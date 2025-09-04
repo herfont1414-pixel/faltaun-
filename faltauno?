@@ -1,0 +1,16 @@
+code
+Bash
+# Inicializa un repositorio de Git local
+git init -b main
+
+# Agrega todos tus archivos al repositorio
+git add .
+
+# Crea tu primer commit (un guardado de los cambios)
+git commit -m "Versión inicial de PadelConnect"
+
+# Conecta tu repositorio local con el de GitHub (reemplaza la URL)
+git remote add origin https://github.com/tu-usuario/nombre-del-repositorio.git
+
+# Sube tu código a GitHub
+git push -u origin main
