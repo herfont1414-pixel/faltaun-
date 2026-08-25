@@ -55,3 +55,29 @@ Para el menú dinámico, corré `supabase/schema.sql` en el SQL editor de tu pro
 - Íconos reales en `public/icons/` (192x192 y 512x512) para el manifest.
 - Persistir reservas en la tabla `reservations` (hoy el flujo confirma por WhatsApp).
 - Service worker si se busca soporte offline completo.
+
+## Gestión interna (GastroSys) — `/gestion`
+
+Módulo de uso interno (staff) para tomar pedidos por mesa y mostrador, separado
+del sitio público. Reemplaza de a poco a Fudo, empezando por Mesas + Mostrador
+con persistencia real en el servidor (antes era un prototipo que vivía solo en
+el navegador y se perdía al recargar).
+
+- Acceso protegido por una contraseña compartida: definí `GESTION_PASSWORD` en
+  las variables de entorno (`.env.local` en desarrollo, o el panel de variables
+  de tu hosting en producción). Sin esa variable, `/gestion` queda bloqueado
+  para todos.
+- Carta real cargada desde `data/catalogo_productos.json` (291 productos,
+  Entradas/Al Plato/Burger/Sandwiches/Pizzas/etc.), extraída de Fudo.
+- `data/ingredientes.csv` queda guardado para el futuro módulo de
+  Productos/Stock (todavía no implementado).
+- 35 mesas en Salón (1–35) y 10 en Terraza (36–45), igual que el prototipo
+  aprobado.
+- Implementado: Mesas (tomar pedido, enviar a cocina, pedir cuenta, cobrar,
+  liberar mesa) y Mostrador (pedidos sin mesa, listado de en curso/cerradas).
+- Placeholders (todavía no construidos): Delivery, Mostrador express,
+  Reservas, Cocina (KDS), Caja, Productos/Stock, Gastos, Reportes.
+- El estado vive en memoria del proceso del servidor (`lib/gestion/store.ts`).
+  Sirve para un único servidor corriendo de forma continua; si se necesita
+  persistencia entre reinicios o múltiples instancias, migrar ese store a
+  Supabase (dejar el mismo shape de datos).
