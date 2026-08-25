@@ -1,0 +1,58 @@
+import type { MenuItem } from "@/lib/types";
+
+export const sampleMenu: MenuItem[] = [
+  {
+    id: "1",
+    name: "Bife de chorizo",
+    description: "300g a la parrilla, papas rústicas y chimichurri de la casa.",
+    price: 12500,
+    image_url: null,
+    category: "comidas",
+    featured: true,
+  },
+  {
+    id: "2",
+    name: "Provoleta ahumada",
+    description: "Provolone a la plancha con orégano, aceite de oliva y pan casero.",
+    price: 6800,
+    image_url: null,
+    category: "comidas",
+    featured: false,
+  },
+  {
+    id: "3",
+    name: "Old Fashioned",
+    description: "Bourbon, angostura, azúcar y un toque de naranja.",
+    price: 7200,
+    image_url: null,
+    category: "tragos",
+    featured: true,
+  },
+  {
+    id: "4",
+    name: "Negroni",
+    description: "Gin, Campari y vermú rojo en partes iguales.",
+    price: 7200,
+    image_url: null,
+    category: "tragos",
+    featured: false,
+  },
+  {
+    id: "5",
+    name: "Malbec Reserva",
+    description: "Copa de malbec de altura, notas a fruta madura y roble.",
+    price: 5400,
+    image_url: null,
+    category: "vinos",
+    featured: false,
+  },
+  {
+    id: "6",
+    name: "Tiramisú",
+    description: "Clásico italiano con café, mascarpone y cacao amargo.",
+    price: 4800,
+    image_url: null,
+    category: "postres",
+    featured: true,
+  },
+];
