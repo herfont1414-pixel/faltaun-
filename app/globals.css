@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+body {
+  @apply bg-base text-stone-100;
+}
+
+::selection {
+  @apply bg-ember/30 text-ember-soft;
+}
