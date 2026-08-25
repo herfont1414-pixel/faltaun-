@@ -6,7 +6,7 @@ import { OrderPanel } from "@/components/gestion/order-panel";
 import { MostradorView } from "@/components/gestion/mostrador-view";
 import { money } from "@/lib/gestion/format";
 import type { GestionStateResponse, Section } from "@/lib/gestion/client-types";
-import type { TableRow, Zone } from "@/lib/gestion/types";
+import type { PaymentMethod, TableRow, Zone } from "@/lib/gestion/types";
 
 const SECTION_TABS: { value: Section; label: string }[] = [
   { value: "mesas", label: "Mesas" },
@@ -33,15 +33,14 @@ async function postJson(url: string, body?: unknown) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error ?? "Error inesperado");
-  }
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Error inesperado");
+  return data;
 }
 
 export function GestionApp() {
   const [data, setData] = useState<GestionStateResponse | null>(null);
+  const [notConfigured, setNotConfigured] = useState(false);
   const [section, setSection] = useState<Section>("mesas");
   const [zone, setZone] = useState<Zone>("salon");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -52,7 +51,11 @@ export function GestionApp() {
   useEffect(() => {
     fetch("/api/gestion/state")
       .then((res) => res.json())
-      .then((state: GestionStateResponse) => {
+      .then((state: GestionStateResponse & { notConfigured?: boolean }) => {
+        if (state.notConfigured) {
+          setNotConfigured(true);
+          return;
+        }
         setData(state);
         setActiveCategory(Object.keys(state.catalog)[0] ?? "");
       });
@@ -67,13 +70,23 @@ export function GestionApp() {
     setData(state);
   }
 
+  async function safeCall<T>(fn: () => Promise<T>) {
+    try {
+      return await fn();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Error inesperado");
+      return null;
+    }
+  }
+
   async function openTable(table: TableRow) {
     if (table.orderId) {
       setSelectedOrderId(table.orderId);
       setSelectedTableNumber(table.number);
       return;
     }
-    const state = await postJson("/api/gestion/open-table", { tableNumber: table.number });
+    const state = await safeCall(() => postJson("/api/gestion/open-table", { tableNumber: table.number }));
+    if (!state) return;
     applyState(state);
     setSelectedOrderId(state.result.id);
     setSelectedTableNumber(table.number);
@@ -86,14 +99,18 @@ export function GestionApp() {
 
   async function addProduct(name: string, price: number) {
     if (!selectedOrderId) return;
-    const state = await postJson("/api/gestion/add-item", { orderId: selectedOrderId, name, price });
-    applyState(state);
+    const state = await safeCall(() =>
+      postJson("/api/gestion/add-item", { orderId: selectedOrderId, name, price })
+    );
+    if (state) applyState(state);
   }
 
   async function changeQty(itemId: string, delta: number) {
     if (!selectedOrderId) return;
-    const state = await postJson("/api/gestion/set-qty", { orderId: selectedOrderId, itemId, delta });
-    applyState(state);
+    const state = await safeCall(() =>
+      postJson("/api/gestion/set-qty", { orderId: selectedOrderId, itemId, delta })
+    );
+    if (state) applyState(state);
   }
 
   async function sendKitchen() {
@@ -103,51 +120,42 @@ export function GestionApp() {
       showToast("Agregá productos antes de enviar");
       return;
     }
-    const state = await postJson("/api/gestion/send-kitchen", { orderId: selectedOrderId });
+    const state = await safeCall(() => postJson("/api/gestion/send-kitchen", { orderId: selectedOrderId }));
+    if (!state) return;
     applyState(state);
     showToast("Comanda enviada a cocina");
+    window.open(`/gestion/comanda/${selectedOrderId}`, "_blank");
   }
 
   async function requestBill() {
     if (!selectedTableNumber) return;
-    const state = await postJson("/api/gestion/request-bill", { tableNumber: selectedTableNumber });
+    const state = await safeCall(() =>
+      postJson("/api/gestion/request-bill", { tableNumber: selectedTableNumber })
+    );
+    if (!state) return;
     applyState(state);
     showToast(`Mesa ${selectedTableNumber} pidió la cuenta`);
   }
 
-  async function charge() {
+  async function finalizeOrder(method: PaymentMethod, customerId: number | null) {
+    if (!selectedOrderId) return;
     const order = data?.openOrders.find((o) => o.id === selectedOrderId);
     if (!order || order.items.length === 0) {
       showToast("El pedido no tiene productos para cobrar");
       return;
     }
-    if (selectedTableNumber) {
-      const state = await postJson("/api/gestion/charge", { tableNumber: selectedTableNumber });
-      applyState(state);
-      showToast(`Cobrando Mesa ${selectedTableNumber} · ${money(order.total)}`);
-    } else if (selectedOrderId) {
-      const state = await postJson("/api/gestion/close-order", { orderId: selectedOrderId });
-      applyState(state);
-      showToast(`Cobrado · ${money(order.total)}`);
-      closePanel();
-    }
-  }
-
-  async function closeOrder() {
-    if (selectedTableNumber) {
-      const state = await postJson("/api/gestion/free-table", { tableNumber: selectedTableNumber });
-      applyState(state);
-      showToast(`Mesa ${selectedTableNumber} liberada`);
-    } else if (selectedOrderId) {
-      const state = await postJson("/api/gestion/close-order", { orderId: selectedOrderId });
-      applyState(state);
-      showToast("Pedido cerrado");
-    }
+    const state = await safeCall(() =>
+      postJson("/api/gestion/finalize-order", { orderId: selectedOrderId, paymentMethod: method, customerId })
+    );
+    if (!state) return;
+    applyState(state);
+    showToast(`Cobrado · ${money(order.total)}`);
     closePanel();
   }
 
   async function newCounterOrder() {
-    const state = await postJson("/api/gestion/counter-order");
+    const state = await safeCall(() => postJson("/api/gestion/counter-order"));
+    if (!state) return;
     applyState(state);
     setSelectedOrderId(state.result.id);
     setSelectedTableNumber(null);
@@ -157,6 +165,20 @@ export function GestionApp() {
     const order = data?.openOrders.find((o) => o.id === orderId);
     setSelectedOrderId(orderId);
     setSelectedTableNumber(order?.tableNumber ?? null);
+  }
+
+  if (notConfigured) {
+    return (
+      <div className="gestion-root">
+        <div className="placeholder-view">
+          <div className="pv-title">Falta conectar la base de datos</div>
+          <div className="pv-sub">
+            Configurá la variable de entorno DATABASE_URL y corré `npm run seed:gestion` para cargar
+            productos, mesas y clientes.
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!data) {
@@ -282,8 +304,7 @@ export function GestionApp() {
             onClose={closePanel}
             onSendKitchen={sendKitchen}
             onRequestBill={requestBill}
-            onCharge={charge}
-            onCloseOrder={closeOrder}
+            onFinalize={finalizeOrder}
           />
         </div>
       ) : (

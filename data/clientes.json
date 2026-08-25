@@ -1,0 +1,2826 @@
+[
+  {
+    "externalId": 1,
+    "name": "PEPO",
+    "phone": null,
+    "balance": -7050.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 2,
+    "name": "BICHO",
+    "phone": "3755411962",
+    "balance": -120100.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 3,
+    "name": "JAVI L",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 4,
+    "name": "ARIEL J",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 5,
+    "name": "DARIO B",
+    "phone": null,
+    "balance": -1190.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 6,
+    "name": "DIEGO COPETI",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 7,
+    "name": "Kevin",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 8,
+    "name": "CHUPACABRA",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 9,
+    "name": "TEDY",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 10,
+    "name": "CELSO",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 11,
+    "name": "JOAQUIN PFAFENZELLER",
+    "phone": null,
+    "balance": -665.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 12,
+    "name": "JAVI SCHULZ",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 13,
+    "name": "POLACO",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 14,
+    "name": "SEBA PITCH",
+    "phone": null,
+    "balance": -280.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 15,
+    "name": "CAMI FRANK",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 16,
+    "name": "CHAMULA",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 17,
+    "name": "DANIELA ANTUNEZ",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 18,
+    "name": "SABRINA CHAMULA",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 19,
+    "name": "ROCIO HUBNER",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 20,
+    "name": "PAISA",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 21,
+    "name": "MARCELO ALVE",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 22,
+    "name": "MUÑECO",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 23,
+    "name": "RALFI",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 24,
+    "name": "FRANCO FRANK",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 25,
+    "name": "VIANCA",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 26,
+    "name": "DOLFI",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 27,
+    "name": "JOAQUI",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 28,
+    "name": "EMI",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 29,
+    "name": "LEO STEFFAN",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 30,
+    "name": "YONI Z",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 31,
+    "name": "VACA (EZEQUIEL)",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 32,
+    "name": "SANDRA ZIR",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 33,
+    "name": "LEITE",
+    "phone": null,
+    "balance": -43540.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 34,
+    "name": "GUISO",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 35,
+    "name": "Santiago Diaz",
+    "phone": null,
+    "balance": -14510.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 36,
+    "name": "ARIEL HOFF",
+    "phone": null,
+    "balance": -396950.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 37,
+    "name": "LUQUI",
+    "phone": null,
+    "balance": -33350.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 39,
+    "name": "CUCHI",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 40,
+    "name": "ivan siloski",
+    "phone": null,
+    "balance": -160.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 42,
+    "name": "JONY AMARAL",
+    "phone": null,
+    "balance": -8710.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 43,
+    "name": "oski",
+    "phone": null,
+    "balance": -1270.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 44,
+    "name": "Hernan fontana",
+    "phone": null,
+    "balance": -224500.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 45,
+    "name": "AYLEN",
+    "phone": null,
+    "balance": -27010.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 46,
+    "name": "Claudia Willms",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 47,
+    "name": "Matheo Ruppel",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 48,
+    "name": "Joaquin Pffafenceller",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 49,
+    "name": "Cristian Rap",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 50,
+    "name": "Franco Franck",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 51,
+    "name": "Caro Barczuk",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 52,
+    "name": "Lucas Schaker",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 53,
+    "name": "Diego Frank",
+    "phone": null,
+    "balance": -30800.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 54,
+    "name": "ARIEL HOFFMANNBECK",
+    "phone": null,
+    "balance": -121700.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 55,
+    "name": "Javier Braganza",
+    "phone": null,
+    "balance": -35500.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 56,
+    "name": "Hernán",
+    "phone": "03755589363",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 57,
+    "name": "JUAN SUAREZ",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 58,
+    "name": "Debora Diemchylo",
+    "phone": "+54 3755 68-8678",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 59,
+    "name": "Hernan Fontana",
+    "phone": "+54 3755 58-9363",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 60,
+    "name": "Miligramos",
+    "phone": "+54 3755 69-8375",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 61,
+    "name": "Adriana Romina Alvez",
+    "phone": "+54 3755 69-7510",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 62,
+    "name": "Emilia Pfaffenzeller",
+    "phone": "+543755644655",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 63,
+    "name": "Cintia Bratz",
+    "phone": "+54 3755 23-5553",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 64,
+    "name": "Javier Schulz",
+    "phone": "+54 3755 41-9381",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 65,
+    "name": "Leandro Kelm",
+    "phone": "+54 3754 47-0181",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 66,
+    "name": "Richard Mittelstad",
+    "phone": "+54 3755 23-7071",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 67,
+    "name": "Lorena de lara",
+    "phone": "+543777473054",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 68,
+    "name": "Andrea Fernandez",
+    "phone": "+543755583200",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 69,
+    "name": "ian frank",
+    "phone": "+54 3755 29-5905",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 70,
+    "name": "Manuel Espíndola",
+    "phone": "+543755555667",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 71,
+    "name": "Evelin Báez",
+    "phone": "+543755207565",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 72,
+    "name": "Fabian Zillmer",
+    "phone": "+54 3755 65-6171",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 73,
+    "name": "alejandro lindemann",
+    "phone": "+543751524080",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 74,
+    "name": "Yami Diedrich",
+    "phone": "+54 3754 41-1419",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 75,
+    "name": "Claudia Willms",
+    "phone": "+54 3754 43-2358",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 76,
+    "name": "Sebastian pitsch",
+    "phone": "+54 3755 21-0755",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 77,
+    "name": "SANTIAGO ZILLMER",
+    "phone": "+543755220194",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 78,
+    "name": "Yanina Sanzobo",
+    "phone": "+54 3755 59-5678",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 79,
+    "name": "Cristian Rapp",
+    "phone": "+54 3755 41-3552",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 80,
+    "name": "Leonela Stefan",
+    "phone": "+54 3755 62-9383",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 81,
+    "name": "Jani Ruppel",
+    "phone": "+54 3755 73-8541",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 82,
+    "name": "Daniela Noelia Schoninger",
+    "phone": "+54 3755 41-7214",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 83,
+    "name": "Daniela Leria",
+    "phone": "+54 3755 43-8326",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 84,
+    "name": "Meribel Batu",
+    "phone": "+54 3755 23-0078",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 85,
+    "name": "Rubén Ruppel",
+    "phone": "+54 3755 44-7115",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 86,
+    "name": "Liliana glanzel",
+    "phone": "+54 3755 44-0904",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 87,
+    "name": "Orlando Labandoczka",
+    "phone": "+54 3755 65-8099",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 88,
+    "name": "Dia",
+    "phone": "+54 3755 23-8132",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 89,
+    "name": "Ivana Stevens",
+    "phone": "+543755513269",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 90,
+    "name": "Derci wdowiak",
+    "phone": "+54 3755 80-6424",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 91,
+    "name": "mari ferras",
+    "phone": "+54 3755 55-1677",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 92,
+    "name": "Debora Nonenmacher",
+    "phone": "+54 3755 58-0186",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 93,
+    "name": "Camila Núñez",
+    "phone": "+54 9 3755 55-4444",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 94,
+    "name": "facundo alcaraz",
+    "phone": "+54 3755 63-2065",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 95,
+    "name": "Fede Muñoz",
+    "phone": "+54 3755 22-1055",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 96,
+    "name": "Luciana Gauna",
+    "phone": "+54 3755 34-2535",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 97,
+    "name": "Bar Yanina",
+    "phone": "+54 9 3755 38-2061",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 98,
+    "name": "Bianca Kehl",
+    "phone": "+54 3755 39-1384",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 99,
+    "name": "Belen Antunez",
+    "phone": "+54 3743 55-3220",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 100,
+    "name": "Nestor wegner",
+    "phone": "+54 341 589-4530",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 101,
+    "name": "Cristina elizabeth da Silva",
+    "phone": "+54 3755 30-7880",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 102,
+    "name": "oscar Labandoczka",
+    "phone": "+543755693651",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 103,
+    "name": "Sergio Fabián Fiuza",
+    "phone": "+54 3755 55-0681",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 104,
+    "name": "Camii Emiliano",
+    "phone": "+54 3755 45-8951",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 105,
+    "name": "Tamara Camila Minuzzo",
+    "phone": "+54 3755 30-7262",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 106,
+    "name": "Lange Matias",
+    "phone": "+54 3755 75-1318",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 107,
+    "name": "Yesica Litviczuk",
+    "phone": "+543754573454",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 108,
+    "name": "Paula Andrea Vesga Porras",
+    "phone": "+54 376 468-4994",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 109,
+    "name": "maira gianella melnik",
+    "phone": "+54 3755 38-3024",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 110,
+    "name": "Adriel Fernándes",
+    "phone": "+54 11 6877-5449",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 111,
+    "name": "Ana Borquez",
+    "phone": "+54 2966 21-7566",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 112,
+    "name": "Facundo Gering",
+    "phone": "+54 3755 74-1455",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 113,
+    "name": "Milena",
+    "phone": "+54 376 508-7085",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 114,
+    "name": "carlos hille",
+    "phone": "+54 3755 75-3696",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 115,
+    "name": "Roman Ruff",
+    "phone": "+54 3755 59-2018",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 116,
+    "name": "Hasselein Yurisan",
+    "phone": "+54 3755 67-8861",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 117,
+    "name": "Cindy fontana",
+    "phone": "+543755306041",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 118,
+    "name": "Gabi tech",
+    "phone": "+54 3755 70-2958",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 119,
+    "name": "Andrea Wegner",
+    "phone": "3755744766",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 120,
+    "name": "Carina Schlindwein",
+    "phone": "+54 3755 58-4197",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 121,
+    "name": "Valeria Stefan",
+    "phone": "+543755688035",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 122,
+    "name": "Frank Federico",
+    "phone": "+54 3755 41-1479",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 123,
+    "name": "Carina Ferreyra",
+    "phone": "+54 3755 69-3698",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 124,
+    "name": "Melisa Wegner",
+    "phone": "+54 3755 21-2393",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 125,
+    "name": "Bettina Drachenberg",
+    "phone": "+54 3755 69-7014",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 126,
+    "name": "Erik Maximiliano H Barrios",
+    "phone": "3755240903",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 127,
+    "name": "Czernecki Beto",
+    "phone": "+54 3755 69-1061",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 128,
+    "name": "Diego rene frank",
+    "phone": "+54 3755 68-1040",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 129,
+    "name": "Rodrigo Urdinola",
+    "phone": "+54 376 437-1051",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 130,
+    "name": "Miguel Angel cegelski",
+    "phone": "+54 3755 26-6785",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 131,
+    "name": "Julián DELEBECQ",
+    "phone": "+54 3755 30-0201",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 132,
+    "name": "Rafael Schatz",
+    "phone": "+54 3755 29-5643",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 133,
+    "name": "Enzo Bonkievicz",
+    "phone": "+54 376 485-2621",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 134,
+    "name": "Florencia Almada",
+    "phone": "+54 376 439-4429",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 135,
+    "name": "De Conti",
+    "phone": "+54 3755 27-8181",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 136,
+    "name": "Yanina Oliveira",
+    "phone": "+543764164482",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 137,
+    "name": "Sonia Soarez",
+    "phone": "+54 3755 43-9344",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 138,
+    "name": "Macarena Penskofer",
+    "phone": "+54 379 480-2982",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 139,
+    "name": "Melani Arce",
+    "phone": "+54 3755 43-9504",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 140,
+    "name": "Facundo Rodriguez",
+    "phone": "+54 3755 56-0318",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 141,
+    "name": "Noelia Pagel",
+    "phone": "3764659229",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 142,
+    "name": "Carina Gabriela Espindola",
+    "phone": "3755540529",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 143,
+    "name": "Ricardo Ferreyra",
+    "phone": "+54 3755 63-1713",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 144,
+    "name": "Leandro Frank",
+    "phone": "+54 3755 69-9420",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 145,
+    "name": "Yanina batu",
+    "phone": "+54 3755 24-0117",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 146,
+    "name": "Cintia Marquez",
+    "phone": "+54 11 3415-9513",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 147,
+    "name": "Lucas Ruppel",
+    "phone": "+54 3755 69-1004",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 148,
+    "name": "Francisco Balbuena",
+    "phone": "3743 47-0672",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 149,
+    "name": "Cintia Yanina Espindola",
+    "phone": "+54 3755 41-2710",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 150,
+    "name": "Fredrich Richardt",
+    "phone": "+54 3755 66-1873",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 151,
+    "name": "Milagros Verón",
+    "phone": "+54 3755 64-4974",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 152,
+    "name": "Gonzalo De Campos",
+    "phone": "+54 3755 24-0924",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 153,
+    "name": "Tadeo Zillmer",
+    "phone": "+54 3755 29-8730",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 154,
+    "name": "Nadia alcaraz",
+    "phone": "+543755595939",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 155,
+    "name": "Anita Arndt",
+    "phone": "+54 3755 30-6534",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 156,
+    "name": "Adriana Romina",
+    "phone": "+54 3755 69-7510",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 157,
+    "name": "Rodrigo zamberlan",
+    "phone": "+54 376 468-3616",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 158,
+    "name": "borges miriam",
+    "phone": "+543755278062",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 159,
+    "name": "Nancy Kraulich",
+    "phone": "+54 3755 24-0392",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 160,
+    "name": "Ivan maruñak",
+    "phone": "+54 3755 68-3242",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 161,
+    "name": "Claudia Correa",
+    "phone": "+54 376 508-1616",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 162,
+    "name": "Lucas Schacker",
+    "phone": "+543755598508",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 163,
+    "name": "Jose Luis kinast",
+    "phone": "+54 3755 65-0427",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 164,
+    "name": "Wagner Damián",
+    "phone": "+54 3755 30-2314",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 165,
+    "name": "Beto Czernecki",
+    "phone": "+54 3755 69-1061",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 166,
+    "name": "Coco fontana",
+    "phone": "+54 11 4986-4445",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 167,
+    "name": "Staudt Ricardo",
+    "phone": "+54 3755 48-1983",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 168,
+    "name": "Romina Krol",
+    "phone": "+54 3755 65-5297",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 169,
+    "name": "Danitza Priscila Pinzon Moncada",
+    "phone": "+54 3755 60-7084",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 170,
+    "name": "Melnik Jorge fabian",
+    "phone": "+54 3755 65-4438",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 171,
+    "name": "Maitena Muñoz",
+    "phone": "+54 3755 22-5278",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 172,
+    "name": "Meile Walter",
+    "phone": "+54 3755 58-0330",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 173,
+    "name": "Eduardo Román Frank",
+    "phone": "+54 3755 69-0123",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 174,
+    "name": "Deicy Gering",
+    "phone": "+543755602220",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 175,
+    "name": "pablo dvojak",
+    "phone": "+543764139502",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 176,
+    "name": "Lucas frank",
+    "phone": "+54 3755 34-3745",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 177,
+    "name": "Macarena Czernecki",
+    "phone": "+55 24 99267-7603",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 178,
+    "name": "Schulz, Lautaro",
+    "phone": "+54 9 3755 54-9957",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 179,
+    "name": "Milena",
+    "phone": "+54 3755 23-6704",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 180,
+    "name": "Leiria Matías",
+    "phone": "+54 3755 54-2890",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 181,
+    "name": "Luis Alberto Glanzel",
+    "phone": "+54 3755 67-9910",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 182,
+    "name": "Vianca Zillmer",
+    "phone": "+54 3755 69-4926",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 183,
+    "name": "Antonela Mulder",
+    "phone": "+54 3755 67-8463",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 184,
+    "name": "Ivan Frank",
+    "phone": "+54 3755 63-4587",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 185,
+    "name": "Facu Alcaraz",
+    "phone": "+54 3755 63-2065",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 186,
+    "name": "Santiago Zillmer",
+    "phone": "+54 376 427-7326",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 187,
+    "name": "Polzhuber yicela",
+    "phone": "+54 3755 30-2429",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 188,
+    "name": "Yanela Gonzalez",
+    "phone": "+54 3755 50-1798",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 189,
+    "name": "Carlos brarda",
+    "phone": "+5547988091216",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 190,
+    "name": "Gómez Marianela",
+    "phone": "+54 3755 65-5397",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 191,
+    "name": "Mertz Cindy Daiana",
+    "phone": "+543755510522",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 192,
+    "name": "Yonatan Matias Lange",
+    "phone": "+54 3755 75-1318",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 193,
+    "name": "Walker Godoy",
+    "phone": "+54 3755 70-5687",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 194,
+    "name": "Valentina Bermudez",
+    "phone": "+54 3755 77-9266",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 195,
+    "name": "Brian Veiga",
+    "phone": "+54 3755 72-5055",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 196,
+    "name": "Pamela Hoffmannbeck",
+    "phone": "+54 3755 66-1646",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 197,
+    "name": "Leonela Stefan",
+    "phone": "+54 3755 62-9383",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 198,
+    "name": "Soledad Adoryan",
+    "phone": "+543755694414",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 199,
+    "name": "Agustina Gómez",
+    "phone": "+54 3743 53-8275",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 200,
+    "name": "Melisa Steinle",
+    "phone": "+54 3755 65-3614",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 201,
+    "name": "Facundo Stevens",
+    "phone": "+54 3755 63-7664",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 202,
+    "name": "Victoria Fischer",
+    "phone": "+54 3755 54-7144",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 203,
+    "name": "Barboza Jairo",
+    "phone": "+54 3755 21-3305",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 204,
+    "name": "Silvia Iurinic",
+    "phone": "+54 3755 63-0579",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 205,
+    "name": "KUCZUK DIEGO ADRIAN",
+    "phone": "+54 376 462-6100",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 206,
+    "name": "Gisela Portolan",
+    "phone": "+54 3758 48-7977",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 207,
+    "name": "Rodrigo Daniel Scheuer",
+    "phone": "+54 3755 27-7911",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 208,
+    "name": "Agustín de lima",
+    "phone": "+54 3755 54-8257",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 209,
+    "name": "Emiliano Schünke",
+    "phone": "+54 3755 24-4520",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 210,
+    "name": "Nickolas Frank",
+    "phone": "+54 3755 30-0448",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 211,
+    "name": "Adriana Dallagnol",
+    "phone": "+54 3755 41-1134",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 212,
+    "name": "Brian Veiga",
+    "phone": "+54 3755 72-5055",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 213,
+    "name": "Milena Padilha",
+    "phone": "+543755236704",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 214,
+    "name": "Silvia Labandoczka",
+    "phone": "+54 3755 44-2444",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 215,
+    "name": "Adrián morais",
+    "phone": "+54 3755 43-6507",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 216,
+    "name": "Yesica Pedrozo",
+    "phone": "+54 3755 67-1171",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 217,
+    "name": "Angela Pamela Olmedo",
+    "phone": "+54 3755 27-4774",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 218,
+    "name": "Alejandro Drews",
+    "phone": "+54 3755 64-5160",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 219,
+    "name": "Gustavo Ezequiel Stevens",
+    "phone": "+543755222019",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 220,
+    "name": "Luciana Gauna",
+    "phone": "+54 9 3755 34-2535",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 221,
+    "name": "Julián delebecq",
+    "phone": "+54 3755 20-0361",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 222,
+    "name": "Leandro Pfaffenzeller",
+    "phone": "+54 3755 29-7804",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 223,
+    "name": "SILVANA HOFF",
+    "phone": null,
+    "balance": -285900.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 224,
+    "name": "GONZALO FONTANA",
+    "phone": null,
+    "balance": -659600.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 225,
+    "name": "Gabriela Laphitz",
+    "phone": "+54 376 431-9232",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 226,
+    "name": "SERGIO JOSE BONKIEVICZ",
+    "phone": "+54 3751 30-9927",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 227,
+    "name": "facu",
+    "phone": "+54 3755 63-5065",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 228,
+    "name": "Agustin pilz",
+    "phone": "+54 3755 29-9042",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 229,
+    "name": "Kramer Ezequiel",
+    "phone": "+54 3755 68-8652",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 230,
+    "name": "Sebastian de Olivera",
+    "phone": "+54 3755 58-0719",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 231,
+    "name": "Rodrigo Pires",
+    "phone": "+54 3755 30-2134",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 232,
+    "name": "ALEJANDRA ESCOBAR",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 233,
+    "name": "silvia",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 234,
+    "name": "Silvia Heckler",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 235,
+    "name": "DIEGO SCHATZ",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 236,
+    "name": "Leandro Frank",
+    "phone": "+54 3755 69-9420",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 237,
+    "name": "santi borges",
+    "phone": "+54 3755 77-2466",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 238,
+    "name": "Derci Wdowiak",
+    "phone": "+54 9 3755 80-6424",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 239,
+    "name": "Gabriela Knebel",
+    "phone": "+543774469453",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 240,
+    "name": "ANDRA WEGNER",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 241,
+    "name": "EMANUEL BUTARELLI",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 242,
+    "name": "Feliciano M",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 243,
+    "name": "Valentino Fontana",
+    "phone": "+543755629383",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 244,
+    "name": "Matilde Olivera",
+    "phone": "+54 3755 65-5602",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 245,
+    "name": "Beto",
+    "phone": "+54 3755 69-1061",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 246,
+    "name": "Neuberger Rafaela",
+    "phone": "+54 3755 41-1117",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 247,
+    "name": "Valeria",
+    "phone": "+54 3755 44-8648",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 248,
+    "name": "Konopka rocio",
+    "phone": "+54 3755 62-7005",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 249,
+    "name": "Alexis Stefan",
+    "phone": "+54 3755 55-6152",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 250,
+    "name": "Belén Rivero",
+    "phone": "+54 3755 67-8282",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 251,
+    "name": "Nickolas Frank",
+    "phone": "+543755300448",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 252,
+    "name": "Mauricio kunze",
+    "phone": "+54 3755 21-5394",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 253,
+    "name": "Sebastian pitsch",
+    "phone": "+54 3755 21-0755",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 254,
+    "name": "Rodri Tomschewitz",
+    "phone": "+54 3755 69-5071",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 255,
+    "name": "Thalía Keffer",
+    "phone": "+54 3755 62-1162",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 256,
+    "name": "Leandro De Lima",
+    "phone": "+54 3755 68-3874",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 257,
+    "name": "Román Fontana",
+    "phone": "+54 3755 69-5682",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 258,
+    "name": "Antonella Dos Santos",
+    "phone": "+543755603704",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 259,
+    "name": "Lorena De Lara",
+    "phone": "+54 3777 47-3054",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 260,
+    "name": "Isa Villanueva",
+    "phone": "+54 376 418-9262",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 261,
+    "name": "Perez Gabriel",
+    "phone": "+54 3755 29-6741",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 262,
+    "name": "Sabrina Tomassi",
+    "phone": "+54 3487 55-6801",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 263,
+    "name": "Alan Pitsch",
+    "phone": "+54 3755 29-2258",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 264,
+    "name": "Joaquin Pfaffenzeller",
+    "phone": "+543755683670",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 265,
+    "name": "Maitena Muñoz",
+    "phone": "+54 3755 22-5278",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 266,
+    "name": "Susana Villanueva",
+    "phone": "+54 3755 66-7114",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 267,
+    "name": "Micaela Romero Fontana",
+    "phone": "+54 9 3755 50-5039",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 268,
+    "name": "facundo Leiva",
+    "phone": "+54 3487 64-4023",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 269,
+    "name": "tamara minuzzo",
+    "phone": "+543755307262",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 270,
+    "name": "Flor Pagel",
+    "phone": "+54 3755 69-5409",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 271,
+    "name": "Lucas Frank",
+    "phone": "+54 3755 34-3745",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 272,
+    "name": "ANDREA PUFFAL",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 273,
+    "name": "Julian teusinho",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 274,
+    "name": "daniela da rocha",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 275,
+    "name": "ANTUAN CERIOLI",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 276,
+    "name": "JOAQUIN LABANDOZCKA",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 277,
+    "name": "Nilda Fontana",
+    "phone": "+54 3755 68-8522",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 278,
+    "name": "Yesica Molinari",
+    "phone": "+54 9 3755 75-3413",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 279,
+    "name": "Julián Delebecq",
+    "phone": "+54 3755 30-0201",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 280,
+    "name": "KUHN Yonatan",
+    "phone": "+54 3755 28-8481",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 281,
+    "name": "Damaris Quaglia",
+    "phone": "+54 3755 54-9978",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 282,
+    "name": "Melisa Krzyminski",
+    "phone": "+54 3755 21-8333",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 283,
+    "name": "maxi gonzález",
+    "phone": "+54 3755 53-4842",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 284,
+    "name": "Ismael buzin",
+    "phone": "+54 11 2658-1226",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 285,
+    "name": "Miqueas Puschmann",
+    "phone": "+54 3751 36-8109",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 286,
+    "name": "Tiki Almada",
+    "phone": "+54 3755 27-8443",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 287,
+    "name": "Brandon Fretes",
+    "phone": "+543765181019",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 288,
+    "name": "Polaco baeke",
+    "phone": "+54 3755 41-0727",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 289,
+    "name": "Henn Daniel",
+    "phone": "+54 3755 22-2476",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 290,
+    "name": "Carlos Santiago Gruhn",
+    "phone": "+54 3755 54-7709",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 291,
+    "name": "Facundo minuzzo",
+    "phone": "+54 3755 41-4209",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 292,
+    "name": "Danrley Padilha",
+    "phone": "+543755267305",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 293,
+    "name": "viki frank",
+    "phone": null,
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 294,
+    "name": "Micaela Alcaraz",
+    "phone": "+54 3755 55-4120",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 295,
+    "name": "Otto Axel Schulz",
+    "phone": "+54 3755 44-3220",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 296,
+    "name": "Juan Gabriel Suarez",
+    "phone": "+543755543620",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 297,
+    "name": "Milena Alvez",
+    "phone": "+54 376 508-7085",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 298,
+    "name": "Luna Lamera",
+    "phone": "+54 3755 69-0627",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 299,
+    "name": "Judith Schreiber",
+    "phone": "+54 3755 56-8564",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 300,
+    "name": "Yenifer Atamaniuk",
+    "phone": "+54 3755 65-9652",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 301,
+    "name": "CHOLO BENDER",
+    "phone": "+543755581051",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 302,
+    "name": "AGUSTIN ATAMANOFF",
+    "phone": "+5491153761035",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 303,
+    "name": "Frank Natanael",
+    "phone": "+543755637660",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 304,
+    "name": "Danisa Schoninger",
+    "phone": "+54 3755 48-0520",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 305,
+    "name": "Ariel schulz",
+    "phone": "+543755586251",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 306,
+    "name": "Stigelmeier",
+    "phone": "+54 3755 26-7655",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 307,
+    "name": "Bermúdez Guadalupe",
+    "phone": "+54 3755 72-6558",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 308,
+    "name": "Karina Scheiderr",
+    "phone": "+54 11 3017-1891",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 309,
+    "name": "Thaigo gatcia",
+    "phone": "+54 3755 41-3663",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 310,
+    "name": "germán pagel",
+    "phone": "+54 3755 57-1777",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 311,
+    "name": "Juan Suarez",
+    "phone": "+54 3755 54-3620",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 312,
+    "name": "Raasch",
+    "phone": "+543755279045",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 313,
+    "name": "Cesar dutra",
+    "phone": "+54 376 436-5916",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 314,
+    "name": "Enzo Kaczmarek",
+    "phone": "+54 3755 63-7558",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 315,
+    "name": "Rocío Hubner",
+    "phone": "+54 3755 50-0206",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 316,
+    "name": "Soarez Milagros",
+    "phone": "+54 3755 79-8098",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 317,
+    "name": "Guada Acosta",
+    "phone": "+54 3755 30-0407",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 318,
+    "name": "Gabriel Wegner",
+    "phone": "+543755212494",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 319,
+    "name": "Sabrina Chamula",
+    "phone": "+54 3755 30-5883",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 320,
+    "name": "Lucas Kaczmarek",
+    "phone": "+54 3755 26-7178",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 321,
+    "name": "Milagros Soarez",
+    "phone": "+543765181019",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 322,
+    "name": "Ziemann griselda",
+    "phone": "+543755691108",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 323,
+    "name": "Sonnmenberg Pablo R",
+    "phone": "+54 3743 66-8799",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 324,
+    "name": "Alejandra Wegner",
+    "phone": "+5493755655724",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 325,
+    "name": "Maribel Hoffmannbeck",
+    "phone": "+54 11 3452-9279",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 326,
+    "name": "Alejandra Fichtner",
+    "phone": "+54 3754 49-1254",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 327,
+    "name": "Claudia Correa",
+    "phone": "+54 376 508-1616",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 328,
+    "name": "Junior soto",
+    "phone": "+54 3755 27-2081",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 329,
+    "name": "Mander Antonela",
+    "phone": "+54 3755 28-4634",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 330,
+    "name": "Marcos Senger",
+    "phone": "+54 3755 21-3897",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 331,
+    "name": "Nestor Wegner",
+    "phone": "+543415894530",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 332,
+    "name": "Giuliana Elizabeth Woelfert",
+    "phone": "+54 3755 27-7791",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 333,
+    "name": "Griselda Lorena DE CONTI",
+    "phone": "+54 3755 27-8181",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 334,
+    "name": "Peretti Angeles",
+    "phone": "+54 3755 44-0657",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 335,
+    "name": "Damaris Piñero",
+    "phone": "+543755705573",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 336,
+    "name": "Daniela Cruz",
+    "phone": "+543755214038",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 337,
+    "name": "Leyni Loisa",
+    "phone": "+54 9 2954 22-1225",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 338,
+    "name": "Fernando Depta",
+    "phone": "+543755671716",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 339,
+    "name": "Danrley padilha",
+    "phone": "+543755655397",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 340,
+    "name": "De Sosa Enzo",
+    "phone": "+543765522992",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 341,
+    "name": "Milena",
+    "phone": "+543765087085",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 342,
+    "name": "Joaquín Fichtner",
+    "phone": "+543755606514",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 343,
+    "name": "Mika",
+    "phone": "+543755606555",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 344,
+    "name": "Hobus",
+    "phone": "+543764621609",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 345,
+    "name": "Diego paz",
+    "phone": "+543755657249",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 346,
+    "name": "Rodrigo fontana",
+    "phone": "+543755545227",
+    "balance": -135200.0,
+    "cuentaCorriente": true,
+    "active": true
+  },
+  {
+    "externalId": 347,
+    "name": "Rocio Gruber",
+    "phone": "+543755598163",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 348,
+    "name": "Patricia Vichorek",
+    "phone": "+543755662050",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 349,
+    "name": "Guadalupe Acosta",
+    "phone": "+543755300407",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 350,
+    "name": "Yesica Marquez",
+    "phone": "+543755277911",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 351,
+    "name": "Fanny",
+    "phone": "+543755228236",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 352,
+    "name": "Milton Saucedo",
+    "phone": "+543756510530",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 353,
+    "name": "Nicolas Daniel Pasiecznik",
+    "phone": "+543764561307",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 354,
+    "name": "Josias Belter",
+    "phone": "+543755737130",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  },
+  {
+    "externalId": 355,
+    "name": "Hobus",
+    "phone": "+543764621609",
+    "balance": 0.0,
+    "cuentaCorriente": false,
+    "active": true
+  }
+]

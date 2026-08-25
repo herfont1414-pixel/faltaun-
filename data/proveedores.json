@@ -1,0 +1,100 @@
+[
+  {
+    "externalId": 1,
+    "name": "cash_count",
+    "phone": null,
+    "address": null,
+    "active": true
+  },
+  {
+    "externalId": 2,
+    "name": "Proveedor Ejemplo",
+    "phone": null,
+    "address": null,
+    "active": true
+  },
+  {
+    "externalId": 3,
+    "name": "ECONOR",
+    "phone": null,
+    "address": null,
+    "active": true
+  },
+  {
+    "externalId": 4,
+    "name": "TOTAL",
+    "phone": null,
+    "address": null,
+    "active": true
+  },
+  {
+    "externalId": 5,
+    "name": "DINO",
+    "phone": null,
+    "address": null,
+    "active": true
+  },
+  {
+    "externalId": 6,
+    "name": "JORGE DELIVERY",
+    "phone": null,
+    "address": "[null,null,null,null]",
+    "active": true
+  },
+  {
+    "externalId": 7,
+    "name": "PAGOS",
+    "phone": null,
+    "address": "[null,null,null,null]",
+    "active": true
+  },
+  {
+    "externalId": 8,
+    "name": "RESERVA LUZ",
+    "phone": null,
+    "address": null,
+    "active": true
+  },
+  {
+    "externalId": 9,
+    "name": "INES",
+    "phone": null,
+    "address": null,
+    "active": true
+  },
+  {
+    "externalId": 10,
+    "name": "EXTRA GAS (CAÑUELAS)",
+    "phone": null,
+    "address": "[null,null,null,\"POSADAS\"]",
+    "active": true
+  },
+  {
+    "externalId": 11,
+    "name": "JL Distribuidora",
+    "phone": null,
+    "address": "[null,null,null,\"OBERA\"]",
+    "active": true
+  },
+  {
+    "externalId": 12,
+    "name": "LOGEX",
+    "phone": null,
+    "address": "[null,null,null,null]",
+    "active": true
+  },
+  {
+    "externalId": 13,
+    "name": "JORGE GARCIA",
+    "phone": null,
+    "address": "[null,null,null,null]",
+    "active": true
+  },
+  {
+    "externalId": 14,
+    "name": "CEPAS SRL",
+    "phone": null,
+    "address": "[null,null,null,null]",
+    "active": true
+  }
+]

@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { X } from "lucide-react";
 import { money } from "@/lib/gestion/format";
-import type { Catalog, OrderWithTotal } from "@/lib/gestion/types";
+import { PaymentPicker } from "@/components/gestion/payment-picker";
+import type { Catalog, Order, PaymentMethod } from "@/lib/gestion/types";
 
 interface OrderPanelProps {
-  order: OrderWithTotal | null;
+  order: Order | null;
   tableNumber: number | null;
   catalog: Catalog;
   activeCategory: string;
@@ -15,8 +17,7 @@ interface OrderPanelProps {
   onClose: () => void;
   onSendKitchen: () => void;
   onRequestBill: () => void;
-  onCharge: () => void;
-  onCloseOrder: () => void;
+  onFinalize: (method: PaymentMethod, customerId: number | null) => void;
 }
 
 export function OrderPanel({
@@ -30,9 +31,10 @@ export function OrderPanel({
   onClose,
   onSendKitchen,
   onRequestBill,
-  onCharge,
-  onCloseOrder,
+  onFinalize,
 }: OrderPanelProps) {
+  const [showPayment, setShowPayment] = useState(false);
+
   if (!order) {
     return (
       <div className="side-panel">
@@ -54,7 +56,14 @@ export function OrderPanel({
             </div>
             <div className="op-sub">{order.items.length} producto(s)</div>
           </div>
-          <button type="button" className="op-close" onClick={onClose}>
+          <button
+            type="button"
+            className="op-close"
+            onClick={() => {
+              setShowPayment(false);
+              onClose();
+            }}
+          >
             <X className="mx-auto h-4 w-4" />
           </button>
         </div>
@@ -102,44 +111,48 @@ export function OrderPanel({
                     +
                   </button>
                 </div>
-                <div className="ti-name">{item.name}</div>
+                <div className="ti-name">
+                  {item.name}
+                  {item.sentToKitchen && <span style={{ color: "var(--text-faint)" }}> · enviado</span>}
+                </div>
                 <div className="ti-price">{money(item.price * item.qty)}</div>
               </div>
             ))
           )}
         </div>
 
-        <div className="op-footer">
-          <div className="total-row">
-            <span className="tl-label">Total</span>
-            <span className="tl-value">{money(order.total)}</span>
-          </div>
-          <div className="footer-actions">
-            <button type="button" className="btn" onClick={onSendKitchen}>
-              Enviar a cocina
-            </button>
-            <button type="button" className="btn btn-primary" onClick={onCharge}>
-              Cobrar
-            </button>
-          </div>
-          {tableNumber && (
-            <div className="footer-actions footer-row2">
-              <button type="button" className="btn" onClick={onRequestBill}>
-                Pedir cuenta
+        {showPayment ? (
+          <PaymentPicker
+            total={order.total}
+            onCancel={() => setShowPayment(false)}
+            onConfirm={(method, customerId) => {
+              setShowPayment(false);
+              onFinalize(method, customerId);
+            }}
+          />
+        ) : (
+          <div className="op-footer">
+            <div className="total-row">
+              <span className="tl-label">Total</span>
+              <span className="tl-value">{money(order.total)}</span>
+            </div>
+            <div className="footer-actions">
+              <button type="button" className="btn" onClick={onSendKitchen}>
+                Enviar a cocina
               </button>
-              <button type="button" className="btn btn-danger" onClick={onCloseOrder}>
-                Liberar mesa
+              <button type="button" className="btn btn-primary" onClick={() => setShowPayment(true)}>
+                Cobrar
               </button>
             </div>
-          )}
-          {!tableNumber && (
-            <div className="footer-actions footer-row2">
-              <button type="button" className="btn btn-danger" onClick={onCloseOrder}>
-                Cerrar pedido
-              </button>
-            </div>
-          )}
-        </div>
+            {tableNumber && (
+              <div className="footer-actions footer-row2">
+                <button type="button" className="btn" onClick={onRequestBill}>
+                  Pedir cuenta
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

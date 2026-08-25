@@ -1,16 +1,16 @@
 "use client";
 
 import { money } from "@/lib/gestion/format";
-import type { OrderWithTotal } from "@/lib/gestion/types";
+import type { Order } from "@/lib/gestion/types";
 
 interface MostradorViewProps {
-  openOrders: OrderWithTotal[];
-  closedOrders: OrderWithTotal[];
+  openOrders: Order[];
+  closedOrders: Order[];
   onNewOrder: () => void;
   onOpenOrder: (orderId: string) => void;
 }
 
-function formatTime(ts: number) {
+function formatTime(ts: string) {
   return new Date(ts).toLocaleTimeString("es-AR", {
     hour: "2-digit",
     minute: "2-digit",
@@ -18,7 +18,7 @@ function formatTime(ts: number) {
   });
 }
 
-function formatDateTime(ts: number) {
+function formatDateTime(ts: string) {
   return new Date(ts).toLocaleString("es-AR", {
     day: "2-digit",
     month: "2-digit",
