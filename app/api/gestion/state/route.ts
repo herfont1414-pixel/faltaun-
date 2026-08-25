@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { getState } from "@/lib/gestion/store";
+import { isDbConfigured } from "@/lib/gestion/db";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json(getState());
+  if (!isDbConfigured()) {
+    return NextResponse.json({ notConfigured: true });
+  }
+  const state = await getState();
+  return NextResponse.json(state);
 }

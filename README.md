@@ -59,25 +59,38 @@ Para el menú dinámico, corré `supabase/schema.sql` en el SQL editor de tu pro
 ## Gestión interna (GastroSys) — `/gestion`
 
 Módulo de uso interno (staff) para tomar pedidos por mesa y mostrador, separado
-del sitio público. Reemplaza de a poco a Fudo, empezando por Mesas + Mostrador
-con persistencia real en el servidor (antes era un prototipo que vivía solo en
-el navegador y se perdía al recargar).
+del sitio público. Reemplaza de a poco a Fudo. Lee y escribe directo en una
+base de datos Postgres propia (no depende de ninguna API externa).
 
-- Acceso protegido por una contraseña compartida: definí `GESTION_PASSWORD` en
-  las variables de entorno (`.env.local` en desarrollo, o el panel de variables
-  de tu hosting en producción). Sin esa variable, `/gestion` queda bloqueado
-  para todos.
-- Carta real cargada desde `data/catalogo_productos.json` (291 productos,
-  Entradas/Al Plato/Burger/Sandwiches/Pizzas/etc.), extraída de Fudo.
-- `data/ingredientes.csv` queda guardado para el futuro módulo de
-  Productos/Stock (todavía no implementado).
-- 35 mesas en Salón (1–35) y 10 en Terraza (36–45), igual que el prototipo
-  aprobado.
-- Implementado: Mesas (tomar pedido, enviar a cocina, pedir cuenta, cobrar,
-  liberar mesa) y Mostrador (pedidos sin mesa, listado de en curso/cerradas).
+### Base de datos
+
+- Necesitás una base de datos Postgres y su cadena de conexión en la variable
+  `DATABASE_URL` (podés crear una gratis desde Vercel: Storage → Create
+  Database → Postgres, o usar Supabase/cualquier Postgres). Sin esa variable,
+  `/gestion` muestra un aviso de "falta conectar la base de datos" en vez de
+  romperse.
+- Una vez que tengas `DATABASE_URL`, corré `npm run seed:gestion`: aplica el
+  schema (`supabase/schema_gestion.sql`) y carga los datos reales exportados
+  de Fudo (`data/catalogo_productos.json`, `data/clientes.json`,
+  `data/cuentas_corrientes.json`). Es seguro correrlo varias veces: actualiza
+  precios/clientes en vez de duplicarlos.
+- Acceso a `/gestion` protegido por una contraseña compartida: definí
+  `GESTION_PASSWORD` en las variables de entorno.
+- `data/ingredientes.csv` y `data/proveedores.json` quedan guardados para el
+  futuro módulo de Productos/Stock y Gastos (todavía no implementados).
+
+### Módulos
+
+- **Mesas**: 35 en Salón (1–35) y 10 en Terraza (36–45). Tomar pedido, enviar
+  a cocina (imprime comanda), pedir cuenta, cobrar.
+- **Mostrador**: pedidos sin mesa asignada, listado de en curso/cerradas.
+- **Cobro**: al cobrar se elige medio de pago — Efectivo, Transferencia o
+  Cta. Cte. (busca entre los clientes reales con cuenta corriente habilitada
+  y descuenta el total de su saldo, dejando un registro en
+  `gestion_customer_ledger`).
+- **Comandas**: "Enviar a cocina" abre una ficha lista para imprimir
+  (`/gestion/comanda/[orderId]`, formato 80mm), separada en BARRA (bebidas) y
+  COCINA (el resto), e imprime automáticamente al abrirse — apuntá esa
+  ventana a tu impresora térmica desde el diálogo de impresión del navegador.
 - Placeholders (todavía no construidos): Delivery, Mostrador express,
-  Reservas, Cocina (KDS), Caja, Productos/Stock, Gastos, Reportes.
-- El estado vive en memoria del proceso del servidor (`lib/gestion/store.ts`).
-  Sirve para un único servidor corriendo de forma continua; si se necesita
-  persistencia entre reinicios o múltiples instancias, migrar ese store a
-  Supabase (dejar el mismo shape de datos).
+  Reservas, Cocina (KDS en pantalla), Caja, Productos/Stock, Gastos, Reportes.
