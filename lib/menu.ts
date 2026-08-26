@@ -1,20 +1,35 @@
-import { supabase } from "@/lib/supabase/client";
+import { getPool, isDbConfigured } from "@/lib/admin/db";
 import { sampleMenu } from "@/lib/data/sample-menu";
 import type { MenuItem } from "@/lib/types";
 
 export async function getMenuItems(): Promise<MenuItem[]> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  if (!isDbConfigured()) {
     return sampleMenu;
   }
 
-  const { data, error } = await supabase
-    .from("menu_items")
-    .select("*")
-    .order("category", { ascending: true });
+  const pool = getPool();
+  const { rows } = await pool.query<{
+    id: number;
+    name: string;
+    price: string;
+    category_name: string;
+  }>(`
+    select p.id, p.name, p.price, c.name as category_name
+    from gestion_products p
+    join gestion_categories c on c.id = p.category_id
+    where p.active = true
+    order by c.sort_order, p.name
+  `);
 
-  if (error || !data) {
-    return sampleMenu;
-  }
+  if (rows.length === 0) return sampleMenu;
 
-  return data as MenuItem[];
+  return rows.map((r) => ({
+    id: String(r.id),
+    name: r.name,
+    description: "",
+    price: parseFloat(r.price),
+    image_url: null,
+    category: r.category_name,
+    featured: false,
+  }));
 }

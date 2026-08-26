@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
-import { X, UtensilsCrossed } from "lucide-react";
+import { X, UtensilsCrossed, Plus } from "lucide-react";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { buildMenuItemInquiry } from "@/lib/whatsapp";
+import { useCart } from "@/components/menu/cart-context";
 import type { MenuItem } from "@/lib/types";
 
 interface MenuModalProps {
@@ -12,6 +14,9 @@ interface MenuModalProps {
 }
 
 export function MenuModal({ item, onClose }: MenuModalProps) {
+  const { addItem } = useCart();
+  const [added, setAdded] = useState(false);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
@@ -48,10 +53,23 @@ export function MenuModal({ item, onClose }: MenuModalProps) {
           </div>
           <p className="mt-2 text-sm leading-relaxed text-stone-400">{item.description}</p>
 
+          <button
+            type="button"
+            onClick={() => {
+              addItem(item.name, item.price);
+              setAdded(true);
+              setTimeout(onClose, 500);
+            }}
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-ember px-5 py-2.5 text-sm font-medium text-base transition hover:bg-ember-soft"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2} />
+            {added ? "¡Agregado!" : "Agregar al pedido"}
+          </button>
+
           <WhatsAppButton
             href={buildMenuItemInquiry(item)}
-            label="Pedir por WhatsApp"
-            className="mt-5 w-full"
+            label="Consultar por WhatsApp"
+            className="mt-2 w-full"
           />
         </div>
       </div>
