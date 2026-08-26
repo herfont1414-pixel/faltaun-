@@ -4,18 +4,19 @@ import { useMemo, useState } from "react";
 import { CategoryFilter } from "@/components/menu/category-filter";
 import { MenuCard } from "@/components/menu/menu-card";
 import { MenuModal } from "@/components/menu/menu-modal";
-import type { MenuCategory, MenuItem } from "@/lib/types";
+import type { MenuItem } from "@/lib/types";
 
 interface MenuSectionProps {
   items: MenuItem[];
 }
 
 export function MenuSection({ items }: MenuSectionProps) {
-  const [activeCategory, setActiveCategory] = useState<MenuCategory | "todos">("todos");
+  const categories = useMemo(() => Array.from(new Set(items.map((item) => item.category))), [items]);
+  const [activeCategory, setActiveCategory] = useState<string>("Todos");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
   const filteredItems = useMemo(() => {
-    if (activeCategory === "todos") return items;
+    if (activeCategory === "Todos") return items;
     return items.filter((item) => item.category === activeCategory);
   }, [items, activeCategory]);
 
@@ -27,7 +28,7 @@ export function MenuSection({ items }: MenuSectionProps) {
       </div>
 
       <div className="mt-4">
-        <CategoryFilter active={activeCategory} onChange={setActiveCategory} />
+        <CategoryFilter categories={categories} active={activeCategory} onChange={setActiveCategory} />
       </div>
 
       <div className="mt-4 flex flex-col gap-2.5 px-5">

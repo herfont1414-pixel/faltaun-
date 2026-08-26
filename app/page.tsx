@@ -1,7 +1,9 @@
 import { Header } from "@/components/header";
-import { MenuSection } from "@/components/menu/menu-section";
+import { MenuExperience } from "@/components/menu/menu-experience";
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { getMenuItems } from "@/lib/menu";
+
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const items = await getMenuItems();
@@ -18,7 +20,7 @@ export default async function HomePage() {
         </p>
       </section>
 
-      <MenuSection items={items} />
+      <MenuExperience items={items} />
       <ReservationForm />
     </main>
   );

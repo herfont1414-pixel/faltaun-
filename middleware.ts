@@ -1,26 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const COOKIE_NAME = "gestion_auth";
+const COOKIE_NAME = "admin_auth";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isLoginPage = pathname === "/gestion/login";
-  const isLoginApi = pathname === "/api/gestion/login";
+  const isLoginPage = pathname === "/admin/login";
+  const isLoginApi = pathname === "/api/admin/login";
 
   if (isLoginPage || isLoginApi) return NextResponse.next();
 
-  const expected = process.env.GESTION_PASSWORD;
+  const expected = process.env.ADMIN_PIN;
   const cookie = request.cookies.get(COOKIE_NAME)?.value;
   if (expected && cookie === expected) return NextResponse.next();
 
-  if (pathname.startsWith("/api/gestion")) {
+  if (pathname.startsWith("/api/admin")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const loginUrl = new URL("/gestion/login", request.url);
+  const loginUrl = new URL("/admin/login", request.url);
   return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
-  matcher: ["/gestion/:path*", "/api/gestion/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*"],
 };

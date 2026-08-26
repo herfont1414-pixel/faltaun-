@@ -1,12 +1,10 @@
-export type MenuCategory = "comidas" | "tragos" | "vinos" | "postres";
-
 export interface MenuItem {
   id: string;
   name: string;
   description: string;
   price: number;
   image_url: string | null;
-  category: MenuCategory;
+  category: string;
   featured: boolean;
 }
 

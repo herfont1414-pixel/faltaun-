@@ -1,5 +1,5 @@
 {
-  "name": "madero-resto",
+  "name": "maderosys",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,10 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed:gestion": "node scripts/seed-gestion.mjs"
+    "seed:admin": "node scripts/seed-admin.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.4",
     "lucide-react": "^0.436.0",
     "next": "14.2.35",
     "pg": "^8.23.0",

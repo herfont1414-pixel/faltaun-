@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Madero Restó | Bar & Restó",
+  title: "MaderoSys - Madero Restó",
   description: "Cocina de autor, tragos de barra y una carta de vinos pensada para compartir. Reservá tu mesa online.",
   manifest: "/manifest.json",
   appleWebApp: {
