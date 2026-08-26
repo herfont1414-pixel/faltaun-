@@ -1,4 +1,5 @@
 import { getPool } from "@/lib/admin/db";
+import { ensureSeeded } from "@/lib/admin/seed";
 import type {
   AdminProduct,
   Catalog,
@@ -91,6 +92,7 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
 }
 
 export async function getState(): Promise<AdminState> {
+  await ensureSeeded();
   const pool = getPool();
   const [catalog, tables, openRows, closedRows] = await Promise.all([
     getCatalog(),

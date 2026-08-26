@@ -53,9 +53,12 @@ Variables de entorno (`.env.local`):
 - `ADMIN_PIN`: PIN de 4 dígitos para entrar a `/admin`.
 - `NEXT_PUBLIC_WHATSAPP_NUMBER`: número del local para el botón de consultas.
 
-Con `DATABASE_URL` configurada, corré `npm run seed:admin` una vez: aplica
-`db/schema.sql` y carga el catálogo/clientes reales (`data/*.json`). Es
-seguro correrlo de nuevo — actualiza en vez de duplicar.
+**No hace falta correr nada a mano**: la primera vez que la app recibe una
+visita con `DATABASE_URL` configurada y la base vacía, se auto-configura
+sola (aplica `db/schema.sql` y carga el catálogo/clientes reales de
+`data/*.json`). Es seguro que pase más de una vez — actualiza en vez de
+duplicar. `npm run seed:admin` sigue disponible para forzarlo a mano en
+desarrollo local si hace falta.
 
 ## Sitio público
 
