@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import { LayoutGrid, BarChart3, Receipt, Package, Users, Truck, Monitor, Settings } from "lucide-react";
 import { OrderPanel } from "@/components/admin/order-panel";
 import { MostradorView } from "@/components/admin/mostrador-view";
@@ -205,7 +206,13 @@ export function AdminApp() {
     <div className="admin-root">
       <div className="topnav">
         <div className="topnav-left">
-          <div className="logo">MaderoSys</div>
+          <Image
+            src="/logo-light.png"
+            alt="Madero Restó"
+            width={480}
+            height={225}
+            className="h-9 w-auto"
+          />
           <div style={{ display: "flex", gap: 4 }}>
             {NAV_ICONS.map(({ Icon, title }) => {
               const isActive =
