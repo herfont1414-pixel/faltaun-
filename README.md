@@ -91,10 +91,15 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
 - Placeholders (todavía no construidos): Delivery, Mostrador express,
   Reservas, Cocina (KDS en pantalla), Caja, Stock, Gastos, Reportes.
 
+## Marca
+
+Logo real de Madero Restó en `public/logo-dark.png` (blanco, para fondos
+oscuros — sitio público) y `public/logo-light.png` (negro, para fondos
+claros — panel `/admin`). El favicon (`app/icon.png`) y los íconos de la
+PWA (`public/icons/`) salen del trébol recortado del mismo logo.
+
 ## Pendiente
 
-- Íconos reales en `public/icons/` (192x192 y 512x512) para el manifest de
-  la PWA (el favicon del navegador ya se genera solo).
 - Persistir reservas en base (hoy el flujo confirma por WhatsApp).
 - `data/ingredientes.csv` y `data/proveedores.json` quedan guardados para
   los futuros módulos de Stock y Gastos.

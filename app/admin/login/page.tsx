@@ -71,10 +71,14 @@ export default function AdminLoginPage() {
           textAlign: "center",
         }}
       >
-        <div style={{ fontWeight: 800, fontSize: 22, color: "#ff5a1f", marginBottom: 4 }}>
-          MaderoSys
-        </div>
-        <p style={{ fontSize: 13, color: "#767672", marginBottom: 20 }}>Madero Restó</p>
+        <img
+          src="/logo-light.png"
+          alt="Madero Restó"
+          style={{ height: 56, width: "auto", margin: "0 auto 6px" }}
+        />
+        <p style={{ fontSize: 12, letterSpacing: 1, color: "#767672", marginBottom: 20 }}>
+          MADEROSYS
+        </p>
 
         <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 10 }}>
           {Array.from({ length: PIN_LENGTH }).map((_, i) => (
