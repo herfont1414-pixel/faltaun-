@@ -8,3 +8,6 @@ build
 *.tsbuildinfo
 next-env.d.ts
 *.log
+*.db
+*.db-shm
+*.db-wal

@@ -4,6 +4,7 @@ const nextConfig = {
     outputFileTracingIncludes: {
       "/**": ["./data/**/*", "./db/**/*"],
     },
+    serverComponentsExternalPackages: ["better-sqlite3"],
   },
 };
 

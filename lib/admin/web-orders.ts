@@ -11,7 +11,7 @@ function mapRow(row: any): WebOrder {
     customerName: row.customer_name,
     customerPhone: row.customer_phone,
     notes: row.notes,
-    items: row.items,
+    items: typeof row.items === "string" ? JSON.parse(row.items) : row.items,
     total: money(row.total),
     status: row.status,
     etaMinutes: row.eta_minutes,

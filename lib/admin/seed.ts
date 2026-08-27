@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { getPool } from "@/lib/admin/db";
+import { getDbMode, getPool } from "@/lib/admin/db";
 
 function readJson(file: string) {
   return JSON.parse(readFileSync(path.join(process.cwd(), "data", file), "utf-8"));
@@ -22,7 +22,8 @@ export async function ensureSeeded() {
   const pool = getPool();
   const client = await pool.connect();
   try {
-    const schema = readFileSync(path.join(process.cwd(), "db", "schema.sql"), "utf-8");
+    const schemaFile = getDbMode() === "sqlite" ? "schema.sqlite.sql" : "schema.sql";
+    const schema = readFileSync(path.join(process.cwd(), "db", schemaFile), "utf-8");
     await client.query(schema);
 
     const catalog = readJson("catalogo_productos.json") as Record<
