@@ -10,7 +10,8 @@ base de datos Postgres propia — no depende de Fudo ni de ninguna API externa.
 - Next.js 14 (App Router) + TypeScript
 - Tailwind CSS
 - lucide-react
-- Postgres (vía `pg`, sin ORM)
+- Postgres (vía `pg`, sin ORM) en la nube; SQLite (vía `better-sqlite3`) como
+  respaldo local — ver "Modo local / offline" más abajo
 
 ## Estructura
 
@@ -30,10 +31,12 @@ components/
   admin/                 UI del panel interno
 lib/
   menu.ts                arma el menú público desde la misma base
-  admin/                 store, tipos, conexión a Postgres, pedidos web
+  admin/                 store, tipos, conexión a la base (Postgres o SQLite), pedidos web
 data/                    catálogo y clientes reales exportados de Fudo
 db/schema.sql            schema completo de Postgres
+db/schema.sqlite.sql     mismo schema, adaptado a SQLite (modo local)
 scripts/seed-admin.mjs   carga schema + datos reales (idempotente)
+start-local.bat          arranca la app en modo local (Windows, sin internet)
 ```
 
 ## Setup
@@ -90,6 +93,34 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   separado en BARRA (bebidas) y COCINA (el resto), que se imprime solo.
 - Placeholders (todavía no construidos): Delivery, Mostrador express,
   Reservas, Cocina (KDS en pantalla), Caja, Stock, Gastos, Reportes.
+
+## Modo local / offline
+
+La versión de Vercel (Postgres) es la que se usa siempre que hay internet, y
+no cambia en nada. Además, la PC del local puede correr una copia propia de
+la app con su propia base de datos (`maderosys.db`, un archivo SQLite en la
+misma carpeta) para seguir operando Mesas, comandas y Cobro si se corta
+internet.
+
+**Uso diario:** doble clic en `start-local.bat`. Arma la app (la primera vez
+tarda un poco más porque instala dependencias) y abre sola
+`http://localhost:3000/admin` en el navegador. No hay que tocar nada de
+configuración: al no encontrar `DATABASE_URL`, la app arranca sola en modo
+local con SQLite. No cerrar la ventana negra del servidor mientras se
+trabaja; al terminar el día se pueden cerrar las dos ventanas.
+
+**Cómo funciona por dentro:**
+
+- Qué base usar se decide sola, según el entorno: si existe `DATABASE_URL`
+  usa Postgres (Vercel); si no, y no está corriendo en Vercel, usa
+  `maderosys.db` (SQLite) en la carpeta del proyecto.
+- `maderosys.db` se auto-configura la primera vez que se usa, igual que pasa
+  hoy con Postgres: crea las tablas y carga el catálogo real.
+- Es una base **aparte** de la de Vercel — lo que se carga en la PC local no
+  sube a la nube ni se mezcla con lo del sitio online. Sirve para no perder
+  el día si se corta internet, no para sincronizar ambas.
+- El archivo `maderosys.db` (y sus archivos auxiliares `-shm`/`-wal`) no se
+  suben al repositorio (están en `.gitignore`).
 
 ## Marca
 

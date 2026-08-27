@@ -56,6 +56,7 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
   if (orderRows.length === 0) return [];
   const pool = getPool();
   const ids = orderRows.map((r) => r.id);
+  const placeholders = ids.map((_, i) => `$${i + 1}`).join(", ");
   const { rows: itemRows } = await pool.query<{
     id: string;
     order_id: string;
@@ -63,7 +64,7 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
     price: string;
     qty: number;
     sent_to_kitchen: boolean;
-  }>("select * from gestion_order_items where order_id = any($1) order by id", [ids]);
+  }>(`select * from gestion_order_items where order_id in (${placeholders}) order by id`, ids);
 
   return orderRows.map((o) => {
     const items: OrderItem[] = itemRows
