@@ -100,3 +100,26 @@ export interface Shift {
   salesCuentaCorriente: number;
   notes: string | null;
 }
+
+export interface SalesReportOrder {
+  id: string;
+  openedAt: string;
+  closedAt: string;
+  origin: OrderOrigin;
+  tableNumber: number | null;
+  paymentMethod: PaymentMethod | null;
+  customerName: string | null;
+  total: number;
+}
+
+export interface SalesReport {
+  from: string;
+  to: string;
+  totalSales: number;
+  orderCount: number;
+  avgTicket: number;
+  byPaymentMethod: { method: PaymentMethod | "sin_definir"; total: number; count: number }[];
+  topProducts: { name: string; qty: number; revenue: number }[];
+  byCategory: { category: string; revenue: number }[];
+  orders: SalesReportOrder[];
+}

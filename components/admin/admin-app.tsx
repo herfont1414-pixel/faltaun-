@@ -8,6 +8,7 @@ import { MostradorView } from "@/components/admin/mostrador-view";
 import { ProductsView } from "@/components/admin/products-view";
 import { WebOrdersView } from "@/components/admin/web-orders-view";
 import { CajaView } from "@/components/admin/caja-view";
+import { ReportsView } from "@/components/admin/reports-view";
 import { money } from "@/lib/admin/format";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
 import type { PaymentMethod, TableRow, Zone } from "@/lib/admin/types";
@@ -220,7 +221,8 @@ export function AdminApp() {
               const isActive =
                 (title === "Mesas" && section === "mesas") ||
                 (title === "Productos" && section === "productos") ||
-                (title === "Caja" && section === "caja");
+                (title === "Caja" && section === "caja") ||
+                (title === "Reportes" && section === "reportes");
               return (
                 <div
                   key={title}
@@ -229,6 +231,7 @@ export function AdminApp() {
                     if (title === "Mesas") setSection("mesas");
                     else if (title === "Productos") setSection("productos");
                     else if (title === "Caja") setSection("caja");
+                    else if (title === "Reportes") setSection("reportes");
                     else showToast(`${title}: lo sumamos en el próximo paso`);
                   }}
                   style={{
@@ -333,6 +336,8 @@ export function AdminApp() {
         <WebOrdersView />
       ) : section === "caja" ? (
         <CajaView />
+      ) : section === "reportes" ? (
+        <ReportsView />
       ) : (
         <div className="placeholder-view">
           <div className="pv-title">
