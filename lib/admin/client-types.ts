@@ -8,6 +8,7 @@ export type Section =
   | "pedidos-web"
   | "productos"
   | "caja"
+  | "reportes"
   | "delivery"
   | "express"
   | "reservas";

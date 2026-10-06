@@ -104,8 +104,13 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   Transferencia, Cta. Cte.) y el total esperado en caja. Al cerrar el turno
   pide el monto contado real y calcula la diferencia contra lo esperado;
   queda un historial de los últimos turnos cerrados.
+- **Reportes** (ícono en la barra superior): ventas por período (hoy, ayer,
+  esta semana, este mes o un rango de fechas a elección) — total vendido,
+  cantidad de pedidos, ticket promedio, desglose por medio de pago,
+  productos más vendidos, ventas por categoría y el detalle de cada venta
+  cerrada (hora, mesa/mostrador, cliente, medio de pago, total).
 - Placeholders (todavía no construidos): Delivery, Mostrador express,
-  Reservas, Cocina (KDS en pantalla), Stock, Gastos, Reportes.
+  Reservas, Cocina (KDS en pantalla), Stock, Gastos.
 
 ## Modo local / offline
 
