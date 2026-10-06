@@ -10,6 +10,7 @@ create table if not exists gestion_products (
   name text not null,
   price numeric(10, 2) not null,
   active boolean not null default true,
+  in_stock boolean not null default true,
   unique (category_id, name)
 );
 
@@ -103,3 +104,8 @@ create table if not exists gestion_shifts (
 );
 
 create index if not exists gestion_shifts_status_idx on gestion_shifts(status);
+
+create table if not exists gestion_meta (
+  key text primary key,
+  value text
+);

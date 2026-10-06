@@ -46,25 +46,38 @@ export function MenuModal({ item, onClose }: MenuModalProps) {
 
         <div className="p-5">
           <div className="flex items-start justify-between gap-4">
-            <h3 className="font-display text-xl text-stone-50">{item.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-display text-xl text-stone-50">{item.name}</h3>
+              {!item.inStock && (
+                <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-300">
+                  Sin stock
+                </span>
+              )}
+            </div>
             <span className="shrink-0 font-display text-lg text-ember-soft">
               ${item.price.toLocaleString("es-AR")}
             </span>
           </div>
           <p className="mt-2 text-sm leading-relaxed text-stone-400">{item.description}</p>
 
-          <button
-            type="button"
-            onClick={() => {
-              addItem(item.name, item.price);
-              setAdded(true);
-              setTimeout(onClose, 500);
-            }}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-ember px-5 py-2.5 text-sm font-medium text-base transition hover:bg-ember-soft"
-          >
-            <Plus className="h-4 w-4" strokeWidth={2} />
-            {added ? "¡Agregado!" : "Agregar al pedido"}
-          </button>
+          {item.inStock ? (
+            <button
+              type="button"
+              onClick={() => {
+                addItem(item.name, item.price);
+                setAdded(true);
+                setTimeout(onClose, 500);
+              }}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-ember px-5 py-2.5 text-sm font-medium text-base transition hover:bg-ember-soft"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              {added ? "¡Agregado!" : "Agregar al pedido"}
+            </button>
+          ) : (
+            <div className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-white/5 px-5 py-2.5 text-sm font-medium text-stone-400">
+              Sin stock por ahora
+            </div>
+          )}
 
           <WhatsAppButton
             href={buildMenuItemInquiry(item)}

@@ -21,16 +21,23 @@ async function getCatalog(): Promise<Catalog> {
   const categories = await pool.query<{ id: number; name: string }>(
     "select id, name from gestion_categories order by sort_order"
   );
-  const products = await pool.query<{ category_id: number; name: string; price: string }>(
-    "select category_id, name, price from gestion_products where active = true order by id"
-  );
+  const products = await pool.query<{
+    category_id: number;
+    name: string;
+    price: string;
+    in_stock: boolean;
+  }>("select category_id, name, price, in_stock from gestion_products where active = true order by id");
 
   const catalog: Catalog = {};
   for (const cat of categories.rows) catalog[cat.name] = [];
   for (const product of products.rows) {
     const category = categories.rows.find((c) => c.id === product.category_id);
     if (!category) continue;
-    catalog[category.name].push({ name: product.name, price: money(product.price) });
+    catalog[category.name].push({
+      name: product.name,
+      price: money(product.price),
+      inStock: product.in_stock,
+    });
   }
   return catalog;
 }
@@ -293,10 +300,11 @@ export async function listAllProducts(): Promise<AdminProduct[]> {
     name: string;
     price: string;
     active: boolean;
+    in_stock: boolean;
     category_name: string;
     sort_order: number;
   }>(`
-    select p.id, p.name, p.price, p.active, c.name as category_name, c.sort_order
+    select p.id, p.name, p.price, p.active, p.in_stock, c.name as category_name, c.sort_order
     from gestion_products p
     join gestion_categories c on c.id = p.category_id
     order by c.sort_order, p.name
@@ -306,16 +314,23 @@ export async function listAllProducts(): Promise<AdminProduct[]> {
     name: r.name,
     price: money(r.price),
     active: r.active,
+    inStock: r.in_stock,
     category: r.category_name,
   }));
 }
 
-export async function updateProduct(id: number, changes: { price?: number; active?: boolean }) {
+export async function updateProduct(
+  id: number,
+  changes: { price?: number; active?: boolean; inStock?: boolean }
+) {
   const pool = getPool();
   if (changes.price !== undefined) {
     await pool.query("update gestion_products set price = $2 where id = $1", [id, changes.price]);
   }
   if (changes.active !== undefined) {
     await pool.query("update gestion_products set active = $2 where id = $1", [id, changes.active]);
+  }
+  if (changes.inStock !== undefined) {
+    await pool.query("update gestion_products set in_stock = $2 where id = $1", [id, changes.inStock]);
   }
 }

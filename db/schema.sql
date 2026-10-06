@@ -15,6 +15,8 @@ create table if not exists gestion_products (
   unique (category_id, name)
 );
 
+alter table gestion_products add column if not exists in_stock boolean not null default true;
+
 create table if not exists gestion_customers (
   id serial primary key,
   external_id int unique,
@@ -106,3 +108,8 @@ create table if not exists gestion_shifts (
 );
 
 create index if not exists gestion_shifts_status_idx on gestion_shifts(status);
+
+create table if not exists gestion_meta (
+  key text primary key,
+  value text
+);

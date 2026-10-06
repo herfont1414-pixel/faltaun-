@@ -16,8 +16,9 @@ export async function getMenuItems(): Promise<MenuItem[]> {
       name: string;
       price: string;
       category_name: string;
+      in_stock: boolean;
     }>(`
-      select p.id, p.name, p.price, c.name as category_name
+      select p.id, p.name, p.price, p.in_stock, c.name as category_name
       from gestion_products p
       join gestion_categories c on c.id = p.category_id
       where p.active = true
@@ -34,6 +35,7 @@ export async function getMenuItems(): Promise<MenuItem[]> {
       image_url: null,
       category: r.category_name,
       featured: false,
+      inStock: r.in_stock,
     }));
   } catch {
     return sampleMenu;

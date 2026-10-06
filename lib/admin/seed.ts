@@ -1,9 +1,78 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { getDbMode, getPool } from "@/lib/admin/db";
+import type { DbClient } from "@/lib/admin/db";
 
 function readJson(file: string) {
   return JSON.parse(readFileSync(path.join(process.cwd(), "data", file), "utf-8"));
+}
+
+type CatalogProduct = { name: string; price: number; inStock?: boolean };
+
+// Sincroniza categorías/productos contra data/catalogo_productos.json cada vez
+// que ese archivo cambia (comparando un hash guardado en gestion_meta), no solo
+// la primera vez: así una actualización del menú (ej. sacar descontinuados,
+// marcar sin stock) se aplica sola en una base que ya tenía datos cargados,
+// sin perder pedidos ni clientes. Los productos que ya no están en el archivo
+// se pausan (active = false) en vez de borrarse, para poder reactivarlos.
+async function syncCatalog(client: DbClient) {
+  const raw = readFileSync(path.join(process.cwd(), "data", "catalogo_productos.json"), "utf-8");
+  const hash = crypto.createHash("sha256").update(raw).digest("hex");
+
+  const { rows: metaRows } = await client.query<{ value: string }>(
+    "select value from gestion_meta where key = $1",
+    ["catalog_hash"]
+  );
+  if (metaRows[0]?.value === hash) return;
+
+  const catalog = JSON.parse(raw) as Record<string, CatalogProduct[]>;
+  const keep = new Set<string>();
+  let sortOrder = 0;
+  for (const [categoryName, products] of Object.entries(catalog)) {
+    sortOrder += 1;
+    const { rows } = await client.query(
+      `insert into gestion_categories (name, sort_order) values ($1, $2)
+       on conflict (name) do update set sort_order = excluded.sort_order
+       returning id`,
+      [categoryName, sortOrder]
+    );
+    const categoryId = rows[0].id;
+    for (const product of products) {
+      keep.add(`${categoryId}::${product.name}`);
+      await client.query(
+        `insert into gestion_products (category_id, name, price, active, in_stock)
+         values ($1, $2, $3, true, $4)
+         on conflict (category_id, name) do update set price = excluded.price, active = true, in_stock = excluded.in_stock`,
+        [categoryId, product.name, product.price, product.inStock !== false]
+      );
+    }
+  }
+
+  const { rows: existing } = await client.query<{ id: number; category_id: number; name: string }>(
+    "select id, category_id, name from gestion_products where active = true"
+  );
+  for (const p of existing) {
+    if (!keep.has(`${p.category_id}::${p.name}`)) {
+      await client.query("update gestion_products set active = false where id = $1", [p.id]);
+    }
+  }
+
+  await client.query(
+    `insert into gestion_meta (key, value) values ('catalog_hash', $1)
+     on conflict (key) do update set value = excluded.value`,
+    [hash]
+  );
+}
+
+// A diferencia de Postgres, SQLite no soporta "alter table add column if not
+// exists": "create table if not exists" tampoco agrega columnas a una tabla
+// que ya existía de antes. Por eso las columnas nuevas en tablas viejas se
+// migran acá a mano, revisando primero si ya están.
+async function ensureSqliteColumn(client: DbClient, table: string, column: string, definition: string) {
+  const { rows } = await client.query<{ name: string }>(`pragma table_info(${table})`);
+  if (rows.some((r) => r.name === column)) return;
+  await client.query(`alter table ${table} add column ${column} ${definition}`);
 }
 
 let schemaApplied = false;
@@ -21,35 +90,16 @@ export async function ensureSeeded() {
       const schemaFile = getDbMode() === "sqlite" ? "schema.sqlite.sql" : "schema.sql";
       const schema = readFileSync(path.join(process.cwd(), "db", schemaFile), "utf-8");
       await client.query(schema);
+      if (getDbMode() === "sqlite") {
+        await ensureSqliteColumn(client, "gestion_products", "in_stock", "boolean not null default 1");
+      }
       schemaApplied = true;
     }
 
-    const { rows: seededRows } = await client.query("select count(*) as count from gestion_categories");
-    if (Number(seededRows[0].count) > 0) return;
+    await syncCatalog(client);
 
-    const catalog = readJson("catalogo_productos.json") as Record<
-      string,
-      { name: string; price: number }[]
-    >;
-    let sortOrder = 0;
-    for (const [categoryName, products] of Object.entries(catalog)) {
-      sortOrder += 1;
-      const { rows } = await client.query(
-        `insert into gestion_categories (name, sort_order) values ($1, $2)
-         on conflict (name) do update set sort_order = excluded.sort_order
-         returning id`,
-        [categoryName, sortOrder]
-      );
-      const categoryId = rows[0].id;
-      for (const product of products) {
-        await client.query(
-          `insert into gestion_products (category_id, name, price)
-           values ($1, $2, $3)
-           on conflict (category_id, name) do update set price = excluded.price`,
-          [categoryId, product.name, product.price]
-        );
-      }
-    }
+    const { rows: zoneRows } = await client.query("select count(*) as count from gestion_zones");
+    if (Number(zoneRows[0].count) > 0) return;
 
     const zones = [
       { name: "salon", from: 1, to: 35 },

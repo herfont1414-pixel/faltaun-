@@ -9,6 +9,7 @@ export const sampleMenu: MenuItem[] = [
     image_url: null,
     category: "comidas",
     featured: true,
+    inStock: true,
   },
   {
     id: "2",
@@ -18,6 +19,7 @@ export const sampleMenu: MenuItem[] = [
     image_url: null,
     category: "comidas",
     featured: false,
+    inStock: true,
   },
   {
     id: "3",
@@ -27,6 +29,7 @@ export const sampleMenu: MenuItem[] = [
     image_url: null,
     category: "tragos",
     featured: true,
+    inStock: true,
   },
   {
     id: "4",
@@ -36,6 +39,7 @@ export const sampleMenu: MenuItem[] = [
     image_url: null,
     category: "tragos",
     featured: false,
+    inStock: true,
   },
   {
     id: "5",
@@ -45,6 +49,7 @@ export const sampleMenu: MenuItem[] = [
     image_url: null,
     category: "vinos",
     featured: false,
+    inStock: true,
   },
   {
     id: "6",
@@ -54,5 +59,6 @@ export const sampleMenu: MenuItem[] = [
     image_url: null,
     category: "postres",
     featured: true,
+    inStock: true,
   },
 ];
