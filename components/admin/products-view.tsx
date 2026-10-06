@@ -22,7 +22,7 @@ export function ProductsView() {
     return map;
   }, [products]);
 
-  async function patch(id: number, changes: { price?: number; active?: boolean }) {
+  async function patch(id: number, changes: { price?: number; active?: boolean; inStock?: boolean }) {
     setSavingId(id);
     await fetch(`/api/admin/products/${id}`, {
       method: "PATCH",
@@ -48,6 +48,7 @@ export function ProductsView() {
               <tr>
                 <th>Producto</th>
                 <th>Precio</th>
+                <th style={{ textAlign: "right" }}>Stock</th>
                 <th style={{ textAlign: "right" }}>Activo</th>
               </tr>
             </thead>
@@ -72,6 +73,17 @@ export function ProductsView() {
                         fontSize: 13,
                       }}
                     />
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button
+                      type="button"
+                      className={`btn ${p.inStock ? "" : "btn-primary"}`}
+                      style={{ flex: "none", padding: "6px 12px" }}
+                      disabled={savingId === p.id || !p.active}
+                      onClick={() => patch(p.id, { inStock: !p.inStock })}
+                    >
+                      {p.inStock ? "Marcar sin stock" : "Reponer stock"}
+                    </button>
                   </td>
                   <td style={{ textAlign: "right" }}>
                     <button

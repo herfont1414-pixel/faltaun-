@@ -12,7 +12,9 @@ export function MenuCard({ item, onSelect }: MenuCardProps) {
     <button
       type="button"
       onClick={() => onSelect(item)}
-      className="flex w-full items-center gap-4 rounded-xl2 border border-white/5 bg-base-card p-3 text-left transition hover:border-ember/30 active:scale-[0.99]"
+      className={`flex w-full items-center gap-4 rounded-xl2 border border-white/5 bg-base-card p-3 text-left transition hover:border-ember/30 active:scale-[0.99] ${
+        item.inStock ? "" : "opacity-50"
+      }`}
     >
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-base-soft">
         {item.image_url ? (
@@ -31,7 +33,14 @@ export function MenuCard({ item, onSelect }: MenuCardProps) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-stone-50">{item.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="truncate font-medium text-stone-50">{item.name}</p>
+          {!item.inStock && (
+            <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-300">
+              Sin stock
+            </span>
+          )}
+        </div>
         <p className="mt-0.5 line-clamp-1 text-sm text-stone-400">{item.description}</p>
       </div>
 

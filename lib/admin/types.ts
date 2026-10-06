@@ -35,6 +35,7 @@ export interface TableRow {
 export interface Product {
   name: string;
   price: number;
+  inStock: boolean;
 }
 
 export type Catalog = Record<string, Product[]>;
@@ -64,6 +65,7 @@ export interface AdminProduct {
   name: string;
   price: number;
   active: boolean;
+  inStock: boolean;
   category: string;
 }
 

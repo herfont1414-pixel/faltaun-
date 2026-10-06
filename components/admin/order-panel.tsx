@@ -86,10 +86,14 @@ export function OrderPanel({
             <button
               key={product.name}
               type="button"
-              className="product-btn"
+              className={`product-btn ${product.inStock ? "" : "sin-stock"}`}
+              disabled={!product.inStock}
               onClick={() => onAddProduct(product.name, product.price)}
             >
-              <div className="p-name">{product.name}</div>
+              <div className="p-name">
+                {product.name}
+                {!product.inStock && <span className="p-badge">Sin stock</span>}
+              </div>
               <div className="p-price">{money(product.price)}</div>
             </button>
           ))}

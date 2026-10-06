@@ -6,6 +6,7 @@ export interface MenuItem {
   image_url: string | null;
   category: string;
   featured: boolean;
+  inStock: boolean;
 }
 
 export interface Reservation {

@@ -63,6 +63,13 @@ sola (aplica `db/schema.sql` y carga el catálogo/clientes reales de
 duplicar. `npm run seed:admin` sigue disponible para forzarlo a mano en
 desarrollo local si hace falta.
 
+El catálogo (`data/catalogo_productos.json`) también se resincroniza solo
+en cada deploy, incluso si la base ya tenía datos cargados: compara un hash
+del archivo contra lo guardado en la tabla `gestion_meta`, y si cambió,
+actualiza precios, da de alta productos nuevos y pausa (no borra) los que ya
+no están en el archivo. Para marcar un producto "sin stock" directamente en
+el archivo, agregá `"inStock": false` a su entrada.
+
 ## Sitio público
 
 - Menú filtrable por categoría, cargado directo desde la base (mismo
@@ -83,9 +90,10 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   sonora + aviso en pantalla al llegar uno nuevo. Confirmar con tiempo
   estimado (15/30/45 min) abre WhatsApp con el mensaje ya armado para el
   cliente, o rechazar.
-- **Productos** (ícono en la barra superior): activar/pausar platos y
-  editar precios en vivo — se reflejan al instante en Mesas y en el menú
-  público.
+- **Productos** (ícono en la barra superior): activar/pausar platos, marcar
+  "sin stock" (se ve gris con la etiqueta, igual que en Fudo, pero no se
+  puede pedir) y editar precios en vivo — se reflejan al instante en Mesas y
+  en el menú público.
 - **Cobro**: Efectivo, Transferencia o Cta. Cte. (busca entre los clientes
   reales con cuenta corriente, descuenta el saldo y deja registro en el
   historial).
