@@ -91,8 +91,13 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   historial).
 - **Comandas**: "Enviar a cocina" abre un ticket imprimible (80mm),
   separado en BARRA (bebidas) y COCINA (el resto), que se imprime solo.
+- **Caja** (ícono en la barra superior): apertura de turno con el monto
+  inicial, ventas acumuladas en vivo por medio de pago (Efectivo,
+  Transferencia, Cta. Cte.) y el total esperado en caja. Al cerrar el turno
+  pide el monto contado real y calcula la diferencia contra lo esperado;
+  queda un historial de los últimos turnos cerrados.
 - Placeholders (todavía no construidos): Delivery, Mostrador express,
-  Reservas, Cocina (KDS en pantalla), Caja, Stock, Gastos, Reportes.
+  Reservas, Cocina (KDS en pantalla), Stock, Gastos, Reportes.
 
 ## Modo local / offline
 
