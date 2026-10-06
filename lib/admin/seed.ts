@@ -6,25 +6,26 @@ function readJson(file: string) {
   return JSON.parse(readFileSync(path.join(process.cwd(), "data", file), "utf-8"));
 }
 
-async function isSeeded(): Promise<boolean> {
-  const pool = getPool();
-  try {
-    const { rows } = await pool.query("select count(*) as count from gestion_categories");
-    return Number(rows[0].count) > 0;
-  } catch {
-    return false;
-  }
-}
+let schemaApplied = false;
 
 export async function ensureSeeded() {
-  if (await isSeeded()) return;
-
   const pool = getPool();
   const client = await pool.connect();
   try {
-    const schemaFile = getDbMode() === "sqlite" ? "schema.sqlite.sql" : "schema.sql";
-    const schema = readFileSync(path.join(process.cwd(), "db", schemaFile), "utf-8");
-    await client.query(schema);
+    if (!schemaApplied) {
+      // El schema se vuelve a aplicar siempre que arranca el proceso (todo son
+      // "create table/index if not exists" y "alter table add column if not
+      // exists", así que no duplica nada): así una base que ya tenía datos de
+      // antes también recibe las tablas o columnas nuevas que se agreguen más
+      // adelante, sin tener que resetearla a mano.
+      const schemaFile = getDbMode() === "sqlite" ? "schema.sqlite.sql" : "schema.sql";
+      const schema = readFileSync(path.join(process.cwd(), "db", schemaFile), "utf-8");
+      await client.query(schema);
+      schemaApplied = true;
+    }
+
+    const { rows: seededRows } = await client.query("select count(*) as count from gestion_categories");
+    if (Number(seededRows[0].count) > 0) return;
 
     const catalog = readJson("catalogo_productos.json") as Record<
       string,
