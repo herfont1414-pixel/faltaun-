@@ -86,3 +86,20 @@ create table if not exists gestion_web_orders (
 );
 
 create index if not exists gestion_web_orders_status_idx on gestion_web_orders(status);
+
+create table if not exists gestion_shifts (
+  id text primary key default (gen_random_uuid()),
+  status text not null default 'abierto' check (status in ('abierto', 'cerrado')),
+  opening_cash numeric(12, 2) not null default 0,
+  opened_at text not null default (now()),
+  closed_at text,
+  counted_cash numeric(12, 2),
+  expected_cash numeric(12, 2),
+  difference numeric(12, 2),
+  sales_efectivo numeric(12, 2) not null default 0,
+  sales_transferencia numeric(12, 2) not null default 0,
+  sales_cuenta_corriente numeric(12, 2) not null default 0,
+  notes text
+);
+
+create index if not exists gestion_shifts_status_idx on gestion_shifts(status);

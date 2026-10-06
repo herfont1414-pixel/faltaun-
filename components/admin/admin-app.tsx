@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { LayoutGrid, BarChart3, Receipt, Package, Users, Truck, Monitor, Settings } from "lucide-react";
+import { LayoutGrid, BarChart3, Receipt, Package, Users, Truck, Monitor, Settings, Wallet } from "lucide-react";
 import { OrderPanel } from "@/components/admin/order-panel";
 import { MostradorView } from "@/components/admin/mostrador-view";
 import { ProductsView } from "@/components/admin/products-view";
 import { WebOrdersView } from "@/components/admin/web-orders-view";
+import { CajaView } from "@/components/admin/caja-view";
 import { money } from "@/lib/admin/format";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
 import type { PaymentMethod, TableRow, Zone } from "@/lib/admin/types";
@@ -22,6 +23,7 @@ const SECTION_TABS: { value: Section; label: string }[] = [
 
 const NAV_ICONS = [
   { Icon: LayoutGrid, title: "Mesas" },
+  { Icon: Wallet, title: "Caja" },
   { Icon: BarChart3, title: "Reportes" },
   { Icon: Receipt, title: "Gastos" },
   { Icon: Package, title: "Productos" },
@@ -216,7 +218,9 @@ export function AdminApp() {
           <div style={{ display: "flex", gap: 4 }}>
             {NAV_ICONS.map(({ Icon, title }) => {
               const isActive =
-                (title === "Mesas" && section === "mesas") || (title === "Productos" && section === "productos");
+                (title === "Mesas" && section === "mesas") ||
+                (title === "Productos" && section === "productos") ||
+                (title === "Caja" && section === "caja");
               return (
                 <div
                   key={title}
@@ -224,6 +228,7 @@ export function AdminApp() {
                   onClick={() => {
                     if (title === "Mesas") setSection("mesas");
                     else if (title === "Productos") setSection("productos");
+                    else if (title === "Caja") setSection("caja");
                     else showToast(`${title}: lo sumamos en el próximo paso`);
                   }}
                   style={{
@@ -326,6 +331,8 @@ export function AdminApp() {
         <ProductsView />
       ) : section === "pedidos-web" ? (
         <WebOrdersView />
+      ) : section === "caja" ? (
+        <CajaView />
       ) : (
         <div className="placeholder-view">
           <div className="pv-title">

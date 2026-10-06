@@ -81,3 +81,20 @@ export interface AdminState {
   openOrders: Order[];
   closedOrders: Order[];
 }
+
+export type ShiftStatus = "abierto" | "cerrado";
+
+export interface Shift {
+  id: string;
+  status: ShiftStatus;
+  openingCash: number;
+  openedAt: string;
+  closedAt: string | null;
+  countedCash: number | null;
+  expectedCash: number | null;
+  difference: number | null;
+  salesEfectivo: number;
+  salesTransferencia: number;
+  salesCuentaCorriente: number;
+  notes: string | null;
+}
