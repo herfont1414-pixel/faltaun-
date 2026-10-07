@@ -105,7 +105,8 @@ create table if not exists gestion_shifts (
   sales_efectivo numeric(12, 2) not null default 0,
   sales_transferencia numeric(12, 2) not null default 0,
   sales_cuenta_corriente numeric(12, 2) not null default 0,
-  notes text
+  notes text,
+  expenses_efectivo numeric(12, 2) not null default 0
 );
 
 create index if not exists gestion_shifts_status_idx on gestion_shifts(status);
@@ -127,5 +128,15 @@ create table if not exists gestion_reservations (
   created_at text not null default (now()),
   responded_at text
 );
+
+create table if not exists gestion_expenses (
+  id text primary key default (gen_random_uuid()),
+  concept text not null,
+  amount numeric(12, 2) not null,
+  payment_method text not null default 'efectivo' check (payment_method in ('efectivo', 'transferencia')),
+  created_at text not null default (now())
+);
+
+create index if not exists gestion_expenses_created_at_idx on gestion_expenses(created_at);
 
 create index if not exists gestion_reservations_status_idx on gestion_reservations(status);

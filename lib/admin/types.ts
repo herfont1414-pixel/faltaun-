@@ -99,7 +99,18 @@ export interface Shift {
   salesEfectivo: number;
   salesTransferencia: number;
   salesCuentaCorriente: number;
+  expensesEfectivo: number;
   notes: string | null;
+}
+
+export type ExpensePaymentMethod = "efectivo" | "transferencia";
+
+export interface Expense {
+  id: string;
+  concept: string;
+  amount: number;
+  paymentMethod: ExpensePaymentMethod;
+  createdAt: string;
 }
 
 export type KitchenStatus = "pendiente" | "preparando" | "listo" | "despachado";
@@ -152,4 +163,6 @@ export interface SalesReport {
   topProducts: { name: string; qty: number; revenue: number }[];
   byCategory: { category: string; revenue: number }[];
   orders: SalesReportOrder[];
+  totalExpenses: number;
+  netTotal: number;
 }

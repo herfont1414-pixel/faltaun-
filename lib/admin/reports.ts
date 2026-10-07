@@ -1,4 +1,5 @@
 import { getPool } from "@/lib/admin/db";
+import { sumExpenses } from "@/lib/admin/expenses";
 import type { OrderOrigin, PaymentMethod, SalesReport } from "@/lib/admin/types";
 
 function money(value: string | number) {
@@ -104,6 +105,8 @@ export async function getSalesReport(fromISO: string, toISO: string): Promise<Sa
     total: money(o.total),
   }));
 
+  const totalExpenses = await sumExpenses(fromISO, toISO);
+
   return {
     from: fromISO,
     to: toISO,
@@ -114,5 +117,7 @@ export async function getSalesReport(fromISO: string, toISO: string): Promise<Sa
     topProducts,
     byCategory,
     orders,
+    totalExpenses,
+    netTotal: totalSales - totalExpenses,
   };
 }

@@ -103,16 +103,22 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   historial).
 - **Comandas**: "Enviar a cocina" abre un ticket imprimible (80mm),
   separado en BARRA (bebidas) y COCINA (el resto), que se imprime solo.
+- **Gastos** (ícono en la barra superior): registro rápido de salidas de
+  dinero de la caja (ej. "Pago a proveedor", "Compra de hielo") — concepto,
+  monto y medio de pago (efectivo/transferencia), con el total gastado hoy
+  siempre visible.
 - **Caja** (ícono en la barra superior): apertura de turno con el monto
   inicial, ventas acumuladas en vivo por medio de pago (Efectivo,
-  Transferencia, Cta. Cte.) y el total esperado en caja. Al cerrar el turno
-  pide el monto contado real y calcula la diferencia contra lo esperado;
-  queda un historial de los últimos turnos cerrados.
+  Transferencia, Cta. Cte.), **gastos en efectivo** del turno, y el total
+  esperado en caja (inicial + ventas en efectivo − gastos en efectivo). Al
+  cerrar el turno pide el monto contado real y calcula la diferencia contra
+  lo esperado; queda un historial de los últimos turnos cerrados.
 - **Reportes** (ícono en la barra superior): ventas por período (hoy, ayer,
   esta semana, este mes o un rango de fechas a elección) — total vendido,
-  cantidad de pedidos, ticket promedio, desglose por medio de pago,
-  productos más vendidos, ventas por categoría y el detalle de cada venta
-  cerrada (hora, mesa/mostrador, cliente, medio de pago, total).
+  cantidad de pedidos, ticket promedio, desglose por medio de pago, total
+  de gastos y neto (ventas − gastos), productos más vendidos, ventas por
+  categoría y el detalle de cada venta cerrada (hora, mesa/mostrador,
+  cliente, medio de pago, total).
 - **Reservas**: escucha las reservas hechas desde el sitio público — alerta
   sonora + aviso en pantalla al llegar una nueva. Confirmar o rechazar abre
   WhatsApp con el mensaje ya armado para el cliente.
@@ -122,8 +128,7 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   enviados a cocina y los pedidos web confirmados, con tres columnas
   (Pendiente/En preparación/Listo), alerta sonora al entrar uno nuevo, y
   temporizador desde que se mandó a cocina.
-- Placeholders (todavía no construidos): Delivery, Mostrador express,
-  Gastos.
+- Placeholders (todavía no construidos): Delivery, Mostrador express.
 
 ## Modo local / offline
 
