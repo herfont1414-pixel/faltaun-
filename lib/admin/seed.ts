@@ -92,6 +92,10 @@ export async function ensureSeeded() {
       await client.query(schema);
       if (getDbMode() === "sqlite") {
         await ensureSqliteColumn(client, "gestion_products", "in_stock", "boolean not null default 1");
+        await ensureSqliteColumn(client, "gestion_orders", "kitchen_status", "text");
+        await ensureSqliteColumn(client, "gestion_orders", "kitchen_sent_at", "text");
+        await ensureSqliteColumn(client, "gestion_web_orders", "kitchen_status", "text");
+        await ensureSqliteColumn(client, "gestion_web_orders", "kitchen_sent_at", "text");
       }
       schemaApplied = true;
     }

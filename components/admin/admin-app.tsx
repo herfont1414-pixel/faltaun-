@@ -233,6 +233,7 @@ export function AdminApp() {
                     else if (title === "Productos") setSection("productos");
                     else if (title === "Caja") setSection("caja");
                     else if (title === "Reportes") setSection("reportes");
+                    else if (title === "Cocina (KDS)") window.open("/admin/kds", "_blank");
                     else showToast(`${title}: lo sumamos en el próximo paso`);
                   }}
                   style={{

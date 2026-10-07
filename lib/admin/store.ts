@@ -200,6 +200,10 @@ export async function sendToKitchen(orderId: string) {
   await pool.query("update gestion_order_items set sent_to_kitchen = true where order_id = $1", [
     orderId,
   ]);
+  await pool.query(
+    "update gestion_orders set kitchen_status = 'pendiente', kitchen_sent_at = now() where id = $1",
+    [orderId]
+  );
   return getOrderRow(orderId);
 }
 

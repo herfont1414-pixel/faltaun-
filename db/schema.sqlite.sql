@@ -57,7 +57,9 @@ create table if not exists gestion_orders (
   customer_id int references gestion_customers(id),
   opened_at text not null default (now()),
   closed_at text,
-  total numeric(12, 2) not null default 0
+  total numeric(12, 2) not null default 0,
+  kitchen_status text check (kitchen_status in ('pendiente', 'preparando', 'listo', 'despachado')),
+  kitchen_sent_at text
 );
 
 create table if not exists gestion_order_items (
@@ -83,7 +85,9 @@ create table if not exists gestion_web_orders (
   status text not null default 'pendiente' check (status in ('pendiente', 'confirmado', 'rechazado')),
   eta_minutes int,
   created_at text not null default (now()),
-  responded_at text
+  responded_at text,
+  kitchen_status text check (kitchen_status in ('pendiente', 'preparando', 'listo', 'despachado')),
+  kitchen_sent_at text
 );
 
 create index if not exists gestion_web_orders_status_idx on gestion_web_orders(status);
