@@ -10,6 +10,7 @@ import { WebOrdersView } from "@/components/admin/web-orders-view";
 import { CajaView } from "@/components/admin/caja-view";
 import { ReportsView } from "@/components/admin/reports-view";
 import { ReservationsView } from "@/components/admin/reservations-view";
+import { ExpensesView } from "@/components/admin/expenses-view";
 import { money } from "@/lib/admin/format";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
 import type { PaymentMethod, TableRow, Zone } from "@/lib/admin/types";
@@ -223,7 +224,8 @@ export function AdminApp() {
                 (title === "Mesas" && section === "mesas") ||
                 (title === "Productos" && section === "productos") ||
                 (title === "Caja" && section === "caja") ||
-                (title === "Reportes" && section === "reportes");
+                (title === "Reportes" && section === "reportes") ||
+                (title === "Gastos" && section === "gastos");
               return (
                 <div
                   key={title}
@@ -233,6 +235,7 @@ export function AdminApp() {
                     else if (title === "Productos") setSection("productos");
                     else if (title === "Caja") setSection("caja");
                     else if (title === "Reportes") setSection("reportes");
+                    else if (title === "Gastos") setSection("gastos");
                     else if (title === "Cocina (KDS)") window.open("/admin/kds", "_blank");
                     else showToast(`${title}: lo sumamos en el próximo paso`);
                   }}
@@ -342,6 +345,8 @@ export function AdminApp() {
         <ReportsView />
       ) : section === "reservas" ? (
         <ReservationsView />
+      ) : section === "gastos" ? (
+        <ExpensesView />
       ) : (
         <div className="placeholder-view">
           <div className="pv-title">

@@ -93,6 +93,7 @@ export async function ensureSeeded() {
       if (getDbMode() === "sqlite") {
         await ensureSqliteColumn(client, "gestion_products", "in_stock", "boolean not null default 1");
         await ensureSqliteColumn(client, "gestion_products", "stock_qty", "int");
+        await ensureSqliteColumn(client, "gestion_shifts", "expenses_efectivo", "numeric(12, 2) not null default 0");
         await ensureSqliteColumn(client, "gestion_orders", "kitchen_status", "text");
         await ensureSqliteColumn(client, "gestion_orders", "kitchen_sent_at", "text");
         await ensureSqliteColumn(client, "gestion_web_orders", "kitchen_status", "text");

@@ -132,6 +132,10 @@ export function CajaView() {
               <div className="cs-label">Ventas cta. cte.</div>
               <div className="cs-value">{money(shift.salesCuentaCorriente)}</div>
             </div>
+            <div className="caja-stat">
+              <div className="cs-label">Gastos (efectivo)</div>
+              <div className="cs-value">{money(shift.expensesEfectivo)}</div>
+            </div>
             <div className="caja-stat highlight">
               <div className="cs-label">Esperado en caja</div>
               <div className="cs-value">{money(shift.expectedCash ?? 0)}</div>
@@ -195,6 +199,7 @@ export function CajaView() {
             <tr>
               <th>Cierre</th>
               <th>Inicial</th>
+              <th>Gastos</th>
               <th>Esperado</th>
               <th>Contado</th>
               <th style={{ textAlign: "right" }}>Diferencia</th>
@@ -203,7 +208,7 @@ export function CajaView() {
           <tbody>
             {history.length === 0 ? (
               <tr>
-                <td colSpan={5} className="m-empty">
+                <td colSpan={6} className="m-empty">
                   Todavía no se cerró ningún turno.
                 </td>
               </tr>
@@ -212,6 +217,7 @@ export function CajaView() {
                 <tr key={h.id}>
                   <td>{h.closedAt ? fmtTime(h.closedAt) : "–"}</td>
                   <td>{money(h.openingCash)}</td>
+                  <td>{money(h.expensesEfectivo)}</td>
                   <td>{money(h.expectedCash ?? 0)}</td>
                   <td>{money(h.countedCash ?? 0)}</td>
                   <td

@@ -158,6 +158,14 @@ export function ReportsView() {
                 <div className="cs-value">{money(m.total)}</div>
               </div>
             ))}
+            <div className="caja-stat">
+              <div className="cs-label">Gastos</div>
+              <div className="cs-value">{money(report.totalExpenses)}</div>
+            </div>
+            <div className="caja-stat highlight">
+              <div className="cs-label">Neto (ventas - gastos)</div>
+              <div className="cs-value">{money(report.netTotal)}</div>
+            </div>
           </div>
 
           <div className="m-section">

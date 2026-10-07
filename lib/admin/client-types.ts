@@ -9,6 +9,7 @@ export type Section =
   | "productos"
   | "caja"
   | "reportes"
+  | "gastos"
   | "delivery"
   | "express"
   | "reservas";
