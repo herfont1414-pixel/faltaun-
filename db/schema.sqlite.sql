@@ -96,10 +96,15 @@ create table if not exists gestion_web_orders (
   created_at text not null default (now()),
   responded_at text,
   kitchen_status text check (kitchen_status in ('pendiente', 'preparando', 'listo', 'despachado')),
-  kitchen_sent_at text
+  kitchen_sent_at text,
+  customer_address text,
+  fulfillment text not null default 'retiro' check (fulfillment in ('retiro', 'delivery')),
+  delivery_zone text,
+  shipping_cost numeric(10, 2) not null default 0
 );
 
 create index if not exists gestion_web_orders_status_idx on gestion_web_orders(status);
+create index if not exists gestion_web_orders_phone_idx on gestion_web_orders(customer_phone);
 
 create table if not exists gestion_shifts (
   id text primary key default (gen_random_uuid()),

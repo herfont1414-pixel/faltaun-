@@ -106,8 +106,14 @@ create table if not exists gestion_web_orders (
 alter table gestion_web_orders add column if not exists kitchen_status text
   check (kitchen_status in ('pendiente', 'preparando', 'listo', 'despachado'));
 alter table gestion_web_orders add column if not exists kitchen_sent_at timestamptz;
+alter table gestion_web_orders add column if not exists customer_address text;
+alter table gestion_web_orders add column if not exists fulfillment text not null default 'retiro'
+  check (fulfillment in ('retiro', 'delivery'));
+alter table gestion_web_orders add column if not exists delivery_zone text;
+alter table gestion_web_orders add column if not exists shipping_cost numeric(10, 2) not null default 0;
 
 create index if not exists gestion_web_orders_status_idx on gestion_web_orders(status);
+create index if not exists gestion_web_orders_phone_idx on gestion_web_orders(customer_phone);
 
 create table if not exists gestion_shifts (
   id uuid primary key default gen_random_uuid(),

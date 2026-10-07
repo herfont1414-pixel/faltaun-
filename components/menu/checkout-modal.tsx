@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useCart } from "@/components/menu/cart-context";
 
@@ -8,18 +8,68 @@ interface CheckoutModalProps {
   onClose: () => void;
 }
 
+type Fulfillment = "retiro" | "delivery";
+
+interface Zone {
+  id: number;
+  name: string;
+  cost: number;
+}
+
+const PHONE_KEY = "madero_customer_phone";
+const NAME_KEY = "madero_customer_name";
+const ADDRESS_KEY = "madero_customer_address";
+
 export function CheckoutModal({ onClose }: CheckoutModalProps) {
   const { items, changeQty, total, clear } = useCart();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [fulfillment, setFulfillment] = useState<Fulfillment>("retiro");
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [zoneName, setZoneName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [lookupMsg, setLookupMsg] = useState("");
+
+  useEffect(() => {
+    try {
+      setName(localStorage.getItem(NAME_KEY) ?? "");
+      setPhone(localStorage.getItem(PHONE_KEY) ?? "");
+      setAddress(localStorage.getItem(ADDRESS_KEY) ?? "");
+    } catch {
+      // localStorage puede fallar en navegación privada: seguimos con campos vacíos.
+    }
+    fetch("/api/zones")
+      .then((res) => res.json())
+      .then((data: { zones: Zone[] }) => setZones(data.zones ?? []));
+  }, []);
+
+  async function lookupPhone(value: string) {
+    setPhone(value);
+    setLookupMsg("");
+    if (value.trim().length < 6) return;
+    const res = await fetch(`/api/customer/${encodeURIComponent(value.trim())}`);
+    const data = await res.json();
+    if (data.customer) {
+      if (!name.trim()) setName(data.customer.name);
+      if (data.customer.address) setAddress(data.customer.address);
+      setLookupMsg("Te reconocimos · datos cargados");
+    }
+  }
+
+  const shippingCost = fulfillment === "delivery" ? zones.find((z) => z.name === zoneName)?.cost ?? 0 : 0;
+  const grandTotal = total + shippingCost;
 
   async function submit() {
     if (!name.trim() || !phone.trim()) {
       setError("Completá tu nombre y tu WhatsApp");
+      return;
+    }
+    if (fulfillment === "delivery" && !address.trim()) {
+      setError("Completá la dirección de entrega");
       return;
     }
     setLoading(true);
@@ -32,6 +82,10 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
         customerPhone: phone,
         notes: notes || null,
         items: items.map((it) => ({ name: it.name, qty: it.qty })),
+        fulfillment,
+        customerAddress: fulfillment === "delivery" ? address : null,
+        deliveryZone: fulfillment === "delivery" ? zoneName || null : null,
+        shippingCost,
       }),
     });
     setLoading(false);
@@ -39,6 +93,13 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "No pudimos enviar tu pedido");
       return;
+    }
+    try {
+      localStorage.setItem(PHONE_KEY, phone.trim());
+      localStorage.setItem(NAME_KEY, name.trim());
+      if (address.trim()) localStorage.setItem(ADDRESS_KEY, address.trim());
+    } catch {
+      // sin persistencia local, el pedido ya se envió igual.
     }
     setSent(true);
     clear();
@@ -50,7 +111,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
       onClick={onClose}
     >
       <div
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-base-card p-5 sm:rounded-2xl"
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-base-card p-5 sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -96,9 +157,29 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
               ))}
             </div>
 
-            <div className="mb-4 flex justify-between border-t border-white/10 pt-3 text-sm font-semibold text-stone-100">
-              <span>Total</span>
-              <span>${total.toLocaleString("es-AR")}</span>
+            <div className="mb-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFulfillment("retiro")}
+                className={`flex-1 rounded-full border px-3 py-2 text-sm font-medium transition ${
+                  fulfillment === "retiro"
+                    ? "border-ember bg-ember text-base"
+                    : "border-white/10 text-stone-300 hover:border-white/25"
+                }`}
+              >
+                Retirar en el local
+              </button>
+              <button
+                type="button"
+                onClick={() => setFulfillment("delivery")}
+                className={`flex-1 rounded-full border px-3 py-2 text-sm font-medium transition ${
+                  fulfillment === "delivery"
+                    ? "border-ember bg-ember text-base"
+                    : "border-white/10 text-stone-300 hover:border-white/25"
+                }`}
+              >
+                Delivery
+              </button>
             </div>
 
             <div className="space-y-2">
@@ -110,10 +191,37 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
               />
               <input
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => lookupPhone(e.target.value)}
                 placeholder="Tu WhatsApp (ej: 5493751123456)"
                 className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2.5 text-sm text-stone-100 outline-none placeholder:text-stone-500"
               />
+              {lookupMsg && <p className="px-1 text-xs text-ember-soft">{lookupMsg}</p>}
+
+              {fulfillment === "delivery" && (
+                <>
+                  <input
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Dirección de entrega (calle y número)"
+                    className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2.5 text-sm text-stone-100 outline-none placeholder:text-stone-500"
+                  />
+                  {zones.length > 0 && (
+                    <select
+                      value={zoneName}
+                      onChange={(e) => setZoneName(e.target.value)}
+                      className="w-full rounded-lg border border-white/10 bg-base-card px-3 py-2.5 text-sm text-stone-100 outline-none"
+                    >
+                      <option value="">Elegí tu zona</option>
+                      {zones.map((z) => (
+                        <option key={z.id} value={z.name}>
+                          {z.name} · envío ${z.cost.toLocaleString("es-AR")}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </>
+              )}
+
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -121,6 +229,23 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                 rows={2}
                 className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2.5 text-sm text-stone-100 outline-none placeholder:text-stone-500"
               />
+            </div>
+
+            <div className="mt-4 space-y-1 border-t border-white/10 pt-3 text-sm">
+              <div className="flex justify-between text-stone-400">
+                <span>Subtotal</span>
+                <span>${total.toLocaleString("es-AR")}</span>
+              </div>
+              {fulfillment === "delivery" && (
+                <div className="flex justify-between text-stone-400">
+                  <span>Envío</span>
+                  <span>${shippingCost.toLocaleString("es-AR")}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold text-stone-100">
+                <span>Total</span>
+                <span>${grandTotal.toLocaleString("es-AR")}</span>
+              </div>
             </div>
 
             {error && <p className="mt-2 text-xs text-red-400">{error}</p>}

@@ -1,5 +1,5 @@
 import { getPool } from "@/lib/admin/db";
-import type { WebOrder, WebOrderStatus } from "@/lib/admin/types";
+import type { Fulfillment, WebOrder, WebOrderStatus } from "@/lib/admin/types";
 
 function money(value: string | number) {
   return typeof value === "string" ? parseFloat(value) : value;
@@ -10,6 +10,10 @@ function mapRow(row: any): WebOrder {
     id: row.id,
     customerName: row.customer_name,
     customerPhone: row.customer_phone,
+    customerAddress: row.customer_address ?? null,
+    fulfillment: row.fulfillment ?? "retiro",
+    deliveryZone: row.delivery_zone ?? null,
+    shippingCost: money(row.shipping_cost ?? 0),
     notes: row.notes,
     items: typeof row.items === "string" ? JSON.parse(row.items) : row.items,
     total: money(row.total),
@@ -24,6 +28,10 @@ export async function createWebOrder(input: {
   customerPhone: string;
   notes: string | null;
   items: { name: string; qty: number }[];
+  fulfillment: Fulfillment;
+  customerAddress: string | null;
+  deliveryZone: string | null;
+  shippingCost: number;
 }): Promise<WebOrder> {
   const pool = getPool();
 
@@ -38,15 +46,45 @@ export async function createWebOrder(input: {
 
   if (items.length === 0) throw new Error("El pedido no tiene productos válidos");
 
-  const total = items.reduce((sum, it) => sum + it.price * it.qty, 0);
+  const shippingCost = input.fulfillment === "delivery" ? input.shippingCost : 0;
+  const total = items.reduce((sum, it) => sum + it.price * it.qty, 0) + shippingCost;
+
+  await pool.query(
+    `insert into gestion_delivery_customers (phone, name, address, updated_at)
+     values ($1, $2, $3, now())
+     on conflict (phone) do update set name = excluded.name,
+       address = coalesce(excluded.address, gestion_delivery_customers.address),
+       updated_at = excluded.updated_at`,
+    [input.customerPhone, input.customerName, input.customerAddress]
+  );
 
   const { rows } = await pool.query(
-    `insert into gestion_web_orders (customer_name, customer_phone, notes, items, total)
-     values ($1, $2, $3, $4, $5)
+    `insert into gestion_web_orders
+       (customer_name, customer_phone, customer_address, fulfillment, delivery_zone, shipping_cost, notes, items, total)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      returning *`,
-    [input.customerName, input.customerPhone, input.notes, JSON.stringify(items), total]
+    [
+      input.customerName,
+      input.customerPhone,
+      input.customerAddress,
+      input.fulfillment,
+      input.deliveryZone,
+      shippingCost,
+      input.notes,
+      JSON.stringify(items),
+      total,
+    ]
   );
   return mapRow(rows[0]);
+}
+
+export async function listWebOrdersByPhone(phone: string, limit = 15): Promise<WebOrder[]> {
+  const pool = getPool();
+  const { rows } = await pool.query(
+    "select * from gestion_web_orders where customer_phone = $1 order by created_at desc limit $2",
+    [phone, limit]
+  );
+  return rows.map(mapRow);
 }
 
 export async function listWebOrders(status?: WebOrderStatus): Promise<WebOrder[]> {

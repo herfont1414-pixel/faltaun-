@@ -9,7 +9,10 @@ export function CartBar() {
   const { count, total } = useCart();
   const [open, setOpen] = useState(false);
 
-  if (count === 0) return null;
+  // No ocultar la barra mientras el modal está abierto: al confirmar el
+  // pedido se vacía el carrito (count vuelve a 0) y necesitamos que siga
+  // montado para mostrar "¡Pedido enviado!" en vez de desaparecer de golpe.
+  if (count === 0 && !open) return null;
 
   return (
     <>

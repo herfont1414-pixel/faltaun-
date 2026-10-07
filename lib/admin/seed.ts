@@ -106,6 +106,20 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_orders", "shipping_cost", "numeric(10, 2) not null default 0");
         await ensureSqliteColumn(client, "gestion_orders", "delivery_person", "text");
         await ensureSqliteColumn(client, "gestion_orders", "delivery_status", "text");
+        await ensureSqliteColumn(client, "gestion_web_orders", "customer_address", "text");
+        await ensureSqliteColumn(
+          client,
+          "gestion_web_orders",
+          "fulfillment",
+          "text not null default 'retiro'"
+        );
+        await ensureSqliteColumn(client, "gestion_web_orders", "delivery_zone", "text");
+        await ensureSqliteColumn(
+          client,
+          "gestion_web_orders",
+          "shipping_cost",
+          "numeric(10, 2) not null default 0"
+        );
       }
       schemaApplied = true;
     }

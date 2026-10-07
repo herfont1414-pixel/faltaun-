@@ -10,7 +10,7 @@ export interface CartItem {
 
 interface CartContextValue {
   items: CartItem[];
-  addItem: (name: string, price: number) => void;
+  addItem: (name: string, price: number, qty?: number) => void;
   changeQty: (name: string, delta: number) => void;
   clear: () => void;
   total: number;
@@ -22,13 +22,13 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  function addItem(name: string, price: number) {
+  function addItem(name: string, price: number, qty = 1) {
     setItems((prev) => {
       const existing = prev.find((it) => it.name === name);
       if (existing) {
-        return prev.map((it) => (it.name === name ? { ...it, qty: it.qty + 1 } : it));
+        return prev.map((it) => (it.name === name ? { ...it, qty: it.qty + qty } : it));
       }
-      return [...prev, { name, price, qty: 1 }];
+      return [...prev, { name, price, qty }];
     });
   }
 
