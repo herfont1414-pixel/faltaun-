@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { LayoutGrid, BarChart3, Receipt, Package, Users, Truck, Monitor, Settings, Wallet } from "lucide-react";
+import { Home, LayoutGrid, BarChart3, Receipt, Package, Users, Truck, Monitor, Settings, Wallet } from "lucide-react";
 import { OrderPanel } from "@/components/admin/order-panel";
+import { DashboardView } from "@/components/admin/dashboard-view";
 import { MostradorView } from "@/components/admin/mostrador-view";
 import { DeliveryView } from "@/components/admin/delivery-view";
 import { ProductsView } from "@/components/admin/products-view";
@@ -26,6 +27,7 @@ const SECTION_TABS: { value: Section; label: string }[] = [
 ];
 
 const NAV_ICONS = [
+  { Icon: Home, title: "Inicio" },
   { Icon: LayoutGrid, title: "Mesas" },
   { Icon: Wallet, title: "Caja" },
   { Icon: BarChart3, title: "Reportes" },
@@ -62,7 +64,7 @@ async function patchJson(url: string, body?: unknown) {
 export function AdminApp() {
   const [data, setData] = useState<AdminStateResponse | null>(null);
   const [notConfigured, setNotConfigured] = useState(false);
-  const [section, setSection] = useState<Section>("mesas");
+  const [section, setSection] = useState<Section>("inicio");
   const [zone, setZone] = useState<Zone>("salon");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedTableNumber, setSelectedTableNumber] = useState<number | null>(null);
@@ -253,6 +255,7 @@ export function AdminApp() {
           <div style={{ display: "flex", gap: 4 }}>
             {NAV_ICONS.map(({ Icon, title }) => {
               const isActive =
+                (title === "Inicio" && section === "inicio") ||
                 (title === "Mesas" && section === "mesas") ||
                 (title === "Productos" && section === "productos") ||
                 (title === "Caja" && section === "caja") ||
@@ -264,7 +267,8 @@ export function AdminApp() {
                   key={title}
                   title={title}
                   onClick={() => {
-                    if (title === "Mesas") setSection("mesas");
+                    if (title === "Inicio") setSection("inicio");
+                    else if (title === "Mesas") setSection("mesas");
                     else if (title === "Productos") setSection("productos");
                     else if (title === "Caja") setSection("caja");
                     else if (title === "Reportes") setSection("reportes");
@@ -324,7 +328,12 @@ export function AdminApp() {
         </div>
       )}
 
-      {showMainWrap ? (
+      {section === "inicio" ? (
+        <DashboardView
+          tables={data.tables}
+          onGoTo={(target) => setSection(target)}
+        />
+      ) : showMainWrap ? (
         <div className="main-wrap">
           {section === "mesas" ? (
             <div className="floor">
