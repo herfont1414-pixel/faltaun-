@@ -113,8 +113,14 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
 - **Reservas**: escucha las reservas hechas desde el sitio público — alerta
   sonora + aviso en pantalla al llegar una nueva. Confirmar o rechazar abre
   WhatsApp con el mensaje ya armado para el cliente.
+- **Cocina (KDS)** — `/admin/kds`: pantalla pensada para quedar abierta en
+  una PC/TV de la cocina (se abre en pestaña aparte desde el ícono de la
+  barra superior). Unifica en un solo tablero los pedidos de Mesa/Mostrador
+  enviados a cocina y los pedidos web confirmados, con tres columnas
+  (Pendiente/En preparación/Listo), alerta sonora al entrar uno nuevo, y
+  temporizador desde que se mandó a cocina.
 - Placeholders (todavía no construidos): Delivery, Mostrador express,
-  Cocina (KDS en pantalla), Stock, Gastos.
+  Stock, Gastos.
 
 ## Modo local / offline
 

@@ -101,6 +101,20 @@ export interface Shift {
   notes: string | null;
 }
 
+export type KitchenStatus = "pendiente" | "preparando" | "listo" | "despachado";
+export type KitchenSource = "orden" | "web";
+
+export interface KitchenTicket {
+  id: string;
+  source: KitchenSource;
+  origin: OrderOrigin | "web";
+  tableNumber: number | null;
+  customerName: string | null;
+  items: { name: string; qty: number }[];
+  kitchenStatus: KitchenStatus;
+  sentAt: string;
+}
+
 export interface SalesReportOrder {
   id: string;
   openedAt: string;

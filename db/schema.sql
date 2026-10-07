@@ -63,6 +63,9 @@ create table if not exists gestion_orders (
 );
 
 alter table gestion_orders add column if not exists total numeric(12, 2) not null default 0;
+alter table gestion_orders add column if not exists kitchen_status text
+  check (kitchen_status in ('pendiente', 'preparando', 'listo', 'despachado'));
+alter table gestion_orders add column if not exists kitchen_sent_at timestamptz;
 
 create table if not exists gestion_order_items (
   id uuid primary key default gen_random_uuid(),
@@ -89,6 +92,10 @@ create table if not exists gestion_web_orders (
   created_at timestamptz not null default now(),
   responded_at timestamptz
 );
+
+alter table gestion_web_orders add column if not exists kitchen_status text
+  check (kitchen_status in ('pendiente', 'preparando', 'listo', 'despachado'));
+alter table gestion_web_orders add column if not exists kitchen_sent_at timestamptz;
 
 create index if not exists gestion_web_orders_status_idx on gestion_web_orders(status);
 
