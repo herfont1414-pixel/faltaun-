@@ -83,7 +83,8 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
         qty: it.qty,
         sentToKitchen: it.sent_to_kitchen,
       }));
-    const liveTotal = items.reduce((sum, it) => sum + it.price * it.qty, 0);
+    const shippingCost = money(o.shipping_cost ?? 0);
+    const liveTotal = items.reduce((sum, it) => sum + it.price * it.qty, 0) + (o.is_delivery ? shippingCost : 0);
     return {
       id: o.id,
       origin: o.origin,
@@ -95,6 +96,14 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
       closedAt: o.closed_at,
       items,
       total: o.status === "cerrada" ? money(o.total) : liveTotal,
+      isDelivery: !!o.is_delivery,
+      customerName: o.customer_name ?? null,
+      customerPhone: o.customer_phone ?? null,
+      customerAddress: o.customer_address ?? null,
+      deliveryZone: o.delivery_zone ?? null,
+      shippingCost,
+      deliveryPerson: o.delivery_person ?? null,
+      deliveryStatus: o.delivery_status ?? null,
     };
   });
 }
@@ -235,7 +244,8 @@ export async function finalizeOrder(
       "select product_name, price, qty from gestion_order_items where order_id = $1",
       [orderId]
     );
-    const total = itemRows.reduce((sum, it) => sum + money(it.price) * it.qty, 0);
+    const itemsTotal = itemRows.reduce((sum, it) => sum + money(it.price) * it.qty, 0);
+    const total = order.is_delivery ? itemsTotal + money(order.shipping_cost ?? 0) : itemsTotal;
 
     // Descuento de stock: solo para productos con stock numérico asignado
     // (stock_qty null = stock infinito, no se toca). Si llega a 0, se marca
@@ -294,6 +304,71 @@ export async function createCounterOrder() {
     "insert into gestion_orders (origin) values ('mostrador') returning id"
   );
   return getOrderRow(rows[0].id);
+}
+
+export async function createDeliveryOrder(customer: {
+  name: string;
+  phone: string;
+  address: string;
+  zone: string | null;
+  shippingCost: number;
+}) {
+  const pool = getPool();
+  await pool.query(
+    `insert into gestion_delivery_customers (phone, name, address, updated_at)
+     values ($1, $2, $3, now())
+     on conflict (phone) do update set name = excluded.name, address = excluded.address, updated_at = excluded.updated_at`,
+    [customer.phone, customer.name, customer.address]
+  );
+  const { rows } = await pool.query(
+    `insert into gestion_orders
+       (origin, is_delivery, customer_name, customer_phone, customer_address, delivery_zone, shipping_cost, delivery_status)
+     values ('mostrador', true, $1, $2, $3, $4, $5, 'preparando')
+     returning id`,
+    [customer.name, customer.phone, customer.address, customer.zone, customer.shippingCost]
+  );
+  return getOrderRow(rows[0].id);
+}
+
+export async function setDeliveryStatus(orderId: string, status: "preparando" | "en_camino" | "entregado") {
+  const pool = getPool();
+  await pool.query("update gestion_orders set delivery_status = $2 where id = $1", [orderId, status]);
+  return getOrderRow(orderId);
+}
+
+export async function setDeliveryPerson(orderId: string, deliveryPerson: string | null) {
+  const pool = getPool();
+  await pool.query("update gestion_orders set delivery_person = $2 where id = $1", [orderId, deliveryPerson]);
+  return getOrderRow(orderId);
+}
+
+export async function findDeliveryCustomer(phone: string): Promise<{ name: string; address: string | null } | null> {
+  const pool = getPool();
+  const { rows } = await pool.query(
+    "select name, address from gestion_delivery_customers where phone = $1",
+    [phone]
+  );
+  return rows[0] ? { name: rows[0].name, address: rows[0].address } : null;
+}
+
+export async function listDeliveryZones(): Promise<{ id: number; name: string; cost: number }[]> {
+  const pool = getPool();
+  const { rows } = await pool.query("select id, name, cost from gestion_delivery_zones order by name");
+  return rows.map((r) => ({ id: r.id, name: r.name, cost: money(r.cost) }));
+}
+
+export async function upsertDeliveryZone(name: string, cost: number) {
+  const pool = getPool();
+  await pool.query(
+    `insert into gestion_delivery_zones (name, cost) values ($1, $2)
+     on conflict (name) do update set cost = excluded.cost`,
+    [name, cost]
+  );
+}
+
+export async function deleteDeliveryZone(id: number) {
+  const pool = getPool();
+  await pool.query("delete from gestion_delivery_zones where id = $1", [id]);
 }
 
 export async function searchCustomers(query: string): Promise<Customer[]> {

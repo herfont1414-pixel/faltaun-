@@ -67,6 +67,15 @@ alter table gestion_orders add column if not exists total numeric(12, 2) not nul
 alter table gestion_orders add column if not exists kitchen_status text
   check (kitchen_status in ('pendiente', 'preparando', 'listo', 'despachado'));
 alter table gestion_orders add column if not exists kitchen_sent_at timestamptz;
+alter table gestion_orders add column if not exists is_delivery boolean not null default false;
+alter table gestion_orders add column if not exists customer_name text;
+alter table gestion_orders add column if not exists customer_phone text;
+alter table gestion_orders add column if not exists customer_address text;
+alter table gestion_orders add column if not exists delivery_zone text;
+alter table gestion_orders add column if not exists shipping_cost numeric(10, 2) not null default 0;
+alter table gestion_orders add column if not exists delivery_person text;
+alter table gestion_orders add column if not exists delivery_status text
+  check (delivery_status in ('preparando', 'en_camino', 'entregado'));
 
 create table if not exists gestion_order_items (
   id uuid primary key default gen_random_uuid(),
@@ -148,3 +157,16 @@ create table if not exists gestion_expenses (
 );
 
 create index if not exists gestion_expenses_created_at_idx on gestion_expenses(created_at);
+
+create table if not exists gestion_delivery_zones (
+  id serial primary key,
+  name text unique not null,
+  cost numeric(10, 2) not null default 0
+);
+
+create table if not exists gestion_delivery_customers (
+  phone text primary key,
+  name text not null,
+  address text,
+  updated_at timestamptz not null default now()
+);

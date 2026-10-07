@@ -5,6 +5,7 @@ import Image from "next/image";
 import { LayoutGrid, BarChart3, Receipt, Package, Users, Truck, Monitor, Settings, Wallet } from "lucide-react";
 import { OrderPanel } from "@/components/admin/order-panel";
 import { MostradorView } from "@/components/admin/mostrador-view";
+import { DeliveryView } from "@/components/admin/delivery-view";
 import { ProductsView } from "@/components/admin/products-view";
 import { WebOrdersView } from "@/components/admin/web-orders-view";
 import { CajaView } from "@/components/admin/caja-view";
@@ -39,6 +40,17 @@ const NAV_ICONS = [
 async function postJson(url: string, body?: unknown) {
   const res = await fetch(url, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Error inesperado");
+  return data;
+}
+
+async function patchJson(url: string, body?: unknown) {
+  const res = await fetch(url, {
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
   });
@@ -176,6 +188,26 @@ export function AdminApp() {
     setSelectedTableNumber(order?.tableNumber ?? null);
   }
 
+  async function newDeliveryOrder(customer: {
+    name: string;
+    phone: string;
+    address: string;
+    zone: string | null;
+    shippingCost: number;
+  }) {
+    const state = await safeCall(() => postJson("/api/admin/delivery-order", customer));
+    if (!state) return;
+    applyState(state);
+    setSelectedOrderId(state.result.id);
+    setSelectedTableNumber(null);
+  }
+
+  async function changeDeliveryStatus(status: "preparando" | "en_camino" | "entregado") {
+    if (!selectedOrderId) return;
+    const state = await safeCall(() => patchJson(`/api/admin/delivery-order/${selectedOrderId}`, { status }));
+    if (state) applyState(state);
+  }
+
   if (notConfigured) {
     return (
       <div className="admin-root">
@@ -205,7 +237,7 @@ export function AdminApp() {
     : null;
 
   const visibleTables = data.tables.filter((t) => t.zone === zone);
-  const showMainWrap = section === "mesas" || section === "mostrador";
+  const showMainWrap = section === "mesas" || section === "mostrador" || section === "delivery";
 
   return (
     <div className="admin-root">
@@ -225,7 +257,8 @@ export function AdminApp() {
                 (title === "Productos" && section === "productos") ||
                 (title === "Caja" && section === "caja") ||
                 (title === "Reportes" && section === "reportes") ||
-                (title === "Gastos" && section === "gastos");
+                (title === "Gastos" && section === "gastos") ||
+                (title === "Delivery config" && section === "delivery");
               return (
                 <div
                   key={title}
@@ -236,6 +269,7 @@ export function AdminApp() {
                     else if (title === "Caja") setSection("caja");
                     else if (title === "Reportes") setSection("reportes");
                     else if (title === "Gastos") setSection("gastos");
+                    else if (title === "Delivery config") setSection("delivery");
                     else if (title === "Cocina (KDS)") window.open("/admin/kds", "_blank");
                     else showToast(`${title}: lo sumamos en el próximo paso`);
                   }}
@@ -312,10 +346,17 @@ export function AdminApp() {
                 })}
               </div>
             </div>
+          ) : section === "delivery" ? (
+            <DeliveryView
+              openOrders={data.openOrders.filter((o) => o.isDelivery)}
+              closedOrders={data.closedOrders.filter((o) => o.isDelivery)}
+              onNewOrder={newDeliveryOrder}
+              onOpenOrder={openExistingOrder}
+            />
           ) : (
             <MostradorView
-              openOrders={data.openOrders}
-              closedOrders={data.closedOrders}
+              openOrders={data.openOrders.filter((o) => !o.isDelivery)}
+              closedOrders={data.closedOrders.filter((o) => !o.isDelivery)}
               onNewOrder={newCounterOrder}
               onOpenOrder={openExistingOrder}
             />
@@ -324,6 +365,7 @@ export function AdminApp() {
           <OrderPanel
             order={currentOrder}
             tableNumber={selectedTableNumber}
+            titleOverride={currentOrder?.isDelivery ? `Delivery · ${currentOrder.customerName}` : null}
             catalog={data.catalog}
             activeCategory={activeCategory}
             onChangeCategory={setActiveCategory}
@@ -333,6 +375,7 @@ export function AdminApp() {
             onSendKitchen={sendKitchen}
             onRequestBill={requestBill}
             onFinalize={finalizeOrder}
+            onChangeDeliveryStatus={currentOrder?.isDelivery ? changeDeliveryStatus : undefined}
           />
         </div>
       ) : section === "productos" ? (
@@ -349,10 +392,7 @@ export function AdminApp() {
         <ExpensesView />
       ) : (
         <div className="placeholder-view">
-          <div className="pv-title">
-            {section === "delivery" && "Delivery"}
-            {section === "express" && "Mostrador express"}
-          </div>
+          <div className="pv-title">{section === "express" && "Mostrador express"}</div>
           <div className="pv-sub">Este módulo lo construimos en el próximo paso.</div>
         </div>
       )}

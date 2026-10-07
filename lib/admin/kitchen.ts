@@ -10,8 +10,11 @@ export async function getKitchenTickets(): Promise<KitchenTicket[]> {
     table_number: number | null;
     kitchen_status: KitchenStatus;
     kitchen_sent_at: string;
+    is_delivery: boolean;
+    customer_name: string | null;
   }>(
-    `select o.id, o.origin, t.number as table_number, o.kitchen_status, o.kitchen_sent_at
+    `select o.id, o.origin, t.number as table_number, o.kitchen_status, o.kitchen_sent_at,
+            o.is_delivery, o.customer_name
      from gestion_orders o
      left join gestion_tables t on t.id = o.table_id
      where o.status = 'abierta' and o.kitchen_status is not null and o.kitchen_status != 'despachado'
@@ -40,9 +43,9 @@ export async function getKitchenTickets(): Promise<KitchenTicket[]> {
       orderTickets.push({
         id: o.id,
         source: "orden",
-        origin: o.origin,
+        origin: o.is_delivery ? "delivery" : o.origin,
         tableNumber: o.table_number,
-        customerName: null,
+        customerName: o.is_delivery ? o.customer_name : null,
         items,
         kitchenStatus: o.kitchen_status,
         sentAt: o.kitchen_sent_at,
