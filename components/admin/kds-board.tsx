@@ -13,6 +13,7 @@ const COLUMNS: { status: KitchenStatus; label: string; next: KitchenStatus | nul
 function originLabel(ticket: KitchenTicket) {
   if (ticket.origin === "mesa") return `Mesa ${ticket.tableNumber}`;
   if (ticket.origin === "mostrador") return "Mostrador";
+  if (ticket.origin === "delivery") return ticket.customerName ? `Delivery · ${ticket.customerName}` : "Delivery";
   return ticket.customerName ? `Web · ${ticket.customerName}` : "Web";
 }
 

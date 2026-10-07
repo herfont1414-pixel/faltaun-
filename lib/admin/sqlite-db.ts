@@ -2,7 +2,14 @@ import path from "node:path";
 import crypto from "node:crypto";
 import type { Db, DbClient } from "@/lib/admin/db";
 
-const BOOLEAN_COLUMNS = new Set(["active", "in_stock", "cuenta_corriente", "sent_to_kitchen", "deleted"]);
+const BOOLEAN_COLUMNS = new Set([
+  "active",
+  "in_stock",
+  "cuenta_corriente",
+  "sent_to_kitchen",
+  "deleted",
+  "is_delivery",
+]);
 
 function bindValue(p: unknown) {
   if (typeof p === "boolean") return p ? 1 : 0;

@@ -9,6 +9,7 @@ import type { Catalog, Order, PaymentMethod } from "@/lib/admin/types";
 interface OrderPanelProps {
   order: Order | null;
   tableNumber: number | null;
+  titleOverride?: string | null;
   catalog: Catalog;
   activeCategory: string;
   onChangeCategory: (category: string) => void;
@@ -18,11 +19,19 @@ interface OrderPanelProps {
   onSendKitchen: () => void;
   onRequestBill: () => void;
   onFinalize: (method: PaymentMethod, customerId: number | null) => void;
+  onChangeDeliveryStatus?: (status: "preparando" | "en_camino" | "entregado") => void;
 }
+
+const DELIVERY_STATUS_LABEL: Record<string, string> = {
+  preparando: "Preparando",
+  en_camino: "En camino",
+  entregado: "Entregado",
+};
 
 export function OrderPanel({
   order,
   tableNumber,
+  titleOverride,
   catalog,
   activeCategory,
   onChangeCategory,
@@ -32,6 +41,7 @@ export function OrderPanel({
   onSendKitchen,
   onRequestBill,
   onFinalize,
+  onChangeDeliveryStatus,
 }: OrderPanelProps) {
   const [showPayment, setShowPayment] = useState(false);
 
@@ -52,7 +62,7 @@ export function OrderPanel({
         <div className="op-header">
           <div>
             <div className="op-title">
-              {tableNumber ? `Mesa ${tableNumber}` : "Pedido de mostrador"}
+              {titleOverride ?? (tableNumber ? `Mesa ${tableNumber}` : "Pedido de mostrador")}
             </div>
             <div className="op-sub">{order.items.length} producto(s)</div>
           </div>
@@ -99,6 +109,34 @@ export function OrderPanel({
           ))}
         </div>
 
+        {order.isDelivery && (
+          <div className="delivery-info">
+            <div>
+              {order.customerName} · {order.customerPhone}
+            </div>
+            <div>{order.customerAddress}</div>
+            {order.deliveryZone && (
+              <div>
+                Zona: {order.deliveryZone} · Envío {money(order.shippingCost)}
+              </div>
+            )}
+            {onChangeDeliveryStatus && (
+              <div className="delivery-status-row">
+                {(["preparando", "en_camino", "entregado"] as const).map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    className={`btn btn-sm ${order.deliveryStatus === status ? "active" : ""}`}
+                    onClick={() => onChangeDeliveryStatus(status)}
+                  >
+                    {DELIVERY_STATUS_LABEL[status]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="ticket-wrap">
           <div className="ticket-title">Pedido actual</div>
           {order.items.length === 0 ? (
@@ -122,6 +160,13 @@ export function OrderPanel({
                 <div className="ti-price">{money(item.price * item.qty)}</div>
               </div>
             ))
+          )}
+          {order.isDelivery && order.shippingCost > 0 && (
+            <div className="ticket-item">
+              <div />
+              <div className="ti-name">Envío</div>
+              <div className="ti-price">{money(order.shippingCost)}</div>
+            </div>
           )}
         </div>
 

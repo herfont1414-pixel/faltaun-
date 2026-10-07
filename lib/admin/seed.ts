@@ -98,6 +98,14 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_orders", "kitchen_sent_at", "text");
         await ensureSqliteColumn(client, "gestion_web_orders", "kitchen_status", "text");
         await ensureSqliteColumn(client, "gestion_web_orders", "kitchen_sent_at", "text");
+        await ensureSqliteColumn(client, "gestion_orders", "is_delivery", "boolean not null default 0");
+        await ensureSqliteColumn(client, "gestion_orders", "customer_name", "text");
+        await ensureSqliteColumn(client, "gestion_orders", "customer_phone", "text");
+        await ensureSqliteColumn(client, "gestion_orders", "customer_address", "text");
+        await ensureSqliteColumn(client, "gestion_orders", "delivery_zone", "text");
+        await ensureSqliteColumn(client, "gestion_orders", "shipping_cost", "numeric(10, 2) not null default 0");
+        await ensureSqliteColumn(client, "gestion_orders", "delivery_person", "text");
+        await ensureSqliteColumn(client, "gestion_orders", "delivery_status", "text");
       }
       schemaApplied = true;
     }

@@ -60,7 +60,15 @@ create table if not exists gestion_orders (
   closed_at text,
   total numeric(12, 2) not null default 0,
   kitchen_status text check (kitchen_status in ('pendiente', 'preparando', 'listo', 'despachado')),
-  kitchen_sent_at text
+  kitchen_sent_at text,
+  is_delivery boolean not null default false,
+  customer_name text,
+  customer_phone text,
+  customer_address text,
+  delivery_zone text,
+  shipping_cost numeric(10, 2) not null default 0,
+  delivery_person text,
+  delivery_status text check (delivery_status in ('preparando', 'en_camino', 'entregado'))
 );
 
 create table if not exists gestion_order_items (
@@ -140,3 +148,16 @@ create table if not exists gestion_expenses (
 create index if not exists gestion_expenses_created_at_idx on gestion_expenses(created_at);
 
 create index if not exists gestion_reservations_status_idx on gestion_reservations(status);
+
+create table if not exists gestion_delivery_zones (
+  id integer primary key autoincrement,
+  name text unique not null,
+  cost numeric(10, 2) not null default 0
+);
+
+create table if not exists gestion_delivery_customers (
+  phone text primary key,
+  name text not null,
+  address text,
+  updated_at text not null default (now())
+);

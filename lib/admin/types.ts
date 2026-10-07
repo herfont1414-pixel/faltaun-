@@ -12,6 +12,8 @@ export interface OrderItem {
   sentToKitchen: boolean;
 }
 
+export type DeliveryStatus = "preparando" | "en_camino" | "entregado";
+
 export interface Order {
   id: string;
   origin: OrderOrigin;
@@ -23,6 +25,27 @@ export interface Order {
   closedAt: string | null;
   items: OrderItem[];
   total: number;
+  isDelivery: boolean;
+  customerName: string | null;
+  customerPhone: string | null;
+  customerAddress: string | null;
+  deliveryZone: string | null;
+  shippingCost: number;
+  deliveryPerson: string | null;
+  deliveryStatus: DeliveryStatus | null;
+}
+
+export interface DeliveryZone {
+  id: number;
+  name: string;
+  cost: number;
+}
+
+export interface DeliveryCustomer {
+  phone: string;
+  name: string;
+  address: string | null;
+  updatedAt: string;
 }
 
 export interface TableRow {
@@ -119,7 +142,7 @@ export type KitchenSource = "orden" | "web";
 export interface KitchenTicket {
   id: string;
   source: KitchenSource;
-  origin: OrderOrigin | "web";
+  origin: OrderOrigin | "web" | "delivery";
   tableNumber: number | null;
   customerName: string | null;
   items: { name: string; qty: number }[];

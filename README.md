@@ -128,7 +128,17 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   enviados a cocina y los pedidos web confirmados, con tres columnas
   (Pendiente/En preparación/Listo), alerta sonora al entrar uno nuevo, y
   temporizador desde que se mandó a cocina.
-- Placeholders (todavía no construidos): Delivery, Mostrador express.
+- **Delivery** (ícono "Delivery config" o pestaña "Delivery" en la barra
+  superior): pedidos por teléfono/WhatsApp con nombre, teléfono y dirección
+  del cliente — al repetir el teléfono de un pedido anterior autocompleta
+  nombre y dirección. Costo de envío configurable por zona (sección "Zonas
+  de envío"), que se suma solo al total del pedido. Reutiliza el mismo
+  panel de productos/comanda/cobro que Mesas y Mostrador, y suma un estado
+  de reparto propio (Preparando / En camino / Entregado) visible en el
+  panel del pedido. Internamente es un pedido de mostrador marcado como
+  delivery, así que no se mezcla con el listado de Mostrador ni afecta la
+  numeración de mesas.
+- Placeholder (todavía no construido): Mostrador express.
 
 ## Modo local / offline
 
