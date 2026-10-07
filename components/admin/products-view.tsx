@@ -22,7 +22,10 @@ export function ProductsView() {
     return map;
   }, [products]);
 
-  async function patch(id: number, changes: { price?: number; active?: boolean; inStock?: boolean }) {
+  async function patch(
+    id: number,
+    changes: { price?: number; active?: boolean; inStock?: boolean; stockQty?: number | null }
+  ) {
     setSavingId(id);
     await fetch(`/api/admin/products/${id}`, {
       method: "PATCH",
@@ -75,15 +78,41 @@ export function ProductsView() {
                     />
                   </td>
                   <td style={{ textAlign: "right" }}>
-                    <button
-                      type="button"
-                      className={`btn ${p.inStock ? "" : "btn-primary"}`}
-                      style={{ flex: "none", padding: "6px 12px" }}
-                      disabled={savingId === p.id || !p.active}
-                      onClick={() => patch(p.id, { inStock: !p.inStock })}
-                    >
-                      {p.inStock ? "Marcar sin stock" : "Reponer stock"}
-                    </button>
+                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
+                      <input
+                        type="number"
+                        placeholder="∞"
+                        defaultValue={p.stockQty ?? ""}
+                        disabled={savingId === p.id}
+                        onBlur={(e) => {
+                          const raw = e.target.value.trim();
+                          const value = raw === "" ? null : Number(raw);
+                          if (value === p.stockQty) return;
+                          if (value !== null && Number.isNaN(value)) return;
+                          patch(p.id, { stockQty: value });
+                        }}
+                        title="Dejar vacío = stock infinito"
+                        style={{
+                          width: 60,
+                          padding: "5px 8px",
+                          borderRadius: 6,
+                          border: "1px solid var(--border)",
+                          fontSize: 13,
+                          textAlign: "right",
+                        }}
+                      />
+                      {p.stockQty === null && (
+                        <button
+                          type="button"
+                          className={`btn ${p.inStock ? "" : "btn-primary"}`}
+                          style={{ flex: "none", padding: "6px 12px" }}
+                          disabled={savingId === p.id || !p.active}
+                          onClick={() => patch(p.id, { inStock: !p.inStock })}
+                        >
+                          {p.inStock ? "Marcar sin stock" : "Reponer stock"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td style={{ textAlign: "right" }}>
                     <button

@@ -94,7 +94,10 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
 - **Productos** (ícono en la barra superior): activar/pausar platos, marcar
   "sin stock" (se ve gris con la etiqueta, igual que en Fudo, pero no se
   puede pedir) y editar precios en vivo — se reflejan al instante en Mesas y
-  en el menú público.
+  en el menú público. Además se le puede asignar un **stock numérico** a
+  cualquier producto (dejar vacío = stock infinito, sin controlarlo): se
+  descuenta solo con cada venta confirmada, y al llegar a 0 el producto pasa
+  a "sin stock" automáticamente, sin tener que tocar nada a mano.
 - **Cobro**: Efectivo, Transferencia o Cta. Cte. (busca entre los clientes
   reales con cuenta corriente, descuenta el saldo y deja registro en el
   historial).
@@ -120,7 +123,7 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   (Pendiente/En preparación/Listo), alerta sonora al entrar uno nuevo, y
   temporizador desde que se mandó a cocina.
 - Placeholders (todavía no construidos): Delivery, Mostrador express,
-  Stock, Gastos.
+  Gastos.
 
 ## Modo local / offline
 
