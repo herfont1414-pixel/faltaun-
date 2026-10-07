@@ -112,6 +112,21 @@ export interface SalesReportOrder {
   total: number;
 }
 
+export type ReservationStatus = "pendiente" | "confirmada" | "rechazada";
+
+export interface Reservation {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  partySize: number;
+  date: string;
+  time: string;
+  notes: string | null;
+  status: ReservationStatus;
+  createdAt: string;
+  respondedAt: string | null;
+}
+
 export interface SalesReport {
   from: string;
   to: string;

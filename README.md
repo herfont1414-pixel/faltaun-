@@ -77,7 +77,8 @@ el archivo, agregá `"inStock": false` a su entrada.
 - Carrito: "Agregar al pedido" en la ficha de cada plato, botón flotante con
   el total, y checkout pidiendo nombre + WhatsApp. El pedido llega en vivo
   al panel `/admin` → Pedidos web.
-- Reservas: hoy arma un mensaje de WhatsApp (no persiste en base todavía).
+- Reservas: pide fecha, horario, personas, nombre y WhatsApp, y queda
+  guardada en la base — llega en vivo al panel `/admin` → Reservas.
 
 ## Panel interno — `/admin`
 
@@ -109,8 +110,11 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   cantidad de pedidos, ticket promedio, desglose por medio de pago,
   productos más vendidos, ventas por categoría y el detalle de cada venta
   cerrada (hora, mesa/mostrador, cliente, medio de pago, total).
+- **Reservas**: escucha las reservas hechas desde el sitio público — alerta
+  sonora + aviso en pantalla al llegar una nueva. Confirmar o rechazar abre
+  WhatsApp con el mensaje ya armado para el cliente.
 - Placeholders (todavía no construidos): Delivery, Mostrador express,
-  Reservas, Cocina (KDS en pantalla), Stock, Gastos.
+  Cocina (KDS en pantalla), Stock, Gastos.
 
 ## Modo local / offline
 
@@ -149,6 +153,5 @@ PWA (`public/icons/`) salen del trébol recortado del mismo logo.
 
 ## Pendiente
 
-- Persistir reservas en base (hoy el flujo confirma por WhatsApp).
 - `data/ingredientes.csv` y `data/proveedores.json` quedan guardados para
   los futuros módulos de Stock y Gastos.

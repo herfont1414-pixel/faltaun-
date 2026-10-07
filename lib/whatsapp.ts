@@ -12,9 +12,3 @@ export function buildMenuItemInquiry(item: MenuItem) {
     `Hola! Quiero consultar por "${item.name}" ($${item.price}) del menú de Madero Restó.`
   );
 }
-
-export function buildReservationInquiry(date: string, time: string, guests: number) {
-  return buildWhatsAppLink(
-    `Hola! Quiero reservar una mesa para ${guests} persona(s) el ${date} a las ${time} en Madero Restó.`
-  );
-}
