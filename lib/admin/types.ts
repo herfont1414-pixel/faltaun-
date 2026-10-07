@@ -66,6 +66,7 @@ export interface AdminProduct {
   price: number;
   active: boolean;
   inStock: boolean;
+  stockQty: number | null;
   category: string;
 }
 

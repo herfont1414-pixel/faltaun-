@@ -232,10 +232,28 @@ export async function finalizeOrder(
     const order = orderRows[0];
 
     const { rows: itemRows } = await client.query(
-      "select price, qty from gestion_order_items where order_id = $1",
+      "select product_name, price, qty from gestion_order_items where order_id = $1",
       [orderId]
     );
     const total = itemRows.reduce((sum, it) => sum + money(it.price) * it.qty, 0);
+
+    // Descuento de stock: solo para productos con stock numérico asignado
+    // (stock_qty null = stock infinito, no se toca). Si llega a 0, se marca
+    // sin stock automáticamente.
+    for (const it of itemRows) {
+      const { rows: prodRows } = await client.query<{ id: number; stock_qty: number | null }>(
+        "select id, stock_qty from gestion_products where name = $1",
+        [it.product_name]
+      );
+      const product = prodRows[0];
+      if (!product || product.stock_qty === null) continue;
+      const newQty = Math.max(0, product.stock_qty - it.qty);
+      await client.query("update gestion_products set stock_qty = $2, in_stock = $3 where id = $1", [
+        product.id,
+        newQty,
+        newQty > 0,
+      ]);
+    }
 
     if (paymentMethod === "cuenta_corriente") {
       if (!customerId) throw new Error("Elegí un cliente para cobrar a cuenta corriente");
@@ -305,10 +323,11 @@ export async function listAllProducts(): Promise<AdminProduct[]> {
     price: string;
     active: boolean;
     in_stock: boolean;
+    stock_qty: number | null;
     category_name: string;
     sort_order: number;
   }>(`
-    select p.id, p.name, p.price, p.active, p.in_stock, c.name as category_name, c.sort_order
+    select p.id, p.name, p.price, p.active, p.in_stock, p.stock_qty, c.name as category_name, c.sort_order
     from gestion_products p
     join gestion_categories c on c.id = p.category_id
     order by c.sort_order, p.name
@@ -319,13 +338,14 @@ export async function listAllProducts(): Promise<AdminProduct[]> {
     price: money(r.price),
     active: r.active,
     inStock: r.in_stock,
+    stockQty: r.stock_qty,
     category: r.category_name,
   }));
 }
 
 export async function updateProduct(
   id: number,
-  changes: { price?: number; active?: boolean; inStock?: boolean }
+  changes: { price?: number; active?: boolean; inStock?: boolean; stockQty?: number | null }
 ) {
   const pool = getPool();
   if (changes.price !== undefined) {
@@ -334,7 +354,15 @@ export async function updateProduct(
   if (changes.active !== undefined) {
     await pool.query("update gestion_products set active = $2 where id = $1", [id, changes.active]);
   }
-  if (changes.inStock !== undefined) {
+  if (changes.stockQty !== undefined) {
+    // Editar el número de stock controla el estado "sin stock" directamente:
+    // null = stock infinito (vuelve a estar disponible), 0 = sin stock, >0 = disponible.
+    await pool.query("update gestion_products set stock_qty = $2, in_stock = $3 where id = $1", [
+      id,
+      changes.stockQty,
+      changes.stockQty === null || changes.stockQty > 0,
+    ]);
+  } else if (changes.inStock !== undefined) {
     await pool.query("update gestion_products set in_stock = $2 where id = $1", [id, changes.inStock]);
   }
 }

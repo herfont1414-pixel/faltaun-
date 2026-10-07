@@ -11,6 +11,7 @@ create table if not exists gestion_products (
   price numeric(10, 2) not null,
   active boolean not null default true,
   in_stock boolean not null default true,
+  stock_qty int,
   unique (category_id, name)
 );
 

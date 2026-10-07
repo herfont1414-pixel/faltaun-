@@ -16,6 +16,7 @@ create table if not exists gestion_products (
 );
 
 alter table gestion_products add column if not exists in_stock boolean not null default true;
+alter table gestion_products add column if not exists stock_qty int;
 
 create table if not exists gestion_customers (
   id serial primary key,
