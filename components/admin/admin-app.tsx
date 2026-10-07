@@ -9,6 +9,7 @@ import { ProductsView } from "@/components/admin/products-view";
 import { WebOrdersView } from "@/components/admin/web-orders-view";
 import { CajaView } from "@/components/admin/caja-view";
 import { ReportsView } from "@/components/admin/reports-view";
+import { ReservationsView } from "@/components/admin/reservations-view";
 import { money } from "@/lib/admin/format";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
 import type { PaymentMethod, TableRow, Zone } from "@/lib/admin/types";
@@ -338,12 +339,13 @@ export function AdminApp() {
         <CajaView />
       ) : section === "reportes" ? (
         <ReportsView />
+      ) : section === "reservas" ? (
+        <ReservationsView />
       ) : (
         <div className="placeholder-view">
           <div className="pv-title">
             {section === "delivery" && "Delivery"}
             {section === "express" && "Mostrador express"}
-            {section === "reservas" && "Reservas"}
           </div>
           <div className="pv-sub">Este módulo lo construimos en el próximo paso.</div>
         </div>

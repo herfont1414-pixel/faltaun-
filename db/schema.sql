@@ -113,3 +113,18 @@ create table if not exists gestion_meta (
   key text primary key,
   value text
 );
+
+create table if not exists gestion_reservations (
+  id uuid primary key default gen_random_uuid(),
+  customer_name text not null,
+  customer_phone text not null,
+  party_size int not null,
+  reservation_date text not null,
+  reservation_time text not null,
+  notes text,
+  status text not null default 'pendiente' check (status in ('pendiente', 'confirmada', 'rechazada')),
+  created_at timestamptz not null default now(),
+  responded_at timestamptz
+);
+
+create index if not exists gestion_reservations_status_idx on gestion_reservations(status);
