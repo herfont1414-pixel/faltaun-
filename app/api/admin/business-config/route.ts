@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isDbConfigured } from "@/lib/admin/db";
 import { ensureSeeded } from "@/lib/admin/seed";
+import { requireUser } from "@/lib/admin/auth";
 import { getBusinessConfig, updateBusinessConfig } from "@/lib/admin/business-config";
 import type { BusinessConfig } from "@/lib/admin/types";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   if (!isDbConfigured()) {
     return NextResponse.json({ error: "Base de datos no configurada" }, { status: 503 });
   }
   await ensureSeeded();
+  if (!(await requireUser(request, ["admin", "encargado"]))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
   const config = await getBusinessConfig();
   return NextResponse.json({ config });
 }
@@ -18,6 +22,9 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Base de datos no configurada" }, { status: 503 });
   }
   await ensureSeeded();
+  if (!(await requireUser(request, ["admin", "encargado"]))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
   const body = (await request.json()) as Partial<BusinessConfig>;
   const config = await updateBusinessConfig({
     name: typeof body.name === "string" ? body.name : undefined,

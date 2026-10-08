@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     customerId: number | null;
     loyaltyPhone?: string | null;
   };
-  return ok(async () => {
+  return ok(request, async () => {
     const result = await finalizeOrder(orderId, payments, customerId ?? null);
     if (loyaltyPhone) await addStamp(loyaltyPhone, { orderTotal: result.total, origin: result.origin });
     return result;

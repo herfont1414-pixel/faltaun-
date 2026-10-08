@@ -238,3 +238,36 @@ create table if not exists gestion_print_config (
   direct_print_enabled boolean not null default 0,
   printer_name text
 );
+
+create table if not exists gestion_users (
+  id integer primary key autoincrement,
+  name text not null,
+  pin_hash text not null,
+  role text not null check (role in ('admin', 'encargado', 'mozo', 'cocina')),
+  active boolean not null default 1,
+  created_at text not null default (now()),
+  updated_at text not null default (now())
+);
+
+create table if not exists gestion_sessions (
+  token text primary key,
+  user_id int not null references gestion_users(id) on delete cascade,
+  created_at text not null default (now()),
+  expires_at text not null
+);
+
+create index if not exists gestion_sessions_user_id_idx on gestion_sessions(user_id);
+
+create table if not exists gestion_audit_log (
+  id integer primary key autoincrement,
+  user_id int references gestion_users(id),
+  action text not null,
+  entity text,
+  entity_id text,
+  old_value text,
+  new_value text,
+  created_at text not null default (now())
+);
+
+create index if not exists gestion_audit_log_created_at_idx on gestion_audit_log(created_at);
+create index if not exists gestion_audit_log_entity_idx on gestion_audit_log(entity, entity_id);

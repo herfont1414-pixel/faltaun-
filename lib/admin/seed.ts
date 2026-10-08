@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { getDbMode, getPool } from "@/lib/admin/db";
 import type { DbClient } from "@/lib/admin/db";
+import { hashPin } from "@/lib/admin/auth";
 
 function readJson(file: string) {
   return JSON.parse(readFileSync(path.join(process.cwd(), "data", file), "utf-8"));
@@ -73,6 +74,23 @@ async function ensureSqliteColumn(client: DbClient, table: string, column: strin
   const { rows } = await client.query<{ name: string }>(`pragma table_info(${table})`);
   if (rows.some((r) => r.name === column)) return;
   await client.query(`alter table ${table} add column ${column} ${definition}`);
+}
+
+// Compatibilidad con el esquema de auth anterior (PIN único en ADMIN_PIN
+// comparado directo): si todavía no hay ningún usuario creado y existe esa
+// variable de entorno, se crea un usuario admin con ese mismo PIN (ya
+// hasheado) para que el local no quede sin acceso al migrar.
+async function ensureDefaultAdminUser(client: DbClient) {
+  const pin = process.env.ADMIN_PIN;
+  if (!pin) return;
+  const { rows } = await client.query<{ count: string | number }>(
+    "select count(*) as count from gestion_users"
+  );
+  if (Number(rows[0].count) > 0) return;
+  await client.query(
+    `insert into gestion_users (name, pin_hash, role, active) values ($1, $2, 'admin', true)`,
+    ["Administrador", hashPin(pin)]
+  );
 }
 
 let schemaApplied = false;
@@ -149,6 +167,7 @@ export async function ensureSeeded() {
     }
 
     await syncCatalog(client);
+    await ensureDefaultAdminUser(client);
 
     const { rows: zoneRows } = await client.query("select count(*) as count from gestion_zones");
     if (Number(zoneRows[0].count) > 0) return;

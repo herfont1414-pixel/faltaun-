@@ -4,5 +4,5 @@ import { setQty } from "@/lib/admin/store";
 
 export async function POST(request: NextRequest) {
   const { orderId, itemId, delta } = await request.json();
-  return ok(() => setQty(orderId, itemId, delta));
+  return ok(request, () => setQty(orderId, itemId, delta));
 }

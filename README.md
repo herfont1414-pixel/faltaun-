@@ -53,7 +53,12 @@ Variables de entorno (`.env.local`):
   desde Vercel: Storage → Create Database → Postgres). Sin esta variable, el
   menú público usa datos de muestra y `/admin` muestra un aviso en vez de
   romperse.
-- `ADMIN_PIN`: PIN de 4 dígitos para entrar a `/admin`.
+- `ADMIN_PIN`: PIN de 4 dígitos para el primer ingreso a `/admin`. Solo se usa
+  para crear automáticamente un usuario "Administrador" la primera vez que la
+  base de datos está vacía (así no hace falta configurar nada a mano para
+  empezar). Desde ahí, los usuarios y sus PIN se manejan desde `/admin` →
+  Usuarios: cada persona tiene su propio PIN (hasheado, nunca en texto
+  plano) y un rol (admin/encargado/mozo/cocina).
 - `NEXT_PUBLIC_WHATSAPP_NUMBER`: número del local para el botón de consultas.
 
 **No hace falta correr nada a mano**: la primera vez que la app recibe una
@@ -97,7 +102,10 @@ el archivo, agregá `"inStock": false` a su entrada.
 
 ## Panel interno — `/admin`
 
-Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
+Protegido por PIN (teclado numérico en `/admin/login`): cada persona tiene su
+propio PIN y rol (admin/encargado/mozo/cocina), gestionables desde **Usuarios**.
+El PIN nunca se guarda en texto plano ni se usa como sesión — al entrar se crea
+un token de sesión aparte, que es lo que queda en la cookie del navegador.
 
 - **Inicio** (ícono de casa): dashboard con ventas del día, mesas
   ocupadas/libres, pedidos web y reservas pendientes, y accesos rápidos.
@@ -178,6 +186,11 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   imprimible agrupa según esa asignación (un producto sin asignar cae en
   el heurístico viejo, para no perder nada mientras se clasifica la
   carta).
+- **Usuarios**: alta/baja de usuarios y reseteo de PIN, uno por persona, con
+  rol admin/encargado/mozo/cocina. Cada acción sensible (precios, caja,
+  configuración, usuarios) se valida en el servidor según el rol — no es
+  solamente una pantalla que se oculta. Siempre queda al menos un
+  administrador activo.
 
 ## Modo local / offline
 

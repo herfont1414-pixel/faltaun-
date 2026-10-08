@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isDbConfigured } from "@/lib/admin/db";
+import { requireUser } from "@/lib/admin/auth";
 import { createPrintArea, listPrintAreas } from "@/lib/admin/print-areas";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   if (!isDbConfigured()) {
     return NextResponse.json({ areas: [] });
+  }
+  if (!(await requireUser(request, ["admin", "encargado"]))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const areas = await listPrintAreas();
   return NextResponse.json({ areas });
@@ -13,6 +17,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   if (!isDbConfigured()) {
     return NextResponse.json({ error: "Base de datos no configurada" }, { status: 503 });
+  }
+  if (!(await requireUser(request, ["admin", "encargado"]))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const { nombre } = (await request.json()) as { nombre: string };
   if (!nombre || !nombre.trim()) {

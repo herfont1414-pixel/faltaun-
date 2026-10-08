@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const COOKIE_NAME = "admin_auth";
+// Debe coincidir con SESSION_COOKIE en lib/admin/auth.ts. No se importa esa
+// constante acá porque este middleware corre en el Edge Runtime, que no
+// puede cargar better-sqlite3 ni abrir una conexión pg normal — por eso
+// solo valida que el cookie de sesión esté presente (una redirección rápida
+// para la UI). La autorización real (que la sesión exista, no haya vencido
+// y el usuario tenga el rol correcto) se verifica en cada ruta /api/admin/*
+// dentro del Node runtime, contra la base de datos. Ver requireUser().
+const SESSION_COOKIE = "admin_session";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -9,9 +16,8 @@ export function middleware(request: NextRequest) {
 
   if (isLoginPage || isLoginApi) return NextResponse.next();
 
-  const expected = process.env.ADMIN_PIN;
-  const cookie = request.cookies.get(COOKIE_NAME)?.value;
-  if (expected && cookie === expected) return NextResponse.next();
+  const session = request.cookies.get(SESSION_COOKIE)?.value;
+  if (session) return NextResponse.next();
 
   if (pathname.startsWith("/api/admin")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });

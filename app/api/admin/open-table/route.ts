@@ -4,5 +4,5 @@ import { openTable } from "@/lib/admin/store";
 
 export async function POST(request: NextRequest) {
   const { tableNumber, partySize, customerName, waiter, notes } = await request.json();
-  return ok(() => openTable(tableNumber, { partySize, customerName, waiter, notes }));
+  return ok(request, () => openTable(tableNumber, { partySize, customerName, waiter, notes }));
 }

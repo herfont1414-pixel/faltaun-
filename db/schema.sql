@@ -287,3 +287,45 @@ alter table gestion_print_config add column if not exists direct_print_enabled b
 alter table gestion_print_config add column if not exists printer_name text;
 
 insert into gestion_print_config (id) values (1) on conflict (id) do nothing;
+
+-- Usuarios del sistema de gestión. El PIN nunca se guarda en texto plano:
+-- pin_hash es scrypt(salt + pin). El rol determina qué puede hacer cada
+-- usuario; la autorización se valida en el backend (ver lib/admin/auth.ts),
+-- no solamente ocultando botones en la interfaz.
+create table if not exists gestion_users (
+  id serial primary key,
+  name text not null,
+  pin_hash text not null,
+  role text not null check (role in ('admin', 'encargado', 'mozo', 'cocina')),
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Sesiones de admin: el cookie "admin_session" guarda este token opaco
+-- generado al azar, nunca el PIN real. Cada sesión expira sola.
+create table if not exists gestion_sessions (
+  token text primary key,
+  user_id int not null references gestion_users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+
+create index if not exists gestion_sessions_user_id_idx on gestion_sessions(user_id);
+
+-- Auditoría de acciones sensibles: quién hizo qué, sobre qué entidad, y
+-- los valores antes/después (como JSON en texto, para no atarse a un tipo
+-- de columna por cada clase de dato auditado).
+create table if not exists gestion_audit_log (
+  id serial primary key,
+  user_id int references gestion_users(id),
+  action text not null,
+  entity text,
+  entity_id text,
+  old_value text,
+  new_value text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists gestion_audit_log_created_at_idx on gestion_audit_log(created_at);
+create index if not exists gestion_audit_log_entity_idx on gestion_audit_log(entity, entity_id);

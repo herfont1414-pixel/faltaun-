@@ -16,6 +16,7 @@ import {
   Monitor,
   Settings,
   Printer,
+  UserCog,
   X,
 } from "lucide-react";
 import { BrandLogo } from "@/components/admin/brand-logo";
@@ -56,6 +57,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { label: "Cocina (KDS)", Icon: Monitor, action: "kds" },
       { label: "Impresión", Icon: Printer, section: "impresion" },
+      { label: "Usuarios", Icon: UserCog, section: "usuarios" },
       { label: "Configuración", Icon: Settings, section: "configuracion" },
     ],
   },

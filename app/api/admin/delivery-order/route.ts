@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     zone: string | null;
     shippingCost: number;
   };
-  return ok(() =>
+  return ok(request, () =>
     createDeliveryOrder({
       name,
       phone,
