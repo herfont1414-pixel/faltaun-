@@ -31,7 +31,7 @@ export function MenuSection({ items }: MenuSectionProps) {
         <CategoryFilter categories={categories} active={activeCategory} onChange={setActiveCategory} />
       </div>
 
-      <div className="mt-4 flex flex-col gap-2.5 px-5">
+      <div className="mt-4 grid grid-cols-2 gap-3 px-5 sm:grid-cols-3">
         {filteredItems.map((item) => (
           <MenuCard key={item.id} item={item} onSelect={setSelectedItem} />
         ))}

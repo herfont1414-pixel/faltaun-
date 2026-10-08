@@ -16,6 +16,7 @@ interface MenuModalProps {
 export function MenuModal({ item, onClose }: MenuModalProps) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
+  const [qty, setQty] = useState(1);
 
   return (
     <div
@@ -61,18 +62,39 @@ export function MenuModal({ item, onClose }: MenuModalProps) {
           <p className="mt-2 text-sm leading-relaxed text-stone-400">{item.description}</p>
 
           {item.inStock ? (
-            <button
-              type="button"
-              onClick={() => {
-                addItem(item.name, item.price);
-                setAdded(true);
-                setTimeout(onClose, 500);
-              }}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-ember px-5 py-2.5 text-sm font-medium text-base transition hover:bg-ember-soft"
-            >
-              <Plus className="h-4 w-4" strokeWidth={2} />
-              {added ? "¡Agregado!" : "Agregar al pedido"}
-            </button>
+            <div className="mt-5 flex items-center gap-3">
+              <div className="flex shrink-0 items-center gap-1 rounded-full border border-white/10 p-1">
+                <button
+                  type="button"
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-lg font-bold text-stone-100 transition hover:bg-white/10"
+                  aria-label="Restar"
+                >
+                  −
+                </button>
+                <span className="min-w-[24px] text-center text-sm font-semibold text-stone-100">{qty}</span>
+                <button
+                  type="button"
+                  onClick={() => setQty((q) => q + 1)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-lg font-bold text-stone-100 transition hover:bg-white/10"
+                  aria-label="Sumar"
+                >
+                  +
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  addItem(item.name, item.price, qty);
+                  setAdded(true);
+                  setTimeout(onClose, 500);
+                }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-ember px-5 py-2.5 text-sm font-medium text-base transition hover:bg-ember-soft active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4" strokeWidth={2} />
+                {added ? "¡Agregado!" : `Agregar · $${(item.price * qty).toLocaleString("es-AR")}`}
+              </button>
+            </div>
           ) : (
             <div className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-white/5 px-5 py-2.5 text-sm font-medium text-stone-400">
               Sin stock por ahora

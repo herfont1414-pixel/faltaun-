@@ -116,6 +116,19 @@ export function WebOrdersView() {
                 <div style={{ fontWeight: 700 }}>{money(order.total)}</div>
               </div>
 
+              <div style={{ margin: "8px 0", fontSize: 12.5 }}>
+                <span className={`pill ${order.fulfillment === "delivery" ? "encurso" : "cerrada"}`}>
+                  {order.fulfillment === "delivery" ? "Delivery" : "Retira en el local"}
+                </span>
+                {order.fulfillment === "delivery" && order.customerAddress && (
+                  <span style={{ marginLeft: 8, color: "var(--text-dim)" }}>
+                    {order.customerAddress}
+                    {order.deliveryZone ? ` · ${order.deliveryZone}` : ""}
+                    {order.shippingCost > 0 ? ` · envío ${money(order.shippingCost)}` : ""}
+                  </span>
+                )}
+              </div>
+
               <div style={{ margin: "10px 0", fontSize: 13 }}>
                 {order.items.map((it, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>

@@ -64,6 +64,7 @@ export interface Product {
 export type Catalog = Record<string, Product[]>;
 
 export type WebOrderStatus = "pendiente" | "confirmado" | "rechazado";
+export type Fulfillment = "retiro" | "delivery";
 
 export interface WebOrderItem {
   name: string;
@@ -75,6 +76,10 @@ export interface WebOrder {
   id: string;
   customerName: string;
   customerPhone: string;
+  customerAddress: string | null;
+  fulfillment: Fulfillment;
+  deliveryZone: string | null;
+  shippingCost: number;
   notes: string | null;
   items: WebOrderItem[];
   total: number;
