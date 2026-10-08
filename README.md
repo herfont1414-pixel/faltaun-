@@ -80,14 +80,18 @@ el archivo, agregá `"inStock": false` a su entrada.
   ahí el cliente elige **Retirar en el local** o **Delivery** (con
   dirección, zona y costo de envío ya sumado al total — mismas zonas que
   administra el panel). Al escribir el teléfono, si ya pidió antes
-  autocompleta nombre y dirección. El pedido llega en vivo al panel
-  `/admin` → Pedidos web.
+  autocompleta nombre y dirección. Al confirmar, el pedido se guarda en la
+  base **y además** se abre WhatsApp hacia el local con el resumen del
+  pedido ya armado (productos, modalidad, dirección/horario y total) para
+  que el cliente solo tenga que mandar el mensaje. El pedido llega en vivo
+  al panel `/admin` → Pedidos web.
 - **Mis pedidos** (ícono en el header): historial de pedidos del cliente
   por teléfono.
-- **Tarjeta de fidelidad** (ícono en el header): tarjeta virtual por
-  teléfono que suma un sello cada vez que el local confirma un pedido
-  hecho desde el menú — cada 10 sellos se gana un premio (a canjear
-  mostrando la tarjeta en el local).
+- **Tarjeta de fidelidad** (ícono en el header, lleva a `/fidelidad`):
+  tarjeta virtual por teléfono que suma un sello cada vez que el local
+  confirma un pedido (desde el menú o cobrando en el panel) — cada 10
+  sellos se gana un premio (a canjear mostrando la tarjeta en el local).
+  También muestra la cantidad de pedidos y el total acumulado gastado.
 - Reservas: pide fecha, horario, personas, nombre y WhatsApp, y queda
   guardada en la base — llega en vivo al panel `/admin` → Reservas.
 
@@ -102,9 +106,14 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   pedido, enviar a cocina (imprime comanda), pedir cuenta, cobrar.
 - **Mostrador**: pedidos sin mesa asignada, listado de en curso/cerradas.
 - **Pedidos web**: escucha los pedidos hechos desde el menú online — alerta
-  sonora + aviso en pantalla al llegar uno nuevo. Confirmar con tiempo
-  estimado (15/30/45 min) abre WhatsApp con el mensaje ya armado para el
-  cliente, o rechazar.
+  sonora + aviso en pantalla al llegar uno nuevo. **Aceptar** abre un
+  modal para elegir el tiempo estimado (15/30/45/60 min) y manda ese
+  tiempo al cliente por WhatsApp ya armado. **Rechazar** abre un modal
+  para elegir el motivo (Sin stock, Fuera de zona, Horario de cierre,
+  Otro) y también le manda el motivo al cliente por WhatsApp.
+- Al cobrar (Mesas/Mostrador/Delivery) se puede cargar un **teléfono de
+  fidelidad** opcional en el modal de pago: suma un sello silenciosamente
+  y actualiza la cantidad de pedidos y el total gastado de ese cliente.
 - **Productos** (ícono en la barra superior): activar/pausar platos, marcar
   "sin stock" (se ve gris con la etiqueta, igual que en Fudo, pero no se
   puede pedir) y editar precios en vivo — se reflejan al instante en Mesas y
@@ -193,3 +202,8 @@ PWA (`public/icons/`) salen del trébol recortado del mismo logo.
 
 - `data/ingredientes.csv` y `data/proveedores.json` quedan guardados para
   los futuros módulos de Stock y Gastos.
+- Tablas de preparación ya creadas en la base pero todavía sin pantalla en
+  el panel: `gestion_payment_methods` (medios de pago configurables),
+  `gestion_print_areas` (áreas de impresión de comandas, ej. Barra/Cocina)
+  y `gestion_afip_config` (CUIT, punto de venta, condición de IVA, para
+  cuando se sume facturación).

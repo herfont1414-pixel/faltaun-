@@ -9,8 +9,14 @@ interface LoyaltyAccount {
   name: string | null;
   stamps: number;
   redeemed: number;
+  orderCount: number;
+  totalSpent: number;
   rewardsAvailable: number;
   stampsToNextReward: number;
+}
+
+function money(value: number) {
+  return `$${value.toLocaleString("es-AR")}`;
 }
 
 const PHONE_KEY = "madero_customer_phone";
@@ -127,6 +133,13 @@ export default function FidelidadPage() {
                   </div>
                 ))}
               </div>
+
+              {account.orderCount > 0 && (
+                <p className="relative mt-5 text-xs text-stone-400">
+                  {account.orderCount} pedido{account.orderCount === 1 ? "" : "s"} · {money(account.totalSpent)}{" "}
+                  acumulado
+                </p>
+              )}
             </div>
 
             <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-sm">

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   };
   return ok(async () => {
     const result = await finalizeOrder(orderId, paymentMethod, customerId ?? null);
-    if (loyaltyPhone) await addStamp(loyaltyPhone);
+    if (loyaltyPhone) await addStamp(loyaltyPhone, { orderTotal: result.total, origin: result.origin });
     return result;
   });
 }
