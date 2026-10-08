@@ -234,7 +234,11 @@ export interface SalesReport {
   byPaymentMethod: { method: PaymentMethod | "sin_definir"; total: number; count: number }[];
   topProducts: { name: string; qty: number; revenue: number }[];
   byCategory: { category: string; revenue: number }[];
+  byEmployee: { userName: string; orderCount: number; total: number }[];
   orders: SalesReportOrder[];
   totalExpenses: number;
   netTotal: number;
+  costoMercaderiaEstimado: number | null;
+  margenBrutoEstimado: number | null;
+  resultadoOperativoEstimado: number | null;
 }

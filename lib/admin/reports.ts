@@ -104,6 +104,56 @@ export async function getSalesReport(fromISO: string, toISO: string): Promise<Sa
 
   const totalExpenses = await sumExpenses(fromISO, toISO);
 
+  // Costo y margen bruto estimados: solo sobre los ítems del rango que
+  // tienen una receta cargada (Fase 7), usando el costo ACTUAL de cada
+  // ingrediente — igual criterio que el dashboard de hoy (Fase 12). Si
+  // ningún ítem del rango tiene receta, queda en null en vez de un cero
+  // engañoso.
+  const { rows: recipeCostRows } = await pool.query<{ product_id: number; cost_total: string | number }>(
+    `select r.product_id, sum(ri.quantity * i.cost) as cost_total
+     from gestion_recipes r
+     join gestion_recipe_items ri on ri.recipe_id = r.id
+     join gestion_ingredients i on i.id = ri.ingredient_id
+     group by r.product_id`
+  );
+  const costPerProduct = new Map(recipeCostRows.map((r) => [r.product_id, money(r.cost_total)]));
+
+  const { rows: costItemRows } = await pool.query<{ product_id: number | null; qty: number }>(
+    `select oi.product_id, oi.qty
+     from gestion_order_items oi
+     join gestion_orders o on o.id = oi.order_id
+     where o.status = 'cerrada' and o.closed_at >= $1 and o.closed_at <= $2`,
+    [fromISO, toISO]
+  );
+  let costoMercaderiaEstimado = 0;
+  let anyRecipeCost = false;
+  for (const it of costItemRows) {
+    if (it.product_id == null) continue;
+    const unitCost = costPerProduct.get(it.product_id);
+    if (unitCost === undefined) continue;
+    costoMercaderiaEstimado += unitCost * it.qty;
+    anyRecipeCost = true;
+  }
+  const margenBrutoEstimado = anyRecipeCost ? totalSales - costoMercaderiaEstimado : null;
+  const resultadoOperativoEstimado = margenBrutoEstimado !== null ? margenBrutoEstimado - totalExpenses : null;
+
+  // Ventas por empleado: no existe una columna "cerrado por" en
+  // gestion_orders, así que se reconstruye desde la auditoría (Fase 3),
+  // que ya registra quién cerró cada pedido (action = 'order_close').
+  const { rows: employeeRows } = await pool.query<{ user_name: string | null; total: string | number; count: string }>(
+    `select u.name as user_name, sum(o.total) as total, count(*) as count
+     from gestion_audit_log a
+     join gestion_orders o on cast(o.id as text) = a.entity_id
+     left join gestion_users u on u.id = a.user_id
+     where a.action = 'order_close' and o.status = 'cerrada'
+       and o.closed_at >= $1 and o.closed_at <= $2
+     group by u.name`,
+    [fromISO, toISO]
+  );
+  const byEmployee = employeeRows
+    .map((r) => ({ userName: r.user_name ?? "Sin usuario", orderCount: Number(r.count), total: money(r.total) }))
+    .sort((a, b) => b.total - a.total);
+
   return {
     from: fromISO,
     to: toISO,
@@ -113,8 +163,12 @@ export async function getSalesReport(fromISO: string, toISO: string): Promise<Sa
     byPaymentMethod,
     topProducts,
     byCategory,
+    byEmployee,
     orders,
     totalExpenses,
     netTotal: totalSales - totalExpenses,
+    costoMercaderiaEstimado: anyRecipeCost ? costoMercaderiaEstimado : null,
+    margenBrutoEstimado,
+    resultadoOperativoEstimado,
   };
 }

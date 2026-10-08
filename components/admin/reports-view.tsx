@@ -168,6 +168,33 @@ export function ReportsView() {
             </div>
           </div>
 
+          <div className="caja-stats" style={{ marginBottom: 26 }}>
+            <div className="caja-stat">
+              <div className="cs-label">Costo de mercadería est.</div>
+              <div className="cs-value">
+                {report.costoMercaderiaEstimado !== null ? money(report.costoMercaderiaEstimado) : "—"}
+              </div>
+            </div>
+            <div className="caja-stat">
+              <div className="cs-label">Margen bruto est.</div>
+              <div className="cs-value">
+                {report.margenBrutoEstimado !== null ? money(report.margenBrutoEstimado) : "—"}
+              </div>
+            </div>
+            <div className="caja-stat highlight">
+              <div className="cs-label">Resultado operativo est.</div>
+              <div className="cs-value">
+                {report.resultadoOperativoEstimado !== null ? money(report.resultadoOperativoEstimado) : "—"}
+              </div>
+            </div>
+          </div>
+          {report.margenBrutoEstimado === null && (
+            <p style={{ fontSize: 12, color: "var(--text-faint)", marginTop: -16, marginBottom: 20 }}>
+              El costo/margen estimado se calcula solo sobre productos con receta cargada (Productos →
+              Receta); ninguno de los vendidos en este período tiene una.
+            </p>
+          )}
+
           <div className="m-section">
             <div className="m-section-title">Productos más vendidos</div>
             <table className="m-table">
@@ -219,6 +246,36 @@ export function ReportsView() {
                     <tr key={c.category}>
                       <td>{c.category}</td>
                       <td style={{ textAlign: "right", fontWeight: 700 }}>{money(c.revenue)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="m-section">
+            <div className="m-section-title">Ventas por empleado</div>
+            <table className="m-table">
+              <thead>
+                <tr>
+                  <th>Empleado</th>
+                  <th style={{ textAlign: "right" }}>Pedidos</th>
+                  <th style={{ textAlign: "right" }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.byEmployee.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="m-empty">
+                      Sin ventas en este período.
+                    </td>
+                  </tr>
+                ) : (
+                  report.byEmployee.map((e) => (
+                    <tr key={e.userName}>
+                      <td>{e.userName}</td>
+                      <td style={{ textAlign: "right" }}>{e.orderCount}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700 }}>{money(e.total)}</td>
                     </tr>
                   ))
                 )}
