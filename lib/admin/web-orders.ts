@@ -106,10 +106,16 @@ export async function respondWebOrder(id: string, status: WebOrderStatus, etaMin
        set status = $2, eta_minutes = $3, responded_at = now(),
            kitchen_status = 'pendiente', kitchen_sent_at = now()
        where id = $1
-       returning customer_phone`,
+       returning customer_phone, customer_name, total`,
       [id, status, etaMinutes]
     );
-    if (rows[0]?.customer_phone) await addStamp(rows[0].customer_phone);
+    if (rows[0]?.customer_phone) {
+      await addStamp(rows[0].customer_phone, {
+        name: rows[0].customer_name,
+        orderTotal: money(rows[0].total),
+        origin: "web",
+      });
+    }
     return;
   }
   await pool.query(

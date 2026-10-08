@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useCart } from "@/components/menu/cart-context";
+import { buildOrderWhatsAppLink } from "@/lib/whatsapp";
 
 interface Zone {
   id: number;
@@ -79,6 +80,13 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
     }
     setLoading(true);
     setError("");
+
+    // Se abre la pestaña en blanco ACÁ, todavía dentro del gesto síncrono del
+    // click: si se espera a que vuelva el fetch antes de abrirla, los
+    // navegadores la bloquean como popup. Una vez confirmado el pedido, se la
+    // redirige al link de WhatsApp (o se la cierra si algo falla).
+    const waWindow = window.open("", "_blank");
+
     const scheduleNote = timeLabel ? `Horario pedido: ${timeLabel}` : null;
     const fullNotes = [scheduleNote, notes.trim() || null].filter(Boolean).join(" · ") || null;
     const res = await fetch("/api/orders", {
@@ -97,6 +105,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
     });
     setLoading(false);
     if (!res.ok) {
+      waWindow?.close();
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "No pudimos enviar tu pedido");
       return;
@@ -108,6 +117,22 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
     } catch {
       // sin persistencia local, el pedido ya se envió igual.
     }
+
+    const waLink = buildOrderWhatsAppLink({
+      customerName: name.trim(),
+      items,
+      fulfillment,
+      address: fulfillment === "delivery" ? address : null,
+      zone: fulfillment === "delivery" ? zoneName || null : null,
+      scheduleLabel: timeLabel,
+      subtotal: total,
+      shippingCost,
+      total: grandTotal,
+      notes: notes.trim() || null,
+    });
+    if (waWindow) waWindow.location.href = waLink;
+    else window.open(waLink, "_blank");
+
     setSent(true);
     clear();
   }
@@ -125,7 +150,8 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
 
       {sent ? (
         <p className="py-6 text-center text-sm text-stone-300">
-          Te vamos a confirmar por WhatsApp en breve con el tiempo de espera. ¡Gracias!
+          Te abrimos WhatsApp con el resumen de tu pedido — mandanos el mensaje para confirmarlo. Te
+          avisamos el tiempo de espera por ahí mismo. ¡Gracias!
         </p>
       ) : (
         <>

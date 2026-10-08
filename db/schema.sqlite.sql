@@ -172,5 +172,28 @@ create table if not exists gestion_loyalty_accounts (
   stamps int not null default 0,
   redeemed int not null default 0,
   updated_at text not null default (now()),
-  name text
+  name text,
+  order_count int not null default 0,
+  total_spent numeric(12, 2) not null default 0,
+  origin text
+);
+
+-- Infraestructura de preparación (sin UI todavía): ver schema.sql.
+create table if not exists gestion_payment_methods (
+  id integer primary key autoincrement,
+  nombre text unique not null,
+  activo boolean not null default 1
+);
+
+create table if not exists gestion_print_areas (
+  id integer primary key autoincrement,
+  nombre text unique not null
+);
+
+create table if not exists gestion_afip_config (
+  id integer primary key autoincrement,
+  cuit text,
+  punto_venta int,
+  condicion_iva text,
+  habilitado boolean not null default 0
 );

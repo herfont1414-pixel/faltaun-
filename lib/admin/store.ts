@@ -290,6 +290,7 @@ export async function finalizeOrder(
     }
 
     await client.query("commit");
+    return { total, origin: order.is_delivery ? "delivery" : (order.origin as "mesa" | "mostrador") };
   } catch (error) {
     await client.query("rollback");
     throw error;

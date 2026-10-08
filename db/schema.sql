@@ -185,3 +185,29 @@ create table if not exists gestion_loyalty_accounts (
 );
 
 alter table gestion_loyalty_accounts add column if not exists name text;
+alter table gestion_loyalty_accounts add column if not exists order_count int not null default 0;
+alter table gestion_loyalty_accounts add column if not exists total_spent numeric(12, 2) not null default 0;
+alter table gestion_loyalty_accounts add column if not exists origin text;
+
+-- Infraestructura de preparación (sin UI todavía): medios de pago
+-- configurables, áreas de impresión de comandas y datos de facturación
+-- AFIP, listas para que un módulo futuro las use sin tener que migrar
+-- la base de nuevo.
+create table if not exists gestion_payment_methods (
+  id serial primary key,
+  nombre text unique not null,
+  activo boolean not null default true
+);
+
+create table if not exists gestion_print_areas (
+  id serial primary key,
+  nombre text unique not null
+);
+
+create table if not exists gestion_afip_config (
+  id serial primary key,
+  cuit text,
+  punto_venta int,
+  condicion_iva text,
+  habilitado boolean not null default false
+);

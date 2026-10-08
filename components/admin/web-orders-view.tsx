@@ -5,7 +5,14 @@ import { money } from "@/lib/admin/format";
 import { playBeep } from "@/lib/admin/beep";
 import type { WebOrder } from "@/lib/admin/types";
 
-const ETA_OPTIONS = [15, 30, 45];
+const ETA_OPTIONS = [15, 30, 45, 60];
+
+const REJECT_REASONS = [
+  { value: "Sin stock", label: "Sin stock" },
+  { value: "Fuera de zona", label: "Fuera de zona" },
+  { value: "Horario de cierre", label: "Horario de cierre" },
+  { value: "Otro", label: "Otro" },
+];
 
 function waLink(phone: string, message: string) {
   const digits = phone.replace(/\D/g, "");
@@ -16,6 +23,10 @@ export function WebOrdersView() {
   const [pending, setPending] = useState<WebOrder[]>([]);
   const [recent, setRecent] = useState<WebOrder[]>([]);
   const [newOrder, setNewOrder] = useState<WebOrder | null>(null);
+  const [acceptTarget, setAcceptTarget] = useState<WebOrder | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<WebOrder | null>(null);
+  const [rejectReason, setRejectReason] = useState(REJECT_REASONS[0].value);
+  const [rejectOther, setRejectOther] = useState("");
   const seenIds = useRef<Set<string>>(new Set());
   const firstLoad = useRef(true);
 
@@ -60,11 +71,27 @@ export function WebOrdersView() {
     });
     setPending((prev) => prev.filter((o) => o.id !== order.id));
     if (newOrder?.id === order.id) setNewOrder(null);
+  }
 
-    if (status === "confirmado" && etaMinutes) {
-      const message = `Hola ${order.customerName}! Confirmamos tu pedido de Madero Restó, va a estar listo en aprox ${etaMinutes} min. ¡Gracias!`;
-      window.open(waLink(order.customerPhone, message), "_blank");
-    }
+  function confirmAccept(minutes: number) {
+    if (!acceptTarget) return;
+    const order = acceptTarget;
+    setAcceptTarget(null);
+    respond(order, "confirmado", minutes);
+    const message = `¡Hola! Recibimos tu pedido en Madero Restó. Estará listo en aprox ${minutes} min.`;
+    window.open(waLink(order.customerPhone, message), "_blank");
+  }
+
+  function confirmReject() {
+    if (!rejectTarget) return;
+    const order = rejectTarget;
+    const reason = rejectReason === "Otro" ? rejectOther.trim() || "Otro motivo" : rejectReason;
+    setRejectTarget(null);
+    setRejectReason(REJECT_REASONS[0].value);
+    setRejectOther("");
+    respond(order, "rechazado", null);
+    const message = `Hola, lamentablemente no podemos procesar tu pedido en este momento debido a: ${reason}.`;
+    window.open(waLink(order.customerPhone, message), "_blank");
   }
 
   return (
@@ -146,17 +173,10 @@ export function WebOrdersView() {
               )}
 
               <div className="footer-actions">
-                {ETA_OPTIONS.map((min) => (
-                  <button
-                    key={min}
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => respond(order, "confirmado", min)}
-                  >
-                    {min} min
-                  </button>
-                ))}
-                <button type="button" className="btn btn-danger" onClick={() => respond(order, "rechazado", null)}>
+                <button type="button" className="btn btn-primary" onClick={() => setAcceptTarget(order)}>
+                  Aceptar
+                </button>
+                <button type="button" className="btn btn-danger" onClick={() => setRejectTarget(order)}>
                   Rechazar
                 </button>
               </div>
@@ -198,6 +218,113 @@ export function WebOrdersView() {
           </tbody>
         </table>
       </div>
+
+      {acceptTarget && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 80,
+            background: "rgba(0,0,0,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setAcceptTarget(null)}
+        >
+          <div
+            style={{ background: "#fff", borderRadius: 14, padding: 20, width: 300 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontWeight: 800, marginBottom: 4 }}>Tiempo estimado</div>
+            <div style={{ fontSize: 12.5, color: "var(--text-dim)", marginBottom: 14 }}>
+              Pedido de {acceptTarget.customerName}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {ETA_OPTIONS.map((min) => (
+                <button
+                  key={min}
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => confirmAccept(min)}
+                >
+                  {min} min
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="btn"
+              style={{ width: "100%", marginTop: 10 }}
+              onClick={() => setAcceptTarget(null)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {rejectTarget && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 80,
+            background: "rgba(0,0,0,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setRejectTarget(null)}
+        >
+          <div
+            style={{ background: "#fff", borderRadius: 14, padding: 20, width: 300 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontWeight: 800, marginBottom: 4 }}>Motivo del rechazo</div>
+            <div style={{ fontSize: 12.5, color: "var(--text-dim)", marginBottom: 14 }}>
+              Pedido de {rejectTarget.customerName}
+            </div>
+            <select
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="caja-input"
+              style={{ marginBottom: 8 }}
+            >
+              {REJECT_REASONS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            {rejectReason === "Otro" && (
+              <input
+                value={rejectOther}
+                onChange={(e) => setRejectOther(e.target.value)}
+                placeholder="Detalle el motivo"
+                className="caja-input"
+                style={{ marginBottom: 8 }}
+              />
+            )}
+            <button
+              type="button"
+              className="btn btn-danger"
+              style={{ width: "100%", marginTop: 6 }}
+              onClick={confirmReject}
+            >
+              Rechazar pedido
+            </button>
+            <button
+              type="button"
+              className="btn"
+              style={{ width: "100%", marginTop: 8 }}
+              onClick={() => setRejectTarget(null)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
