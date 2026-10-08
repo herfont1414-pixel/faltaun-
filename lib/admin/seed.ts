@@ -130,11 +130,13 @@ export async function ensureSeeded() {
         );
         await ensureSqliteColumn(client, "gestion_loyalty_accounts", "origin", "text");
         await ensureSqliteColumn(client, "gestion_products", "print_area_id", "int");
+        await ensureSqliteColumn(client, "gestion_orders", "notes", "text");
       }
       await client.query(
         `insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')
          on conflict (nombre) do nothing`
       );
+      await client.query(`insert into gestion_print_config (id) values (1) on conflict (id) do nothing`);
       schemaApplied = true;
     }
 

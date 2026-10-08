@@ -16,6 +16,7 @@ import { ExpensesView } from "@/components/admin/expenses-view";
 import { ClientesView } from "@/components/admin/clientes-view";
 import { ImpresionView } from "@/components/admin/impresion-view";
 import { money } from "@/lib/admin/format";
+import { printUrl } from "@/lib/print-client";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
 import type { Catalog, PaymentMethod, TableRow, Zone } from "@/lib/admin/types";
 
@@ -131,11 +132,30 @@ export function AdminApp() {
       showToast("Agregá productos antes de enviar");
       return;
     }
-    const state = await safeCall(() => postJson("/api/admin/send-kitchen", { orderId: selectedOrderId }));
+    const orderId = selectedOrderId;
+    const state = await safeCall(() => postJson("/api/admin/send-kitchen", { orderId }));
     if (!state) return;
     applyState(state);
     showToast("Comanda enviada a cocina");
-    window.open(`/admin/comanda/${selectedOrderId}`, "_blank");
+    try {
+      await printUrl(`/api/admin/print/comanda/${orderId}`);
+    } catch {
+      showToast("No se pudo imprimir la comanda");
+    }
+  }
+
+  async function printTicket(orderId: string) {
+    try {
+      await printUrl(`/api/admin/print/ticket/${orderId}`);
+    } catch {
+      showToast("No se pudo imprimir el ticket");
+    }
+  }
+
+  async function changeNotes(notes: string) {
+    if (!selectedOrderId) return;
+    const state = await safeCall(() => postJson("/api/admin/set-notes", { orderId: selectedOrderId, notes }));
+    if (state) applyState(state);
   }
 
   async function requestBill() {
@@ -150,14 +170,15 @@ export function AdminApp() {
 
   async function finalizeOrder(method: PaymentMethod, customerId: number | null, loyaltyPhone: string | null) {
     if (!selectedOrderId) return;
-    const order = data?.openOrders.find((o) => o.id === selectedOrderId);
+    const orderId = selectedOrderId;
+    const order = data?.openOrders.find((o) => o.id === orderId);
     if (!order || order.items.length === 0) {
       showToast("El pedido no tiene productos para cobrar");
       return;
     }
     const state = await safeCall(() =>
       postJson("/api/admin/finalize-order", {
-        orderId: selectedOrderId,
+        orderId,
         paymentMethod: method,
         customerId,
         loyaltyPhone,
@@ -165,6 +186,7 @@ export function AdminApp() {
     );
     if (!state) return;
     applyState(state);
+    printTicket(orderId);
     showToast(
       loyaltyPhone ? `Cobrado · ${money(order.total)} · +1 sello de fidelidad` : `Cobrado · ${money(order.total)}`
     );
@@ -335,6 +357,8 @@ export function AdminApp() {
             onRequestBill={requestBill}
             onFinalize={finalizeOrder}
             onChangeDeliveryStatus={currentOrder?.isDelivery ? changeDeliveryStatus : undefined}
+            onChangeNotes={changeNotes}
+            onPrintTicket={() => currentOrder && printTicket(currentOrder.id)}
           />
         </div>
       ) : section === "productos" ? (

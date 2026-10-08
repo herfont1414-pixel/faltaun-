@@ -33,6 +33,7 @@ export interface Order {
   shippingCost: number;
   deliveryPerson: string | null;
   deliveryStatus: DeliveryStatus | null;
+  notes: string | null;
 }
 
 export interface DeliveryZone {
@@ -180,6 +181,19 @@ export interface Reservation {
   status: ReservationStatus;
   createdAt: string;
   respondedAt: string | null;
+}
+
+export type PaperWidthMm = 58 | 80;
+export type PrintFontSize = "normal" | "pequena";
+
+export interface PrintConfig {
+  paperWidthMm: PaperWidthMm;
+  headerText: string;
+  footerText: string;
+  paperSavingMode: boolean;
+  fontSizeHeader: PrintFontSize;
+  fontSizeBody: PrintFontSize;
+  fontSizeFooter: PrintFontSize;
 }
 
 export interface SalesReport {
