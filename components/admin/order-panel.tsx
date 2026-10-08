@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Printer, Pencil } from "lucide-react";
 import { money } from "@/lib/admin/format";
 import { PaymentPicker } from "@/components/admin/payment-picker";
-import type { Catalog, Order, PaymentMethod } from "@/lib/admin/types";
+import type { Catalog, Order, OrderPayment } from "@/lib/admin/types";
 
 interface OrderPanelProps {
   order: Order | null;
@@ -18,7 +18,7 @@ interface OrderPanelProps {
   onClose: () => void;
   onSendKitchen: () => void;
   onRequestBill: () => void;
-  onFinalize: (method: PaymentMethod, customerId: number | null, loyaltyPhone: string | null) => void;
+  onFinalize: (payments: OrderPayment[], customerId: number | null, loyaltyPhone: string | null) => void;
   onChangeDeliveryStatus?: (status: "preparando" | "en_camino" | "entregado") => void;
   onChangeNotes: (notes: string) => void;
   onChangeItemNote: (itemId: string, note: string) => void;
@@ -85,7 +85,12 @@ export function OrderPanel({
             <div className="op-title">
               {titleOverride ?? (tableNumber ? `Mesa ${tableNumber}` : "Pedido de mostrador")}
             </div>
-            <div className="op-sub">{order.items.length} producto(s)</div>
+            <div className="op-sub">
+              {order.items.length} producto(s)
+              {order.partySize ? ` · ${order.partySize} persona${order.partySize === 1 ? "" : "s"}` : ""}
+              {order.waiter ? ` · ${order.waiter}` : ""}
+            </div>
+            {order.customerName && tableNumber && <div className="op-sub">{order.customerName}</div>}
           </div>
           <button type="button" className="op-close" onClick={onClose}>
             <X className="mx-auto h-4 w-4" />
@@ -243,10 +248,14 @@ export function OrderPanel({
             <PaymentPicker
               total={order.total}
               onCancel={() => setShowPayment(false)}
-              onConfirm={(method, customerId, loyaltyPhone) => {
+              onConfirm={(payments, customerId, loyaltyPhone) => {
                 setShowPayment(false);
                 setSheetOpen(false);
-                onFinalize(method, customerId, loyaltyPhone);
+                onFinalize(payments, customerId, loyaltyPhone);
+              }}
+              onPartial={() => {
+                setShowPayment(false);
+                onPrintTicket();
               }}
             />
           ) : (

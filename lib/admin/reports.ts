@@ -9,30 +9,27 @@ function money(value: string | number) {
 export async function getSalesReport(fromISO: string, toISO: string): Promise<SalesReport> {
   const pool = getPool();
 
-  const { rows: orderRows } = await pool.query<{
-    payment_method: PaymentMethod | null;
-    total: string | number;
-  }>(
-    `select payment_method, total from gestion_orders
+  const { rows: orderRows } = await pool.query<{ total: string | number }>(
+    `select total from gestion_orders
      where status = 'cerrada' and closed_at >= $1 and closed_at <= $2`,
     [fromISO, toISO]
   );
-
-  let totalSales = 0;
-  const byMethodMap = new Map<string, { total: number; count: number }>();
-  for (const o of orderRows) {
-    const total = money(o.total);
-    totalSales += total;
-    const key = o.payment_method ?? "sin_definir";
-    const entry = byMethodMap.get(key) ?? { total: 0, count: 0 };
-    entry.total += total;
-    entry.count += 1;
-    byMethodMap.set(key, entry);
-  }
+  const totalSales = orderRows.reduce((sum, o) => sum + money(o.total), 0);
   const orderCount = orderRows.length;
   const avgTicket = orderCount > 0 ? totalSales / orderCount : 0;
-  const byPaymentMethod = [...byMethodMap.entries()]
-    .map(([method, v]) => ({ method: method as PaymentMethod | "sin_definir", total: v.total, count: v.count }))
+
+  // Desde gestion_order_payments, no desde gestion_orders.payment_method:
+  // una venta puede estar pagada con varios medios combinados.
+  const { rows: paymentRows } = await pool.query<{ method: PaymentMethod; total: string | number; count: string }>(
+    `select gop.method, sum(gop.amount) as total, count(*) as count
+     from gestion_order_payments gop
+     join gestion_orders o on o.id = gop.order_id
+     where o.status = 'cerrada' and o.closed_at >= $1 and o.closed_at <= $2
+     group by gop.method`,
+    [fromISO, toISO]
+  );
+  const byPaymentMethod = paymentRows
+    .map((r) => ({ method: r.method, total: money(r.total), count: Number(r.count) }))
     .sort((a, b) => b.total - a.total);
 
   const { rows: itemRows } = await pool.query<{

@@ -251,7 +251,7 @@ export function ReportsView() {
                       <td>{fmtTime(o.closedAt)}</td>
                       <td>{o.tableNumber ? `Mesa ${o.tableNumber}` : "Mostrador"}</td>
                       <td>{o.customerName ?? "–"}</td>
-                      <td>{o.paymentMethod ? PAYMENT_LABELS[o.paymentMethod] ?? o.paymentMethod : "–"}</td>
+                      <td>{o.paymentMethod ? PAYMENT_LABELS[o.paymentMethod] ?? o.paymentMethod : "Combinado"}</td>
                       <td style={{ textAlign: "right", fontWeight: 700 }}>{money(o.total)}</td>
                     </tr>
                   ))

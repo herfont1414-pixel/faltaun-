@@ -35,6 +35,13 @@ export interface Order {
   deliveryPerson: string | null;
   deliveryStatus: DeliveryStatus | null;
   notes: string | null;
+  partySize: number | null;
+  waiter: string | null;
+}
+
+export interface OrderPayment {
+  method: PaymentMethod;
+  amount: number;
 }
 
 export interface DeliveryZone {

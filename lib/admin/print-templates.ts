@@ -42,10 +42,17 @@ function baseStyles(config: PrintConfig) {
     .body-text { font-size: ${fontPx(config.fontSizeBody, 16, 13)}px; line-height: 1.4; }
     .footer-text { font-size: ${fontPx(config.fontSizeFooter, 13, 11)}px; line-height: 1.3; }
     .area-block { margin-top: 10px; page-break-inside: avoid; }
-    /* Título del origen en la comanda: a tamaño doble, como en el ESC/POS. */
-    .origin-title { font-size: ${fontPx(config.fontSizeHeader, 22, 18) * 2}px; line-height: 1.2; }
+    /* Nota de ítem en el ticket del cliente: chica y discreta. En la
+       comanda de cocina se usa .comanda-item-note, bien destacada, más
+       abajo — son casos distintos a propósito. */
     .item-note { font-size: ${fontPx(config.fontSizeBody, 16, 13) - 2}px; color: #333; margin: 1px 0 2px 10px; }
     .logo-img { display: block; margin: 0 auto 6px; max-width: 70%; max-height: 90px; object-fit: contain; }
+    /* Comanda de cocina: el título de mesa/origen va en negrita a tamaño
+       normal (no gigante), y el detalle de platos se destaca más grande
+       y en negrita para leerse rápido desde lejos. */
+    .comanda-origin { font-size: ${fontPx(config.fontSizeHeader, 22, 18)}px; font-weight: 700; line-height: 1.3; }
+    .comanda-item { font-size: ${fontPx(config.fontSizeBody, 18, 15)}px; font-weight: 700; line-height: 1.4; }
+    .comanda-item-note { font-size: ${fontPx(config.fontSizeBody, 16, 13)}px; font-weight: 700; margin: 0 0 4px 12px; }
   `;
 }
 
@@ -84,6 +91,7 @@ export interface ComandaPrintData {
   tableNumber: number | null;
   origin: "mesa" | "mostrador" | "delivery";
   customerName: string | null;
+  partySize: number | null;
   openedAt: string;
   notes: string | null;
   areas: { name: string; items: { name: string; qty: number; note: string | null }[] }[];
@@ -99,6 +107,7 @@ export function toComandaPrintData(order: PrintableOrder): ComandaPrintData {
     tableNumber: order.tableNumber,
     origin: order.origin,
     customerName: order.customerName,
+    partySize: order.partySize,
     openedAt: order.openedAt,
     notes: order.notes,
     areas: order.areas.map((name) => ({
@@ -126,22 +135,26 @@ export function renderComandaHtml(data: ComandaPrintData, config: PrintConfig): 
           ${items
             .map(
               (item) => `
-            <div class="row body-text">
+            <div class="row comanda-item">
               <span>${escapeHtml(item.name)}</span>
-              <span class="bold">x${item.qty}</span>
+              <span>x${item.qty}</span>
             </div>
-            ${item.note ? `<div class="item-note">- ${escapeHtml(item.note)}</div>` : ""}`
+            ${item.note ? `<div class="comanda-item-note">- ${escapeHtml(item.note)}</div>` : ""}`
             )
             .join("")}
         </div>`;
     })
     .join("");
 
+  const customerLine = [data.customerName, data.partySize ? `${data.partySize} personas` : null]
+    .filter(Boolean)
+    .join(" · ");
+
   const body = `
     ${config.headerText ? `<div class="center bold header-text">${escapeHtml(config.headerText)}</div>` : ""}
-    <div class="center bold origin-title" style="margin-top: 4px">${escapeHtml(originLabel)}</div>
+    <div class="center comanda-origin" style="margin-top: 4px">${escapeHtml(originLabel)}</div>
+    ${customerLine ? `<div class="center body-text">${escapeHtml(customerLine)}</div>` : ""}
     <div class="center body-text">Venta #${shortId} · ${time}</div>
-    ${data.customerName ? `<div class="center body-text">${escapeHtml(data.customerName)}</div>` : ""}
     <hr />
     ${areasHtml || `<div class="center body-text">Sin productos enviados</div>`}
     ${data.notes ? `<hr /><div class="bold body-text">Notas:</div><div class="body-text">${escapeHtml(data.notes)}</div>` : ""}
@@ -165,6 +178,7 @@ export interface TicketPrintData {
   shippingCost: number;
   total: number;
   paymentMethod: string | null;
+  payments: { method: string; amount: number }[];
   logoUrl?: string | null;
 }
 
@@ -197,9 +211,16 @@ export function renderTicketHtml(data: TicketPrintData, config: PrintConfig): st
 
   const paymentLine =
     data.status === "cerrada"
-      ? `<div class="row body-text bold"><span>Medio de pago</span><span>${
-          data.paymentMethod ? PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod : "—"
-        }</span></div>`
+      ? data.payments.length > 1
+        ? data.payments
+            .map(
+              (p) =>
+                `<div class="row body-text"><span>${escapeHtml(PAYMENT_LABELS[p.method] ?? p.method)}</span><span>${money(p.amount)}</span></div>`
+            )
+            .join("")
+        : `<div class="row body-text bold"><span>Medio de pago</span><span>${
+            data.paymentMethod ? PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod : "—"
+          }</span></div>`
       : `<div class="row body-text"><span>Estado</span><span>Precuenta (sin cobrar)</span></div>`;
 
   const customerHtml =

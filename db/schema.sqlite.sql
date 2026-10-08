@@ -69,7 +69,9 @@ create table if not exists gestion_orders (
   shipping_cost numeric(10, 2) not null default 0,
   delivery_person text,
   delivery_status text check (delivery_status in ('preparando', 'en_camino', 'entregado')),
-  notes text
+  notes text,
+  party_size int,
+  waiter text
 );
 
 create table if not exists gestion_order_items (
@@ -82,6 +84,21 @@ create table if not exists gestion_order_items (
   note text
 );
 
+create table if not exists gestion_order_payments (
+  id text primary key default (gen_random_uuid()),
+  order_id text references gestion_orders(id) on delete cascade,
+  method text not null check (method in ('efectivo', 'transferencia', 'cuenta_corriente')),
+  amount numeric(12, 2) not null,
+  created_at text not null default (now())
+);
+
+insert into gestion_order_payments (order_id, method, amount)
+select o.id, o.payment_method, o.total
+from gestion_orders o
+where o.status = 'cerrada' and o.payment_method is not null
+  and not exists (select 1 from gestion_order_payments gop where gop.order_id = o.id);
+
+create index if not exists gestion_order_payments_order_id_idx on gestion_order_payments(order_id);
 create index if not exists gestion_order_items_order_id_idx on gestion_order_items(order_id);
 create index if not exists gestion_orders_status_idx on gestion_orders(status);
 create index if not exists gestion_customer_ledger_customer_id_idx on gestion_customer_ledger(customer_id);

@@ -7,6 +7,7 @@ import type {
   AdminState,
   Order,
   OrderItem,
+  OrderPayment,
   PaymentMethod,
   TableRow,
   Zone,
@@ -107,6 +108,8 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
       deliveryPerson: o.delivery_person ?? null,
       deliveryStatus: o.delivery_status ?? null,
       notes: o.notes ?? null,
+      partySize: o.party_size ?? null,
+      waiter: o.waiter ?? null,
     };
   });
 }
@@ -154,7 +157,10 @@ async function getOrderRow(orderId: string) {
   return rows[0];
 }
 
-export async function openTable(tableNumber: number) {
+export async function openTable(
+  tableNumber: number,
+  details: { partySize?: number | null; customerName?: string | null; waiter?: string | null; notes?: string | null } = {}
+) {
   const pool = getPool();
   const { rows: tableRows } = await pool.query(
     "select id, status from gestion_tables where number = $1",
@@ -171,8 +177,15 @@ export async function openTable(tableNumber: number) {
   }
 
   const { rows: orderRows } = await pool.query(
-    "insert into gestion_orders (table_id, origin) values ($1, 'mesa') returning id",
-    [tableRows[0].id]
+    `insert into gestion_orders (table_id, origin, party_size, customer_name, waiter, notes)
+     values ($1, 'mesa', $2, $3, $4, $5) returning id`,
+    [
+      tableRows[0].id,
+      details.partySize ?? null,
+      details.customerName?.trim() || null,
+      details.waiter?.trim() || null,
+      details.notes?.trim() || null,
+    ]
   );
   await pool.query("update gestion_tables set status = 'ocupada' where number = $1", [tableNumber]);
   return getOrderRow(orderRows[0].id);
@@ -224,11 +237,9 @@ export async function requestBill(tableNumber: number) {
   await pool.query("update gestion_tables set status = 'atencion' where number = $1", [tableNumber]);
 }
 
-export async function finalizeOrder(
-  orderId: string,
-  paymentMethod: PaymentMethod,
-  customerId: number | null
-) {
+export async function finalizeOrder(orderId: string, payments: OrderPayment[], customerId: number | null) {
+  if (payments.length === 0) throw new Error("Agregá al menos un medio de pago");
+
   const pool = getPool();
   const client = await pool.connect();
   try {
@@ -250,6 +261,14 @@ export async function finalizeOrder(
     const itemsTotal = itemRows.reduce((sum, it) => sum + money(it.price) * it.qty, 0);
     const total = order.is_delivery ? itemsTotal + money(order.shipping_cost ?? 0) : itemsTotal;
 
+    const paidSum = payments.reduce((sum, p) => sum + p.amount, 0);
+    // Centavos de tolerancia por redondeo de punto flotante en el cliente.
+    if (Math.round((paidSum - total) * 100) !== 0) {
+      throw new Error(
+        `Los medios de pago suman ${paidSum.toLocaleString("es-AR")} pero el total es ${total.toLocaleString("es-AR")}`
+      );
+    }
+
     // Descuento de stock: solo para productos con stock numérico asignado
     // (stock_qty null = stock infinito, no se toca). Si llega a 0, se marca
     // sin stock automáticamente.
@@ -268,24 +287,42 @@ export async function finalizeOrder(
       ]);
     }
 
-    if (paymentMethod === "cuenta_corriente") {
+    // El débito a cuenta corriente es solo por la porción pagada con ese
+    // medio, no por el total de la venta (puede venir combinado con
+    // efectivo/transferencia).
+    const ctaCteAmount = payments
+      .filter((p) => p.method === "cuenta_corriente")
+      .reduce((sum, p) => sum + p.amount, 0);
+    if (ctaCteAmount > 0) {
       if (!customerId) throw new Error("Elegí un cliente para cobrar a cuenta corriente");
       await client.query("update gestion_customers set balance = balance - $2 where id = $1", [
         customerId,
-        total,
+        ctaCteAmount,
       ]);
       await client.query(
         `insert into gestion_customer_ledger (customer_id, amount, type, payment_method, note)
          values ($1, $2, 'Pago de Venta', 'Cta. Cte.', $3)`,
-        [customerId, -total, order.table_number ? `Mesa ${order.table_number}` : "Mostrador"]
+        [customerId, -ctaCteAmount, order.table_number ? `Mesa ${order.table_number}` : "Mostrador"]
       );
     }
+
+    for (const p of payments) {
+      await client.query(
+        "insert into gestion_order_payments (order_id, method, amount) values ($1, $2, $3)",
+        [orderId, p.method, p.amount]
+      );
+    }
+
+    // Con un solo medio, payment_method queda igual que antes (compatibilidad
+    // con lo que ya lee cualquier pantalla vieja); con varios, queda en null
+    // y gestion_order_payments es la fuente real del desglose.
+    const primaryMethod: PaymentMethod | null = payments.length === 1 ? payments[0].method : null;
 
     await client.query(
       `update gestion_orders
        set status = 'cerrada', closed_at = now(), total = $2, payment_method = $3, customer_id = $4
        where id = $1`,
-      [orderId, total, paymentMethod, customerId]
+      [orderId, total, primaryMethod, customerId]
     );
 
     if (order.table_id) {

@@ -2,17 +2,17 @@ import { NextRequest } from "next/server";
 import { ok } from "@/lib/admin/api-helpers";
 import { finalizeOrder } from "@/lib/admin/store";
 import { addStamp } from "@/lib/admin/loyalty";
-import type { PaymentMethod } from "@/lib/admin/types";
+import type { OrderPayment } from "@/lib/admin/types";
 
 export async function POST(request: NextRequest) {
-  const { orderId, paymentMethod, customerId, loyaltyPhone } = (await request.json()) as {
+  const { orderId, payments, customerId, loyaltyPhone } = (await request.json()) as {
     orderId: string;
-    paymentMethod: PaymentMethod;
+    payments: OrderPayment[];
     customerId: number | null;
     loyaltyPhone?: string | null;
   };
   return ok(async () => {
-    const result = await finalizeOrder(orderId, paymentMethod, customerId ?? null);
+    const result = await finalizeOrder(orderId, payments, customerId ?? null);
     if (loyaltyPhone) await addStamp(loyaltyPhone, { orderTotal: result.total, origin: result.origin });
     return result;
   });

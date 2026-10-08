@@ -79,6 +79,33 @@ alter table gestion_orders add column if not exists delivery_person text;
 alter table gestion_orders add column if not exists delivery_status text
   check (delivery_status in ('preparando', 'en_camino', 'entregado'));
 alter table gestion_orders add column if not exists notes text;
+alter table gestion_orders add column if not exists party_size int;
+alter table gestion_orders add column if not exists waiter text;
+
+-- Desglose de pagos de una venta: una fila por medio de pago usado (una
+-- venta puede pagarse combinando varios, ej. parte efectivo + parte
+-- transferencia). gestion_orders.payment_method sigue existiendo y se
+-- sigue llenando cuando la venta tiene un solo medio (compatibilidad con
+-- lo que ya leía Reportes/Caja de ahí); cuando son varios, queda en null
+-- y esta tabla es la fuente de verdad.
+create table if not exists gestion_order_payments (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid references gestion_orders(id) on delete cascade,
+  method text not null check (method in ('efectivo', 'transferencia', 'cuenta_corriente')),
+  amount numeric(12, 2) not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists gestion_order_payments_order_id_idx on gestion_order_payments(order_id);
+
+-- Backfill idempotente: toda venta cerrada de antes de esta tabla también
+-- queda con su línea de pago, para que Caja/Reportes (que ahora suman
+-- desde acá) no pierdan el historial.
+insert into gestion_order_payments (order_id, method, amount)
+select o.id, o.payment_method, o.total
+from gestion_orders o
+where o.status = 'cerrada' and o.payment_method is not null
+  and not exists (select 1 from gestion_order_payments gop where gop.order_id = o.id);
 
 create table if not exists gestion_order_items (
   id uuid primary key default gen_random_uuid(),

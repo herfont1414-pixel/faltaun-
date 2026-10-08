@@ -25,19 +25,23 @@ function mapShiftRow(row: any): Shift {
   };
 }
 
+// Suma desde gestion_order_payments (no desde gestion_orders.payment_method):
+// una venta puede estar pagada con varios medios combinados, y ahí el
+// desglose real vive en esta tabla, no en la columna de la orden.
 async function sumSalesByMethod(fromISO: string, toISO: string) {
   const pool = getPool();
-  const { rows } = await pool.query<{ payment_method: PaymentMethod | null; total: string | number }>(
-    `select payment_method, sum(total) as total
-     from gestion_orders
-     where status = 'cerrada' and closed_at >= $1 and closed_at <= $2
-     group by payment_method`,
+  const { rows } = await pool.query<{ method: PaymentMethod; total: string | number }>(
+    `select gop.method, sum(gop.amount) as total
+     from gestion_order_payments gop
+     join gestion_orders o on o.id = gop.order_id
+     where o.status = 'cerrada' and o.closed_at >= $1 and o.closed_at <= $2
+     group by gop.method`,
     [fromISO, toISO]
   );
   const totals = { efectivo: 0, transferencia: 0, cuenta_corriente: 0 };
   for (const r of rows) {
-    if (r.payment_method && r.payment_method in totals) {
-      totals[r.payment_method] = money(r.total);
+    if (r.method in totals) {
+      totals[r.method] = money(r.total);
     }
   }
   return totals;
@@ -108,20 +112,18 @@ export async function closeShift(countedCash: number, notes: string | null): Pro
     shiftId = shift.id;
 
     const nowISO = new Date().toISOString();
-    const { rows: salesRows } = await client.query<{
-      payment_method: PaymentMethod | null;
-      total: string | number;
-    }>(
-      `select payment_method, sum(total) as total
-       from gestion_orders
-       where status = 'cerrada' and closed_at >= $1 and closed_at <= $2
-       group by payment_method`,
+    const { rows: salesRows } = await client.query<{ method: PaymentMethod; total: string | number }>(
+      `select gop.method, sum(gop.amount) as total
+       from gestion_order_payments gop
+       join gestion_orders o on o.id = gop.order_id
+       where o.status = 'cerrada' and o.closed_at >= $1 and o.closed_at <= $2
+       group by gop.method`,
       [shift.opened_at, nowISO]
     );
     const sales = { efectivo: 0, transferencia: 0, cuenta_corriente: 0 };
     for (const r of salesRows) {
-      if (r.payment_method && r.payment_method in sales) {
-        sales[r.payment_method] = money(r.total);
+      if (r.method in sales) {
+        sales[r.method] = money(r.total);
       }
     }
 
