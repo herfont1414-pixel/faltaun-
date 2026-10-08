@@ -95,8 +95,11 @@ el archivo, agregá `"inStock": false` a su entrada.
 
 Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
 
-- **Mesas**: 35 en Salón (1–35) y 10 en Terraza (36–45). Tomar pedido,
-  enviar a cocina (imprime comanda), pedir cuenta, cobrar.
+- **Inicio** (ícono de casa): dashboard con ventas del día, mesas
+  ocupadas/libres, pedidos web y reservas pendientes, y accesos rápidos.
+- **Mesas**: 35 en Salón (1–35) y 10 en Terraza (36–45), como tarjetas con
+  su estado (Libre/Ocupada/Pidió cuenta/Cobrando) bien visible. Tomar
+  pedido, enviar a cocina (imprime comanda), pedir cuenta, cobrar.
 - **Mostrador**: pedidos sin mesa asignada, listado de en curso/cerradas.
 - **Pedidos web**: escucha los pedidos hechos desde el menú online — alerta
   sonora + aviso en pantalla al llegar uno nuevo. Confirmar con tiempo

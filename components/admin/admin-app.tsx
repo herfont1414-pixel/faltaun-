@@ -17,6 +17,13 @@ import { money } from "@/lib/admin/format";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
 import type { PaymentMethod, TableRow, Zone } from "@/lib/admin/types";
 
+const MESA_STATUS_LABEL: Record<TableRow["status"], string> = {
+  libre: "Libre",
+  ocupada: "Ocupada",
+  atencion: "Pidió cuenta",
+  cobrando: "Cobrando",
+};
+
 const SECTION_TABS: { value: Section; label: string }[] = [
   { value: "mesas", label: "Mesas" },
   { value: "mostrador", label: "Mostrador" },
@@ -345,10 +352,11 @@ export function AdminApp() {
                   return (
                     <div
                       key={table.number}
-                      className={`mesa-circ ${table.status}`}
+                      className={`mesa-tile ${table.status}`}
                       onClick={() => openTable(table)}
                     >
-                      {table.number}
+                      <span className="mesa-num">{table.number}</span>
+                      <span className="mesa-label">{MESA_STATUS_LABEL[table.status]}</span>
                       {order && order.total > 0 && <span className="mesa-badge">{money(order.total)}</span>}
                     </div>
                   );
