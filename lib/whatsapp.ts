@@ -1,15 +1,20 @@
 import type { MenuItem } from "@/lib/types";
 
-const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
+// Valor de respaldo para instalaciones que todavía no cargaron el número en
+// Configuración (gestion_business_config): así el sitio sigue funcionando
+// sin redeploy ni pasos extra. Una vez cargado en el admin, ese valor pisa
+// a este cada vez que se llama a estas funciones pasando `number`.
+const DEFAULT_WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
 
-export function buildWhatsAppLink(message: string) {
+export function buildWhatsAppLink(message: string, number?: string) {
   const encoded = encodeURIComponent(message);
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`;
+  return `https://wa.me/${number || DEFAULT_WHATSAPP_NUMBER}?text=${encoded}`;
 }
 
-export function buildMenuItemInquiry(item: MenuItem) {
+export function buildMenuItemInquiry(item: MenuItem, number?: string) {
   return buildWhatsAppLink(
-    `Hola! Quiero consultar por "${item.name}" ($${item.price}) del menú de Madero Restó.`
+    `Hola! Quiero consultar por "${item.name}" ($${item.price}) del menú de Madero Restó.`,
+    number
   );
 }
 
@@ -24,6 +29,7 @@ export interface OrderSummaryInput {
   shippingCost: number;
   total: number;
   notes?: string | null;
+  businessNumber?: string;
 }
 
 export function buildOrderWhatsAppLink(input: OrderSummaryInput) {
@@ -43,5 +49,5 @@ export function buildOrderWhatsAppLink(input: OrderSummaryInput) {
   lines.push(`Total: $${input.total.toLocaleString("es-AR")}`);
   if (input.notes) lines.push("", `Notas: ${input.notes}`);
   lines.push("", "¡Gracias!");
-  return buildWhatsAppLink(lines.join("\n"));
+  return buildWhatsAppLink(lines.join("\n"), input.businessNumber);
 }

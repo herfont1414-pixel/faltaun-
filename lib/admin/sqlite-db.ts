@@ -10,6 +10,7 @@ const BOOLEAN_COLUMNS = new Set([
   "deleted",
   "is_delivery",
   "paper_saving_mode",
+  "habilitado",
 ]);
 
 function bindValue(p: unknown) {

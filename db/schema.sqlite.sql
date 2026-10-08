@@ -199,6 +199,14 @@ create table if not exists gestion_afip_config (
   habilitado boolean not null default 0
 );
 
+create table if not exists gestion_business_config (
+  id int primary key default 1,
+  name text,
+  address text,
+  hours text,
+  whatsapp_number text
+);
+
 create table if not exists gestion_print_config (
   id int primary key default 1,
   paper_width_mm int not null default 80,

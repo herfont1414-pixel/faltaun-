@@ -15,4 +15,5 @@ export type Section =
   | "express"
   | "reservas"
   | "clientes"
-  | "impresion";
+  | "impresion"
+  | "configuracion";

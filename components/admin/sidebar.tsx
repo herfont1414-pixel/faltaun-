@@ -25,7 +25,7 @@ interface NavItem {
   label: string;
   Icon: typeof Home;
   section?: Section;
-  action?: "kds" | "toast";
+  action?: "kds";
 }
 
 const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
@@ -56,7 +56,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { label: "Cocina (KDS)", Icon: Monitor, action: "kds" },
       { label: "Impresión", Icon: Printer, section: "impresion" },
-      { label: "Configuración", Icon: Settings, action: "toast" },
+      { label: "Configuración", Icon: Settings, section: "configuracion" },
     ],
   },
 ];
@@ -64,12 +64,11 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 interface SidebarProps {
   activeSection: Section;
   onNavigate: (section: Section) => void;
-  onToast: (message: string) => void;
   mobileOpen: boolean;
   onCloseMobile: () => void;
 }
 
-export function Sidebar({ activeSection, onNavigate, onToast, mobileOpen, onCloseMobile }: SidebarProps) {
+export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile }: SidebarProps) {
   function handleClick(item: NavItem) {
     onCloseMobile();
     if (item.section) {
@@ -78,9 +77,7 @@ export function Sidebar({ activeSection, onNavigate, onToast, mobileOpen, onClos
     }
     if (item.action === "kds") {
       window.open("/admin/kds", "_blank");
-      return;
     }
-    onToast(`${item.label}: lo sumamos en el próximo paso`);
   }
 
   return (
