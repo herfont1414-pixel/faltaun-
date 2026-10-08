@@ -6,6 +6,7 @@ const DEFAULTS: BusinessConfig = {
   address: "",
   hours: "",
   whatsappNumber: "",
+  logoUrl: "",
 };
 
 export async function getBusinessConfig(): Promise<BusinessConfig> {
@@ -15,7 +16,8 @@ export async function getBusinessConfig(): Promise<BusinessConfig> {
     address: string | null;
     hours: string | null;
     whatsapp_number: string | null;
-  }>("select name, address, hours, whatsapp_number from gestion_business_config where id = 1");
+    logo_url: string | null;
+  }>("select name, address, hours, whatsapp_number, logo_url from gestion_business_config where id = 1");
   const row = rows[0];
   if (!row) return DEFAULTS;
   return {
@@ -23,6 +25,7 @@ export async function getBusinessConfig(): Promise<BusinessConfig> {
     address: row.address ?? "",
     hours: row.hours ?? "",
     whatsappNumber: row.whatsapp_number ?? "",
+    logoUrl: row.logo_url ?? "",
   };
 }
 
@@ -32,14 +35,15 @@ export async function updateBusinessConfig(patch: Partial<BusinessConfig>): Prom
   const next: BusinessConfig = { ...current, ...definedPatch };
   const pool = getPool();
   await pool.query(
-    `insert into gestion_business_config (id, name, address, hours, whatsapp_number)
-     values (1, $1, $2, $3, $4)
+    `insert into gestion_business_config (id, name, address, hours, whatsapp_number, logo_url)
+     values (1, $1, $2, $3, $4, $5)
      on conflict (id) do update set
        name = excluded.name,
        address = excluded.address,
        hours = excluded.hours,
-       whatsapp_number = excluded.whatsapp_number`,
-    [next.name, next.address, next.hours, next.whatsappNumber]
+       whatsapp_number = excluded.whatsapp_number,
+       logo_url = excluded.logo_url`,
+    [next.name, next.address, next.hours, next.whatsappNumber, next.logoUrl]
   );
   return next;
 }

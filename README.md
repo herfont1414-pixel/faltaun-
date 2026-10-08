@@ -207,6 +207,37 @@ trabaja; al terminar el día se pueden cerrar las dos ventanas.
 - El archivo `maderosys.db` (y sus archivos auxiliares `-shm`/`-wal`) no se
   suben al repositorio (están en `.gitignore`).
 
+### Impresión directa (ESC/POS) en modo local
+
+En `/admin` → **Impresión** hay una sección "Impresión directa (ESC/POS)" que,
+una vez activada, hace que "Enviar a cocina" y "Imprimir" manden el ticket
+directo a la impresora térmica conectada por USB a esta PC, sin ningún
+diálogo de impresión del navegador. Solo tiene efecto corriendo en modo
+local (`start-local.bat`) **y en Windows**: contra el sitio de Vercel, o en
+cualquier otro sistema operativo, el botón sigue abriendo el flujo normal
+del navegador (igual que si la opción estuviera desactivada) — no hay forma
+de que un servidor en la nube le hable a un USB físico del local.
+
+Para activarla:
+
+1. Confirmá el nombre exacto de la impresora en Windows → **Dispositivos e
+   impresoras** (en este caso, algo como `POS-58-Series`).
+2. En `/admin` → Impresión → Impresión directa, activala y cargá ese
+   nombre tal cual.
+
+No hace falta compartir la impresora ni cambiarle el driver: el sistema le
+manda los bytes crudos directamente vía la API de impresión de Windows
+(`winspool.drv`, con el script `scripts/print-raw.ps1`), usando la
+impresora exactamente como Windows ya la tiene instalada.
+
+Los tickets se imprimen sin tildes ni Ñ a propósito: la mayoría de las
+impresoras térmicas genéricas vienen con una página de códigos que no las
+tiene, y es mejor que se lean bien a arriesgarse a que salgan caracteres
+sueltos. El logo del ticket final usa el nombre del local en letra grande
+en vez de una imagen — imprimir el logo real como bitmap necesitaría
+convertirlo a blanco y negro ajustado al ancho del rollo, algo que hay que
+afinar contra la impresora física, no a ciegas.
+
 ## Marca
 
 Logo real de Madero Restó en `public/logo-dark.png` (blanco, para fondos
@@ -218,8 +249,11 @@ PWA (`public/icons/`) salen del trébol recortado del mismo logo.
 
 - `data/ingredientes.csv` y `data/proveedores.json` quedan guardados para
   los futuros módulos de Stock y Gastos.
-- Tablas de preparación ya creadas en la base pero todavía sin pantalla en
-  el panel: `gestion_payment_methods` (medios de pago configurables) y
-  `gestion_afip_config` (CUIT, punto de venta, condición de IVA, para
-  cuando se sume facturación). `gestion_print_areas` ya tiene pantalla —
-  ver "Impresión" arriba.
+- Tabla de preparación ya creada en la base pero todavía sin pantalla en
+  el panel: `gestion_payment_methods` (medios de pago configurables).
+  `gestion_afip_config`, `gestion_business_config` y `gestion_print_config`
+  ya tienen pantalla — ver "Configuración" e "Impresión" arriba.
+- La impresión directa (ESC/POS) está construida y probada en todo lo que
+  se puede verificar sin el hardware real (generación de los bytes,
+  fallback al flujo normal cuando no corresponde), pero falta la prueba
+  final contra la impresora física — ver la sección de arriba.

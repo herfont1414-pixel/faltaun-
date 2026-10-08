@@ -400,6 +400,52 @@
   font-weight: 700;
   color: var(--text-dim);
 }
+.ti-note {
+  font-style: italic;
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+.ticket-item-wrap {
+  border-bottom: 1px solid #f0f0ee;
+}
+.ticket-item-wrap:last-child {
+  border-bottom: none;
+}
+.ticket-item-wrap .ticket-item {
+  border-bottom: none;
+}
+.ti-note-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ti-note-btn:hover {
+  background: #f2f2f0;
+  color: var(--text-dim);
+}
+.ti-note-btn.has-note {
+  color: var(--orange);
+}
+.ti-note-edit {
+  padding: 0 0 8px;
+}
+.ti-note-edit input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--text);
+}
 
 .op-footer {
   border-top: 1px solid var(--border);

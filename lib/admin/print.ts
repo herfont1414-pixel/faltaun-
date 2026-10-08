@@ -5,6 +5,7 @@ export interface PrintableItem {
   qty: number;
   category: string;
   area: string;
+  note: string | null;
 }
 
 export interface PrintableOrder {
@@ -39,7 +40,7 @@ export async function getPrintableOrder(orderId: string): Promise<PrintableOrder
   const orderRow = orderRows[0];
 
   const { rows: itemRows } = await pool.query(
-    `select oi.product_name, oi.qty, c.name as category_name, pa.nombre as area_name
+    `select oi.product_name, oi.qty, oi.note, c.name as category_name, pa.nombre as area_name
      from gestion_order_items oi
      join gestion_products p on p.name = oi.product_name
      join gestion_categories c on c.id = p.category_id
@@ -54,6 +55,7 @@ export async function getPrintableOrder(orderId: string): Promise<PrintableOrder
     qty: r.qty,
     category: r.category_name,
     area: r.area_name ?? fallbackArea(r.category_name),
+    note: r.note ?? null,
   }));
 
   return {
@@ -78,7 +80,7 @@ export interface PrintableTicket {
   customerPhone: string | null;
   customerAddress: string | null;
   openedAt: string;
-  items: { name: string; qty: number; price: number }[];
+  items: { name: string; qty: number; price: number; note: string | null }[];
   shippingCost: number;
   total: number;
   paymentMethod: string | null;
@@ -101,10 +103,15 @@ export async function getPrintableTicket(orderId: string): Promise<PrintableTick
   const order = orderRows[0];
 
   const { rows: itemRows } = await pool.query(
-    `select product_name, price, qty from gestion_order_items where order_id = $1 order by id`,
+    `select product_name, price, qty, note from gestion_order_items where order_id = $1 order by id`,
     [orderId]
   );
-  const items = itemRows.map((r) => ({ name: r.product_name, qty: r.qty, price: toNumber(r.price) }));
+  const items = itemRows.map((r) => ({
+    name: r.product_name,
+    qty: r.qty,
+    price: toNumber(r.price),
+    note: r.note ?? null,
+  }));
   const shippingCost = toNumber(order.shipping_cost ?? 0);
   const itemsTotal = items.reduce((sum, it) => sum + it.price * it.qty, 0);
   const liveTotal = itemsTotal + (order.is_delivery ? shippingCost : 0);

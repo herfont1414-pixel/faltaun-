@@ -201,6 +201,50 @@ export function ImpresionView() {
       </div>
 
       <div className="m-section">
+        <div className="m-section-title">Impresión directa (ESC/POS)</div>
+        <div className="caja-card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <p style={{ fontSize: 12.5, color: "var(--text-dim)", margin: 0, maxWidth: 520 }}>
+            Imprime directo en la impresora térmica conectada a esta PC, sin ningún diálogo de impresión.
+            Solo funciona en modo local (<code>start-local.bat</code>) y en Windows — contra el sitio online
+            (Vercel) no hay forma de llegar a una impresora USB física, así que ahí siempre se usa el flujo
+            normal del navegador.
+          </p>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              type="button"
+              className={`btn ${config.directPrintEnabled ? "btn-primary" : ""}`}
+              style={{ flex: "none", padding: "8px 14px" }}
+              onClick={() => saveConfig({ directPrintEnabled: !config.directPrintEnabled })}
+            >
+              {config.directPrintEnabled ? "Activada" : "Desactivada"}
+            </button>
+          </div>
+
+          <label style={{ fontSize: 12.5, fontWeight: 600 }}>
+            Nombre de la impresora en Windows
+            <input
+              defaultValue={config.printerName}
+              onBlur={(e) => saveConfig({ printerName: e.target.value })}
+              placeholder='Ej: POS-58-Series'
+              className="caja-input"
+              style={{ marginTop: 6, width: "100%" }}
+            />
+            <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "var(--text-faint)" }}>
+              Tiene que ser exactamente el nombre que aparece en Windows → Dispositivos e impresoras. No
+              hace falta compartirla ni cambiarle el driver.
+            </span>
+          </label>
+
+          <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0 }}>
+            Si está desactivada, o si el navegador no le habla a la instancia local de esta PC, "Enviar a
+            cocina" e "Imprimir" siguen funcionando igual que siempre (se abre el diálogo de impresión del
+            navegador).
+          </p>
+        </div>
+      </div>
+
+      <div className="m-section">
         <div className="m-section-title">Áreas de impresión (comanda de cocina)</div>
         <p style={{ fontSize: 12.5, color: "var(--text-dim)", marginBottom: 14, maxWidth: 480 }}>
           Las comandas que se mandan a cocina (botón "Enviar a cocina") se separan en estas áreas según el

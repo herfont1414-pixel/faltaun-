@@ -17,7 +17,7 @@ import { ClientesView } from "@/components/admin/clientes-view";
 import { ImpresionView } from "@/components/admin/impresion-view";
 import { ConfiguracionView } from "@/components/admin/configuracion-view";
 import { money } from "@/lib/admin/format";
-import { printUrl } from "@/lib/print-client";
+import { printOrderDocument } from "@/lib/print-client";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
 import type { Catalog, PaymentMethod, TableRow, Zone } from "@/lib/admin/types";
 
@@ -139,7 +139,7 @@ export function AdminApp() {
     applyState(state);
     showToast("Comanda enviada a cocina");
     try {
-      await printUrl(`/api/admin/print/comanda/${orderId}`);
+      await printOrderDocument("comanda", orderId);
     } catch {
       showToast("No se pudo imprimir la comanda");
     }
@@ -147,7 +147,7 @@ export function AdminApp() {
 
   async function printTicket(orderId: string) {
     try {
-      await printUrl(`/api/admin/print/ticket/${orderId}`);
+      await printOrderDocument("ticket", orderId);
     } catch {
       showToast("No se pudo imprimir el ticket");
     }
@@ -156,6 +156,14 @@ export function AdminApp() {
   async function changeNotes(notes: string) {
     if (!selectedOrderId) return;
     const state = await safeCall(() => postJson("/api/admin/set-notes", { orderId: selectedOrderId, notes }));
+    if (state) applyState(state);
+  }
+
+  async function changeItemNote(itemId: string, note: string) {
+    if (!selectedOrderId) return;
+    const state = await safeCall(() =>
+      postJson("/api/admin/set-item-note", { orderId: selectedOrderId, itemId, note })
+    );
     if (state) applyState(state);
   }
 
@@ -358,6 +366,7 @@ export function AdminApp() {
             onFinalize={finalizeOrder}
             onChangeDeliveryStatus={currentOrder?.isDelivery ? changeDeliveryStatus : undefined}
             onChangeNotes={changeNotes}
+            onChangeItemNote={changeItemNote}
             onPrintTicket={() => currentOrder && printTicket(currentOrder.id)}
           />
         </div>

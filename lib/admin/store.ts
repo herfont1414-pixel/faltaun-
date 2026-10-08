@@ -71,6 +71,7 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
     price: string;
     qty: number;
     sent_to_kitchen: boolean;
+    note: string | null;
   }>(`select * from gestion_order_items where order_id in (${placeholders}) order by id`, ids);
 
   return orderRows.map((o) => {
@@ -82,6 +83,7 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
         price: money(it.price),
         qty: it.qty,
         sentToKitchen: it.sent_to_kitchen,
+        note: it.note ?? null,
       }));
     const shippingCost = money(o.shipping_cost ?? 0);
     const liveTotal = items.reduce((sum, it) => sum + it.price * it.qty, 0) + (o.is_delivery ? shippingCost : 0);
@@ -347,6 +349,16 @@ export async function setDeliveryPerson(orderId: string, deliveryPerson: string 
 export async function setOrderNotes(orderId: string, notes: string | null) {
   const pool = getPool();
   await pool.query("update gestion_orders set notes = $2 where id = $1", [orderId, notes]);
+  return getOrderRow(orderId);
+}
+
+export async function setItemNote(orderId: string, itemId: string, note: string | null) {
+  const pool = getPool();
+  await pool.query("update gestion_order_items set note = $2 where id = $1 and order_id = $3", [
+    itemId,
+    note,
+    orderId,
+  ]);
   return getOrderRow(orderId);
 }
 

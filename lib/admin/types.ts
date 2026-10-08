@@ -10,6 +10,7 @@ export interface OrderItem {
   price: number;
   qty: number;
   sentToKitchen: boolean;
+  note: string | null;
 }
 
 export type DeliveryStatus = "preparando" | "en_camino" | "entregado";
@@ -194,6 +195,8 @@ export interface PrintConfig {
   fontSizeHeader: PrintFontSize;
   fontSizeBody: PrintFontSize;
   fontSizeFooter: PrintFontSize;
+  directPrintEnabled: boolean;
+  printerName: string;
 }
 
 export interface BusinessConfig {
@@ -201,6 +204,7 @@ export interface BusinessConfig {
   address: string;
   hours: string;
   whatsappNumber: string;
+  logoUrl: string;
 }
 
 export interface AfipConfig {

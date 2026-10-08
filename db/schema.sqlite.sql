@@ -78,7 +78,8 @@ create table if not exists gestion_order_items (
   product_name text not null,
   price numeric(10, 2) not null,
   qty int not null default 1,
-  sent_to_kitchen boolean not null default false
+  sent_to_kitchen boolean not null default false,
+  note text
 );
 
 create index if not exists gestion_order_items_order_id_idx on gestion_order_items(order_id);
@@ -204,7 +205,8 @@ create table if not exists gestion_business_config (
   name text,
   address text,
   hours text,
-  whatsapp_number text
+  whatsapp_number text,
+  logo_url text
 );
 
 create table if not exists gestion_print_config (
@@ -215,5 +217,7 @@ create table if not exists gestion_print_config (
   paper_saving_mode boolean not null default 0,
   font_size_header text not null default 'normal',
   font_size_body text not null default 'normal',
-  font_size_footer text not null default 'normal'
+  font_size_footer text not null default 'normal',
+  direct_print_enabled boolean not null default 0,
+  printer_name text
 );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Printer } from "lucide-react";
+import { X, Printer, Pencil } from "lucide-react";
 import { money } from "@/lib/admin/format";
 import { PaymentPicker } from "@/components/admin/payment-picker";
 import type { Catalog, Order, PaymentMethod } from "@/lib/admin/types";
@@ -21,6 +21,7 @@ interface OrderPanelProps {
   onFinalize: (method: PaymentMethod, customerId: number | null, loyaltyPhone: string | null) => void;
   onChangeDeliveryStatus?: (status: "preparando" | "en_camino" | "entregado") => void;
   onChangeNotes: (notes: string) => void;
+  onChangeItemNote: (itemId: string, note: string) => void;
   onPrintTicket: () => void;
 }
 
@@ -45,16 +46,19 @@ export function OrderPanel({
   onFinalize,
   onChangeDeliveryStatus,
   onChangeNotes,
+  onChangeItemNote,
   onPrintTicket,
 }: OrderPanelProps) {
   const [showPayment, setShowPayment] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState(order?.notes ?? "");
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   useEffect(() => {
     setSheetOpen(false);
     setShowPayment(false);
     setNotesDraft(order?.notes ?? "");
+    setEditingItemId(null);
   }, [order?.id]);
 
   if (!order) {
@@ -166,24 +170,54 @@ export function OrderPanel({
             {order.items.length === 0 ? (
               <div className="ticket-empty">Todavía no agregaste productos</div>
             ) : (
-              order.items.map((item) => (
-                <div key={item.id} className="ticket-item">
-                  <div className="qty-ctrl">
-                    <button type="button" onClick={() => onChangeQty(item.id, -1)}>
-                      −
-                    </button>
-                    <span>{item.qty}</span>
-                    <button type="button" onClick={() => onChangeQty(item.id, 1)}>
-                      +
-                    </button>
+              order.items.map((item) => {
+                const isEditingNote = editingItemId === item.id;
+                return (
+                  <div key={item.id} className="ticket-item-wrap">
+                    <div className="ticket-item">
+                      <div className="qty-ctrl">
+                        <button type="button" onClick={() => onChangeQty(item.id, -1)}>
+                          −
+                        </button>
+                        <span>{item.qty}</span>
+                        <button type="button" onClick={() => onChangeQty(item.id, 1)}>
+                          +
+                        </button>
+                      </div>
+                      <div className="ti-name">
+                        {item.name}
+                        {item.sentToKitchen && <span style={{ color: "var(--text-faint)" }}> · enviado</span>}
+                        {item.note && !isEditingNote && <div className="ti-note">{item.note}</div>}
+                      </div>
+                      <div className="ti-price">{money(item.price * item.qty)}</div>
+                      <button
+                        type="button"
+                        className={`ti-note-btn ${item.note ? "has-note" : ""}`}
+                        aria-label="Nota del producto"
+                        onClick={() => setEditingItemId(isEditingNote ? null : item.id)}
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    </div>
+                    {isEditingNote && (
+                      <div className="ti-note-edit">
+                        <input
+                          autoFocus
+                          defaultValue={item.note ?? ""}
+                          placeholder="Ej: sin sal, bien cocido..."
+                          onBlur={(e) => {
+                            onChangeItemNote(item.id, e.target.value);
+                            setEditingItemId(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") e.currentTarget.blur();
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
-                  <div className="ti-name">
-                    {item.name}
-                    {item.sentToKitchen && <span style={{ color: "var(--text-faint)" }}> · enviado</span>}
-                  </div>
-                  <div className="ti-price">{money(item.price * item.qty)}</div>
-                </div>
-              ))
+                );
+              })
             )}
             {order.isDelivery && order.shippingCost > 0 && (
               <div className="ticket-item">

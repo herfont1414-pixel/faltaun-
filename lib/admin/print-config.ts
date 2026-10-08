@@ -9,6 +9,8 @@ const DEFAULTS: PrintConfig = {
   fontSizeHeader: "normal",
   fontSizeBody: "normal",
   fontSizeFooter: "normal",
+  directPrintEnabled: false,
+  printerName: "",
 };
 
 function toFontSize(value: unknown): PrintConfig["fontSizeHeader"] {
@@ -25,9 +27,12 @@ export async function getPrintConfig(): Promise<PrintConfig> {
     font_size_header: string;
     font_size_body: string;
     font_size_footer: string;
+    direct_print_enabled: boolean;
+    printer_name: string | null;
   }>(
     `select paper_width_mm, header_text, footer_text, paper_saving_mode,
-            font_size_header, font_size_body, font_size_footer
+            font_size_header, font_size_body, font_size_footer,
+            direct_print_enabled, printer_name
      from gestion_print_config where id = 1`
   );
   const row = rows[0];
@@ -40,6 +45,8 @@ export async function getPrintConfig(): Promise<PrintConfig> {
     fontSizeHeader: toFontSize(row.font_size_header),
     fontSizeBody: toFontSize(row.font_size_body),
     fontSizeFooter: toFontSize(row.font_size_footer),
+    directPrintEnabled: !!row.direct_print_enabled,
+    printerName: row.printer_name ?? "",
   };
 }
 
@@ -54,8 +61,9 @@ export async function updatePrintConfig(patch: Partial<PrintConfig>): Promise<Pr
   await pool.query(
     `insert into gestion_print_config
        (id, paper_width_mm, header_text, footer_text, paper_saving_mode,
-        font_size_header, font_size_body, font_size_footer)
-     values (1, $1, $2, $3, $4, $5, $6, $7)
+        font_size_header, font_size_body, font_size_footer,
+        direct_print_enabled, printer_name)
+     values (1, $1, $2, $3, $4, $5, $6, $7, $8, $9)
      on conflict (id) do update set
        paper_width_mm = excluded.paper_width_mm,
        header_text = excluded.header_text,
@@ -63,7 +71,9 @@ export async function updatePrintConfig(patch: Partial<PrintConfig>): Promise<Pr
        paper_saving_mode = excluded.paper_saving_mode,
        font_size_header = excluded.font_size_header,
        font_size_body = excluded.font_size_body,
-       font_size_footer = excluded.font_size_footer`,
+       font_size_footer = excluded.font_size_footer,
+       direct_print_enabled = excluded.direct_print_enabled,
+       printer_name = excluded.printer_name`,
     [
       next.paperWidthMm,
       next.headerText,
@@ -72,6 +82,8 @@ export async function updatePrintConfig(patch: Partial<PrintConfig>): Promise<Pr
       next.fontSizeHeader,
       next.fontSizeBody,
       next.fontSizeFooter,
+      next.directPrintEnabled,
+      next.printerName,
     ]
   );
   return next;

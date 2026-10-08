@@ -11,6 +11,7 @@ const BOOLEAN_COLUMNS = new Set([
   "is_delivery",
   "paper_saving_mode",
   "habilitado",
+  "direct_print_enabled",
 ]);
 
 function bindValue(p: unknown) {
