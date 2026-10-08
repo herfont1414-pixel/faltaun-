@@ -72,54 +72,59 @@
 .section-tabs {
   display: flex;
   align-items: center;
-  background: var(--bar-dark);
+  gap: 4px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  padding: 0 4px;
+  padding: 10px 16px;
+  overflow-x: auto;
 }
 .section-tab {
-  padding: 12px 20px;
-  font-size: 14px;
+  padding: 8px 16px;
+  font-size: 13.5px;
   font-weight: 600;
-  color: #e4e2dd;
+  color: var(--text-dim);
   cursor: pointer;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 .section-tab:hover {
-  color: #fff;
+  color: var(--text);
+  background: #fff;
 }
 .section-tab.active {
-  background: #fff;
-  color: var(--text);
-  border-radius: 6px 6px 0 0;
-  margin-top: 6px;
-  padding-top: 9px;
+  background: #18181b;
+  color: #fff;
 }
 
 .zone-row {
   display: flex;
   align-items: center;
-  background: #e2e1dc;
-  padding: 0 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
   flex-shrink: 0;
-  height: 42px;
 }
 .zones {
   display: flex;
-  height: 100%;
+  gap: 6px;
 }
 .zone-tab {
-  padding: 0 18px;
-  font-size: 13.5px;
+  padding: 7px 16px;
+  font-size: 13px;
   font-weight: 600;
-  color: #6f6d67;
+  color: var(--text-dim);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  border-bottom: 3px solid transparent;
+  border-radius: 999px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.zone-tab:hover {
+  background: var(--bg);
 }
 .zone-tab.active {
-  color: var(--text);
-  border-bottom-color: var(--orange);
-  background: var(--bg);
+  color: #fff;
+  background: #18181b;
 }
 
 .main-wrap {
@@ -130,73 +135,105 @@
 .floor {
   flex: 1;
   overflow-y: auto;
-  padding: 26px 26px 40px;
+  padding: 26px;
+  background: var(--bg);
 }
 .mesas-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
-  gap: 26px 30px;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 14px;
 }
-.mesa-circ {
-  width: 84px;
-  height: 84px;
-  border-radius: 50%;
+.mesa-tile {
+  aspect-ratio: 1;
+  border-radius: 20px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  font-weight: 700;
-  color: #fff;
+  gap: 2px;
   cursor: pointer;
-  background: var(--green);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
   position: relative;
-  border: none;
 }
-.mesa-circ:hover {
+.mesa-tile:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
 }
-.mesa-circ.ocupada {
-  background: var(--orange);
+.mesa-num {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
 }
-.mesa-circ.atencion {
-  background: var(--red);
+.mesa-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-faint);
+}
+.mesa-tile.ocupada {
+  background: #18181b;
+  border-color: #18181b;
+}
+.mesa-tile.ocupada .mesa-num {
+  color: #fff;
+}
+.mesa-tile.ocupada .mesa-label {
+  color: #9b9b97;
+}
+.mesa-tile.atencion {
+  background: var(--red-bg);
+  border-color: #f6c9c2;
   animation: pulseA 1.6s ease-in-out infinite;
 }
-.mesa-circ.cobrando {
-  background: var(--blue-text);
+.mesa-tile.atencion .mesa-label {
+  color: var(--red);
+}
+.mesa-tile.cobrando {
+  background: var(--blue-bg);
+  border-color: #c7dbf6;
+}
+.mesa-tile.cobrando .mesa-label {
+  color: var(--blue-text);
 }
 @keyframes pulseA {
   0%,
   100% {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(229, 83, 61, 0.18);
+    box-shadow: 0 0 0 7px rgba(229, 83, 61, 0.14);
   }
 }
 .mesa-badge {
   position: absolute;
-  bottom: -9px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1px 7px;
+  top: -8px;
+  right: -8px;
+  background: #18181b;
+  color: #fff;
+  border-radius: 999px;
+  padding: 3px 8px;
   font-size: 10.5px;
   font-weight: 700;
-  color: var(--text-dim);
   white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.mesa-tile.ocupada .mesa-badge {
+  background: #fff;
+  color: #18181b;
 }
 
 .side-panel {
   width: 400px;
-  border-left: 1px solid var(--border);
   background: #fff;
+  box-shadow: -6px 0 24px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  z-index: 1;
 }
 .empty-hint {
   flex: 1;
@@ -249,16 +286,17 @@
   flex-shrink: 0;
   font-size: 12px;
   font-weight: 700;
-  padding: 7px 12px;
-  border-radius: 8px;
-  background: #f2f2f0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--bg);
   color: var(--text-dim);
   cursor: pointer;
   white-space: nowrap;
   border: none;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 .cat-tab.active {
-  background: var(--orange);
+  background: #18181b;
   color: #fff;
 }
 
@@ -273,15 +311,17 @@
 }
 .product-btn {
   text-align: left;
-  background: #f7f7f6;
+  background: #fff;
   border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 9px 10px;
+  border-radius: 14px;
+  padding: 10px 12px;
   cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease;
 }
 .product-btn:hover {
-  border-color: var(--orange);
-  background: #fff5f0;
+  border-color: #18181b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 .product-btn.sin-stock {
   opacity: 0.5;
@@ -289,7 +329,8 @@
 }
 .product-btn.sin-stock:hover {
   border-color: var(--border);
-  background: #f7f7f6;
+  transform: none;
+  box-shadow: none;
 }
 .p-name {
   font-size: 12px;
@@ -404,7 +445,7 @@
 .btn {
   font-weight: 700;
   font-size: 12.5px;
-  border-radius: 9px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   padding: 10px 10px;
   cursor: pointer;
@@ -412,6 +453,7 @@
   color: var(--text);
   flex: 1;
   text-align: center;
+  transition: background 0.12s ease, transform 0.08s ease;
 }
 .btn:hover {
   background: #f5f5f4;
@@ -462,13 +504,15 @@
 }
 
 .mostrador {
-  padding: 22px 26px;
+  padding: 26px;
   overflow-y: auto;
   flex: 1;
+  background: var(--bg);
 }
 .mostrador h1 {
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 800;
+  letter-spacing: -0.01em;
 }
 .m-section {
   margin-bottom: 26px;
@@ -478,28 +522,30 @@
   font-weight: 800;
   letter-spacing: 0.4px;
   color: var(--text-dim);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   text-transform: uppercase;
 }
 .m-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background: #fff;
-  border-radius: 10px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border);
 }
 .m-table th {
   text-align: left;
   font-size: 11.5px;
   color: var(--text-faint);
   font-weight: 700;
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   background: #fafafa;
 }
 .m-table td {
-  padding: 11px 14px;
+  padding: 13px 16px;
   font-size: 13px;
   border-bottom: 1px solid #f2f2f0;
 }
@@ -507,7 +553,8 @@
   border-bottom: none;
 }
 .m-row-strip {
-  border-left: 4px solid transparent;
+  border-left: 3px solid transparent;
+  transition: background 0.1s ease;
 }
 .m-row-strip.encurso {
   border-left-color: var(--red);
@@ -515,8 +562,11 @@
 .m-row-strip.cerrada {
   border-left-color: var(--green-dark);
 }
+.m-row-strip:hover {
+  background: #fafafa;
+}
 .m-empty {
-  padding: 24px;
+  padding: 28px;
   text-align: center;
   color: var(--text-faint);
   font-size: 13px;
@@ -524,8 +574,8 @@
 .pill {
   font-size: 11px;
   font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
 }
 .pill.encurso {
   background: var(--red-bg);
@@ -541,14 +591,18 @@
   text-align: right;
 }
 .m-new-btn {
-  background: var(--bar-dark-2);
+  background: #18181b;
   color: #fff;
   border: none;
-  padding: 9px 16px;
-  border-radius: 9px;
+  padding: 10px 18px;
+  border-radius: 999px;
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+.m-new-btn:hover {
+  background: #2a2a2e;
 }
 
 .caja-card {
