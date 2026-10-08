@@ -89,6 +89,8 @@ create table if not exists gestion_order_items (
   sent_to_kitchen boolean not null default false
 );
 
+alter table gestion_order_items add column if not exists note text;
+
 create index if not exists gestion_order_items_order_id_idx on gestion_order_items(order_id);
 create index if not exists gestion_orders_status_idx on gestion_orders(status);
 create index if not exists gestion_customer_ledger_customer_id_idx on gestion_customer_ledger(customer_id);
@@ -233,6 +235,10 @@ create table if not exists gestion_business_config (
   whatsapp_number text
 );
 
+-- logo_url se agregó después de que esta tabla ya existiera en producción;
+-- "create table if not exists" no le agrega columnas a una tabla vieja.
+alter table gestion_business_config add column if not exists logo_url text;
+
 insert into gestion_business_config (id) values (1) on conflict (id) do nothing;
 
 -- Configuración del motor de impresión térmica: una única fila (id = 1)
@@ -248,5 +254,9 @@ create table if not exists gestion_print_config (
   font_size_body text not null default 'normal',
   font_size_footer text not null default 'normal'
 );
+
+-- Agregadas después de que la tabla ya existiera en producción.
+alter table gestion_print_config add column if not exists direct_print_enabled boolean not null default false;
+alter table gestion_print_config add column if not exists printer_name text;
 
 insert into gestion_print_config (id) values (1) on conflict (id) do nothing;

@@ -131,6 +131,10 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_loyalty_accounts", "origin", "text");
         await ensureSqliteColumn(client, "gestion_products", "print_area_id", "int");
         await ensureSqliteColumn(client, "gestion_orders", "notes", "text");
+        await ensureSqliteColumn(client, "gestion_order_items", "note", "text");
+        await ensureSqliteColumn(client, "gestion_business_config", "logo_url", "text");
+        await ensureSqliteColumn(client, "gestion_print_config", "direct_print_enabled", "boolean not null default 0");
+        await ensureSqliteColumn(client, "gestion_print_config", "printer_name", "text");
       }
       await client.query(
         `insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')

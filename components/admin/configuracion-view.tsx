@@ -132,6 +132,28 @@ export function ConfiguracionView({ onGoTo }: ConfiguracionViewProps) {
             </span>
           </label>
 
+          <label style={{ fontSize: 12.5, fontWeight: 600 }}>
+            Logo (URL)
+            <input
+              defaultValue={business.logoUrl}
+              onBlur={(e) => saveBusiness({ logoUrl: e.target.value })}
+              placeholder="Ej: https://tusitio.com/logo.png"
+              className="caja-input"
+              style={{ marginTop: 6, width: "100%" }}
+            />
+            <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "var(--text-faint)" }}>
+              Se usa centrado arriba del ticket final que se le da al cliente al cobrar.
+            </span>
+            {business.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={business.logoUrl}
+                alt="Vista previa del logo"
+                style={{ marginTop: 8, maxHeight: 60, maxWidth: 180, display: "block" }}
+              />
+            )}
+          </label>
+
           <div style={{ fontSize: 11.5, color: "var(--text-faint)", minHeight: 14 }}>
             {businessSaving ? "Guardando…" : businessSaved ? "Guardado ✓" : ""}
           </div>

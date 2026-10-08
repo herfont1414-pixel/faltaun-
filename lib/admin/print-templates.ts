@@ -1,5 +1,6 @@
 import { money } from "@/lib/admin/format";
 import type { PrintConfig } from "@/lib/admin/types";
+import type { PrintableOrder } from "@/lib/admin/print";
 
 function escapeHtml(value: string) {
   return value
@@ -41,6 +42,10 @@ function baseStyles(config: PrintConfig) {
     .body-text { font-size: ${fontPx(config.fontSizeBody, 16, 13)}px; line-height: 1.4; }
     .footer-text { font-size: ${fontPx(config.fontSizeFooter, 13, 11)}px; line-height: 1.3; }
     .area-block { margin-top: 10px; page-break-inside: avoid; }
+    /* Título del origen en la comanda: a tamaño doble, como en el ESC/POS. */
+    .origin-title { font-size: ${fontPx(config.fontSizeHeader, 22, 18) * 2}px; line-height: 1.2; }
+    .item-note { font-size: ${fontPx(config.fontSizeBody, 16, 13) - 2}px; color: #333; margin: 1px 0 2px 10px; }
+    .logo-img { display: block; margin: 0 auto 6px; max-width: 70%; max-height: 90px; object-fit: contain; }
   `;
 }
 
@@ -81,7 +86,28 @@ export interface ComandaPrintData {
   customerName: string | null;
   openedAt: string;
   notes: string | null;
-  areas: { name: string; items: { name: string; qty: number }[] }[];
+  areas: { name: string; items: { name: string; qty: number; note: string | null }[] }[];
+}
+
+// Arma los datos de impresión de la comanda a partir de lo que devuelve
+// getPrintableOrder, agrupando por área. La usan tanto la ruta HTML
+// (navegador) como la ruta ESC/POS (impresión directa), para no repetir
+// este mapeo en los dos lugares.
+export function toComandaPrintData(order: PrintableOrder): ComandaPrintData {
+  return {
+    orderId: order.orderId,
+    tableNumber: order.tableNumber,
+    origin: order.origin,
+    customerName: order.customerName,
+    openedAt: order.openedAt,
+    notes: order.notes,
+    areas: order.areas.map((name) => ({
+      name,
+      items: order.items
+        .filter((it) => it.area === name)
+        .map((it) => ({ name: it.name, qty: it.qty, note: it.note })),
+    })),
+  };
 }
 
 export function renderComandaHtml(data: ComandaPrintData, config: PrintConfig): string {
@@ -103,7 +129,8 @@ export function renderComandaHtml(data: ComandaPrintData, config: PrintConfig): 
             <div class="row body-text">
               <span>${escapeHtml(item.name)}</span>
               <span class="bold">x${item.qty}</span>
-            </div>`
+            </div>
+            ${item.note ? `<div class="item-note">- ${escapeHtml(item.note)}</div>` : ""}`
             )
             .join("")}
         </div>`;
@@ -112,7 +139,7 @@ export function renderComandaHtml(data: ComandaPrintData, config: PrintConfig): 
 
   const body = `
     ${config.headerText ? `<div class="center bold header-text">${escapeHtml(config.headerText)}</div>` : ""}
-    <div class="center bold header-text" style="margin-top: 4px">${escapeHtml(originLabel)}</div>
+    <div class="center bold origin-title" style="margin-top: 4px">${escapeHtml(originLabel)}</div>
     <div class="center body-text">Venta #${shortId} · ${time}</div>
     ${data.customerName ? `<div class="center body-text">${escapeHtml(data.customerName)}</div>` : ""}
     <hr />
@@ -134,10 +161,11 @@ export interface TicketPrintData {
   customerPhone: string | null;
   customerAddress: string | null;
   openedAt: string;
-  items: { name: string; qty: number; price: number }[];
+  items: { name: string; qty: number; price: number; note: string | null }[];
   shippingCost: number;
   total: number;
   paymentMethod: string | null;
+  logoUrl?: string | null;
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -162,7 +190,8 @@ export function renderTicketHtml(data: TicketPrintData, config: PrintConfig): st
       <div class="row body-text">
         <span>${item.qty}x ${escapeHtml(item.name)}</span>
         <span>${money(item.price * item.qty)}</span>
-      </div>`
+      </div>
+      ${item.note ? `<div class="item-note">- ${escapeHtml(item.note)}</div>` : ""}`
     )
     .join("");
 
@@ -184,6 +213,7 @@ export function renderTicketHtml(data: TicketPrintData, config: PrintConfig): st
       : "";
 
   const body = `
+    ${data.logoUrl ? `<img class="logo-img" src="${escapeHtml(data.logoUrl)}" alt="" />` : ""}
     ${config.headerText ? `<div class="center bold header-text">${escapeHtml(config.headerText)}</div>` : ""}
     <div class="center bold header-text" style="margin-top: 4px">${escapeHtml(originLabel)}</div>
     <div class="center body-text">Pedido #${shortId} · ${time}</div>
