@@ -1,4 +1,5 @@
 import { getPool } from "@/lib/admin/db";
+import { addStamp } from "@/lib/admin/loyalty";
 import type { Fulfillment, WebOrder, WebOrderStatus } from "@/lib/admin/types";
 
 function money(value: string | number) {
@@ -100,13 +101,15 @@ export async function listWebOrders(status?: WebOrderStatus): Promise<WebOrder[]
 export async function respondWebOrder(id: string, status: WebOrderStatus, etaMinutes: number | null) {
   const pool = getPool();
   if (status === "confirmado") {
-    await pool.query(
+    const { rows } = await pool.query(
       `update gestion_web_orders
        set status = $2, eta_minutes = $3, responded_at = now(),
            kitchen_status = 'pendiente', kitchen_sent_at = now()
-       where id = $1`,
+       where id = $1
+       returning customer_phone`,
       [id, status, etaMinutes]
     );
+    if (rows[0]?.customer_phone) await addStamp(rows[0].customer_phone);
     return;
   }
   await pool.query(

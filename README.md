@@ -72,11 +72,22 @@ el archivo, agregá `"inStock": false` a su entrada.
 
 ## Sitio público
 
-- Menú filtrable por categoría, cargado directo desde la base (mismo
-  catálogo que usa el panel interno).
-- Carrito: "Agregar al pedido" en la ficha de cada plato, botón flotante con
-  el total, y checkout pidiendo nombre + WhatsApp. El pedido llega en vivo
-  al panel `/admin` → Pedidos web.
+- Menú en grilla (2-3 columnas), filtrable por categorías en pills
+  horizontales, cargado directo desde la base (mismo catálogo que usa el
+  panel interno). Cada plato abre una ficha con selector de cantidad antes
+  de agregarlo al carrito.
+- Carrito flotante con el total, que se expande en un modal de checkout:
+  ahí el cliente elige **Retirar en el local** o **Delivery** (con
+  dirección, zona y costo de envío ya sumado al total — mismas zonas que
+  administra el panel). Al escribir el teléfono, si ya pidió antes
+  autocompleta nombre y dirección. El pedido llega en vivo al panel
+  `/admin` → Pedidos web.
+- **Mis pedidos** (ícono en el header): historial de pedidos del cliente
+  por teléfono.
+- **Tarjeta de fidelidad** (ícono en el header): tarjeta virtual por
+  teléfono que suma un sello cada vez que el local confirma un pedido
+  hecho desde el menú — cada 10 sellos se gana un premio (a canjear
+  mostrando la tarjeta en el local).
 - Reservas: pide fecha, horario, personas, nombre y WhatsApp, y queda
   guardada en la base — llega en vivo al panel `/admin` → Reservas.
 

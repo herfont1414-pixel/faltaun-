@@ -176,3 +176,10 @@ create table if not exists gestion_delivery_customers (
   address text,
   updated_at timestamptz not null default now()
 );
+
+create table if not exists gestion_loyalty_accounts (
+  phone text primary key,
+  stamps int not null default 0,
+  redeemed int not null default 0,
+  updated_at timestamptz not null default now()
+);
