@@ -289,3 +289,19 @@ create table if not exists gestion_cash_movements (
 );
 
 create index if not exists gestion_cash_movements_shift_id_idx on gestion_cash_movements(shift_id);
+
+create table if not exists gestion_stock_movements (
+  id text primary key default (gen_random_uuid()),
+  product_id int references gestion_products(id) on delete set null,
+  ingredient_id int,
+  type text not null check (type in ('compra', 'venta', 'receta', 'ajuste_positivo', 'ajuste_negativo', 'merma', 'devolucion')),
+  quantity numeric(12, 3) not null,
+  reference_type text,
+  reference_id text,
+  note text,
+  user_id int references gestion_users(id),
+  created_at text not null default (now())
+);
+
+create index if not exists gestion_stock_movements_product_id_idx on gestion_stock_movements(product_id);
+create index if not exists gestion_stock_movements_created_at_idx on gestion_stock_movements(created_at);

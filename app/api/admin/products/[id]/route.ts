@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { updateProduct } from "@/lib/admin/store";
 import { isDbConfigured, getPool } from "@/lib/admin/db";
 import { requireUser, recordAudit } from "@/lib/admin/auth";
+import { recordStockMovement } from "@/lib/admin/stock-movements";
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   if (!isDbConfigured()) {
@@ -15,10 +16,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const id = Number(params.id);
 
   const pool = getPool();
-  const { rows: before } = await pool.query(
-    "select price, active, in_stock, stock_qty from gestion_products where id = $1",
-    [id]
-  );
+  const { rows: before } = await pool.query<{
+    price: string;
+    active: boolean;
+    in_stock: boolean;
+    stock_qty: number | null;
+  }>("select price, active, in_stock, stock_qty from gestion_products where id = $1", [id]);
 
   const changes = {
     price: typeof body.price === "number" ? body.price : undefined,
@@ -39,6 +42,22 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       oldValue: before[0] ?? null,
       newValue: changes,
     });
+  }
+
+  // Un ajuste manual de stock (editar el número a mano en Productos) deja
+  // registro en la bitácora igual que una venta, para poder reconstruir
+  // después por qué cambió el stock de un producto.
+  if (changes.stockQty !== undefined && changes.stockQty !== null && before[0]?.stock_qty != null) {
+    const delta = changes.stockQty - before[0].stock_qty;
+    if (delta !== 0) {
+      await recordStockMovement({
+        productId: id,
+        type: delta > 0 ? "ajuste_positivo" : "ajuste_negativo",
+        quantity: delta,
+        referenceType: "manual",
+        userId: actor.id,
+      });
+    }
   }
 
   return NextResponse.json({ ok: true });

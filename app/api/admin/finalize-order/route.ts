@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     loyaltyPhone?: string | null;
   };
   return ok(request, async (actor) => {
-    const result = await finalizeOrder(orderId, payments, customerId ?? null);
+    const result = await finalizeOrder(orderId, payments, customerId ?? null, actor.id);
     if (loyaltyPhone) await addStamp(loyaltyPhone, { orderTotal: result.total, origin: result.origin });
     await recordAudit({
       userId: actor.id,

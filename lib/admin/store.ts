@@ -1,5 +1,6 @@
 import { getPool } from "@/lib/admin/db";
 import { ensureSeeded } from "@/lib/admin/seed";
+import { recordStockMovement } from "@/lib/admin/stock-movements";
 import type {
   AdminProduct,
   Catalog,
@@ -256,7 +257,12 @@ export async function requestBill(tableNumber: number) {
   await pool.query("update gestion_tables set status = 'atencion' where number = $1", [tableNumber]);
 }
 
-export async function finalizeOrder(orderId: string, payments: OrderPayment[], customerId: number | null) {
+export async function finalizeOrder(
+  orderId: string,
+  payments: OrderPayment[],
+  customerId: number | null,
+  userId: number | null = null
+) {
   if (payments.length === 0) throw new Error("Agregá al menos un medio de pago");
 
   const pool = getPool();
@@ -321,6 +327,17 @@ export async function finalizeOrder(orderId: string, payments: OrderPayment[], c
         newQty,
         newQty > 0,
       ]);
+      await recordStockMovement(
+        {
+          productId: product.id,
+          type: "venta",
+          quantity: -it.qty,
+          referenceType: "order",
+          referenceId: orderId,
+          userId,
+        },
+        client
+      );
     }
 
     // El débito a cuenta corriente es solo por la porción pagada con ese
