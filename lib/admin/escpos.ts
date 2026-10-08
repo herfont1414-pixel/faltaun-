@@ -110,7 +110,8 @@ export function renderComandaEscPos(data: ComandaPrintData, config: PrintConfig)
     .join(" - ");
   if (customerLine) b.align("center").line(customerLine);
 
-  b.align("left").line(`Venta #${shortId} - ${time}`);
+  b.align("left").line(`Venta #${shortId}`);
+  b.line(time);
   b.hr(width);
 
   let printedAny = false;
@@ -168,7 +169,8 @@ export function renderTicketEscPos(data: TicketPrintData, config: PrintConfig): 
   }
 
   b.align("center").bold(true).line(originLabel).bold(false);
-  b.line(`Pedido #${shortId} - ${time}`);
+  b.line(`Pedido #${shortId}`);
+  b.line(time);
 
   if (data.customerName || data.customerPhone || data.customerAddress) {
     b.hr(width).align("left");

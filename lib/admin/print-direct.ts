@@ -43,7 +43,7 @@ export async function sendRawToPrinter(buffer: Buffer): Promise<DirectPrintResul
           "-File",
           scriptPath,
           "-PrinterName",
-          config.printerName,
+          config.printerName.trim(),
           "-FilePath",
           filePath,
         ],

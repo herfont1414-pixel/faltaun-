@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest) {
     fontSizeBody: body.fontSizeBody === "pequena" || body.fontSizeBody === "normal" ? body.fontSizeBody : undefined,
     fontSizeFooter: body.fontSizeFooter === "pequena" || body.fontSizeFooter === "normal" ? body.fontSizeFooter : undefined,
     directPrintEnabled: typeof body.directPrintEnabled === "boolean" ? body.directPrintEnabled : undefined,
-    printerName: typeof body.printerName === "string" ? body.printerName : undefined,
+    printerName: typeof body.printerName === "string" ? body.printerName.trim() : undefined,
   });
   return NextResponse.json({ config });
 }
