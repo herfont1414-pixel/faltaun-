@@ -136,10 +136,10 @@ export function AdminApp() {
     setSelectedTableNumber(null);
   }
 
-  async function addProduct(name: string, price: number) {
+  async function addProduct(productId: number) {
     if (!selectedOrderId) return;
     const state = await safeCall(() =>
-      postJson("/api/admin/add-item", { orderId: selectedOrderId, name, price })
+      postJson("/api/admin/add-item", { orderId: selectedOrderId, productId })
     );
     if (state) applyState(state);
   }

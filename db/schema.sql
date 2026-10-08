@@ -118,6 +118,13 @@ create table if not exists gestion_order_items (
 
 alter table gestion_order_items add column if not exists note text;
 
+-- Referencia al producto, además de product_name/price (que se mantienen
+-- como "foto" histórica de lo vendido: cambiar el precio de un producto no
+-- debe recalcular ventas pasadas). Nullable porque los ítems de pedidos ya
+-- cerrados antes de esta migración no tienen esta referencia, y porque un
+-- producto se puede dar de baja sin perder el historial de lo vendido.
+alter table gestion_order_items add column if not exists product_id int references gestion_products(id) on delete set null;
+
 create index if not exists gestion_order_items_order_id_idx on gestion_order_items(order_id);
 create index if not exists gestion_orders_status_idx on gestion_orders(status);
 create index if not exists gestion_customer_ledger_customer_id_idx on gestion_customer_ledger(customer_id);

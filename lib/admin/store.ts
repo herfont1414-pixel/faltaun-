@@ -23,11 +23,12 @@ async function getCatalog(): Promise<Catalog> {
     "select id, name from gestion_categories order by sort_order"
   );
   const products = await pool.query<{
+    id: number;
     category_id: number;
     name: string;
     price: string;
     in_stock: boolean;
-  }>("select category_id, name, price, in_stock from gestion_products where active = true order by id");
+  }>("select id, category_id, name, price, in_stock from gestion_products where active = true order by id");
 
   const catalog: Catalog = {};
   for (const cat of categories.rows) catalog[cat.name] = [];
@@ -35,6 +36,7 @@ async function getCatalog(): Promise<Catalog> {
     const category = categories.rows.find((c) => c.id === product.category_id);
     if (!category) continue;
     catalog[category.name].push({
+      id: product.id,
       name: product.name,
       price: money(product.price),
       inStock: product.in_stock,
@@ -191,18 +193,35 @@ export async function openTable(
   return getOrderRow(orderRows[0].id);
 }
 
-export async function addItem(orderId: string, product: { name: string; price: number }) {
+// El precio y el nombre SIEMPRE se resuelven acá contra gestion_products,
+// nunca se confía en lo que mande el cliente: el frontend solo manda el id
+// del producto (tomado del catálogo que el propio servidor le dio), así que
+// un request manipulado no puede cobrar un producto real a otro precio.
+export async function addItem(orderId: string, productId: number) {
   const pool = getPool();
+  const { rows: productRows } = await pool.query<{
+    id: number;
+    name: string;
+    price: string;
+    active: boolean;
+    in_stock: boolean;
+  }>("select id, name, price, active, in_stock from gestion_products where id = $1", [productId]);
+  const product = productRows[0];
+  if (!product) throw new Error("Ese producto no existe");
+  if (!product.active) throw new Error(`${product.name} ya no está disponible`);
+  if (!product.in_stock) throw new Error(`${product.name} está sin stock`);
+
+  const price = money(product.price);
   const { rows: existing } = await pool.query(
-    "select id, qty from gestion_order_items where order_id = $1 and product_name = $2",
-    [orderId, product.name]
+    "select id, qty from gestion_order_items where order_id = $1 and product_id = $2",
+    [orderId, product.id]
   );
   if (existing[0]) {
     await pool.query("update gestion_order_items set qty = qty + 1 where id = $1", [existing[0].id]);
   } else {
     await pool.query(
-      "insert into gestion_order_items (order_id, product_name, price) values ($1, $2, $3)",
-      [orderId, product.name, product.price]
+      "insert into gestion_order_items (order_id, product_name, price, product_id) values ($1, $2, $3, $4)",
+      [orderId, product.name, price, product.id]
     );
   }
   return getOrderRow(orderId);
@@ -253,9 +272,16 @@ export async function finalizeOrder(orderId: string, payments: OrderPayment[], c
     );
     if (!orderRows[0]) throw new Error(`Pedido ${orderId} no existe`);
     const order = orderRows[0];
+    // Protege contra doble submit (doble click, reintento de red): el lock
+    // "for update" hace que un segundo pedido de cierre para el mismo orderId
+    // espere a que termine el primero, y al despertar ve el estado ya
+    // 'cerrada' y se frena acá — nunca llega a cobrar dos veces.
+    if (order.status !== "abierta") {
+      throw new Error("El pedido ya fue cerrado");
+    }
 
     const { rows: itemRows } = await client.query(
-      "select product_name, price, qty from gestion_order_items where order_id = $1",
+      "select product_name, price, qty, product_id from gestion_order_items where order_id = $1",
       [orderId]
     );
     const itemsTotal = itemRows.reduce((sum, it) => sum + money(it.price) * it.qty, 0);
@@ -270,16 +296,26 @@ export async function finalizeOrder(orderId: string, payments: OrderPayment[], c
     }
 
     // Descuento de stock: solo para productos con stock numérico asignado
-    // (stock_qty null = stock infinito, no se toca). Si llega a 0, se marca
-    // sin stock automáticamente.
+    // (stock_qty null = stock infinito, no se toca). El "for update" bloquea
+    // la fila del producto para que dos cobros simultáneos de ese mismo
+    // producto no lean el mismo stock y sobrevendan; si no queda stock para
+    // cubrir lo pedido, se rechaza toda la venta (no se vende "lo que
+    // alcance" ni se deja en negativo).
     for (const it of itemRows) {
-      const { rows: prodRows } = await client.query<{ id: number; stock_qty: number | null }>(
-        "select id, stock_qty from gestion_products where name = $1",
-        [it.product_name]
+      const { rows: prodRows } = await client.query<{ id: number; name: string; stock_qty: number | null }>(
+        it.product_id != null
+          ? "select id, name, stock_qty from gestion_products where id = $1 for update"
+          : "select id, name, stock_qty from gestion_products where name = $1 for update",
+        [it.product_id != null ? it.product_id : it.product_name]
       );
       const product = prodRows[0];
       if (!product || product.stock_qty === null) continue;
-      const newQty = Math.max(0, product.stock_qty - it.qty);
+      const newQty = product.stock_qty - it.qty;
+      if (newQty < 0) {
+        throw new Error(
+          `No hay suficiente stock de ${product.name} (quedan ${product.stock_qty}, se necesitan ${it.qty})`
+        );
+      }
       await client.query("update gestion_products set stock_qty = $2, in_stock = $3 where id = $1", [
         product.id,
         newQty,

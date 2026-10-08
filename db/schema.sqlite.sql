@@ -81,7 +81,8 @@ create table if not exists gestion_order_items (
   price numeric(10, 2) not null,
   qty int not null default 1,
   sent_to_kitchen boolean not null default false,
-  note text
+  note text,
+  product_id int references gestion_products(id) on delete set null
 );
 
 create table if not exists gestion_order_payments (

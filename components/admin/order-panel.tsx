@@ -13,7 +13,7 @@ interface OrderPanelProps {
   catalog: Catalog;
   activeCategory: string;
   onChangeCategory: (category: string) => void;
-  onAddProduct: (name: string, price: number) => void;
+  onAddProduct: (productId: number) => void;
   onChangeQty: (itemId: string, delta: number) => void;
   onClose: () => void;
   onSendKitchen: () => void;
@@ -115,11 +115,11 @@ export function OrderPanel({
         <div className="product-list">
           {products.map((product) => (
             <button
-              key={product.name}
+              key={product.id}
               type="button"
               className={`product-btn ${product.inStock ? "" : "sin-stock"}`}
               disabled={!product.inStock}
-              onClick={() => onAddProduct(product.name, product.price)}
+              onClick={() => onAddProduct(product.id)}
             >
               <div className="p-name">
                 {product.name}
