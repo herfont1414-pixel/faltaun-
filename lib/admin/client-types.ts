@@ -19,4 +19,5 @@ export type Section =
   | "configuracion"
   | "usuarios"
   | "auditoria"
-  | "ingredientes";
+  | "ingredientes"
+  | "compras";

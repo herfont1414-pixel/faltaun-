@@ -19,6 +19,7 @@ import { ConfiguracionView } from "@/components/admin/configuracion-view";
 import { UsuariosView } from "@/components/admin/usuarios-view";
 import { AuditoriaView } from "@/components/admin/auditoria-view";
 import { IngredientesView } from "@/components/admin/ingredientes-view";
+import { ComprasView } from "@/components/admin/compras-view";
 import { TableOpenModal } from "@/components/admin/table-open-modal";
 import { money } from "@/lib/admin/format";
 import { printOrderDocument } from "@/lib/print-client";
@@ -421,6 +422,8 @@ export function AdminApp() {
         <AuditoriaView />
       ) : section === "ingredientes" ? (
         <IngredientesView />
+      ) : section === "compras" ? (
+        <ComprasView />
       ) : null}
       </div>
 

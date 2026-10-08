@@ -316,7 +316,9 @@ create table if not exists gestion_ingredients (
   unit text not null default 'unid.',
   active boolean not null default 1,
   created_at text not null default (now()),
-  updated_at text not null default (now())
+  updated_at text not null default (now()),
+  track_stock boolean not null default 0,
+  stock_qty numeric(12, 3)
 );
 
 create table if not exists gestion_ingredient_price_history (
@@ -345,3 +347,40 @@ create table if not exists gestion_recipe_items (
 );
 
 create index if not exists gestion_recipe_items_recipe_id_idx on gestion_recipe_items(recipe_id);
+
+create table if not exists gestion_suppliers (
+  id integer primary key autoincrement,
+  external_id int unique,
+  name text not null,
+  phone text,
+  address text,
+  active boolean not null default 1
+);
+
+create table if not exists gestion_purchases (
+  id text primary key default (gen_random_uuid()),
+  supplier_id int references gestion_suppliers(id),
+  purchased_at text not null default (now()),
+  payment_method text not null default 'efectivo' check (payment_method in ('efectivo', 'transferencia', 'cuenta_corriente')),
+  total numeric(12, 2) not null default 0,
+  note text,
+  user_id int references gestion_users(id),
+  created_at text not null default (now())
+);
+
+create table if not exists gestion_purchase_items (
+  id text primary key default (gen_random_uuid()),
+  purchase_id text not null references gestion_purchases(id) on delete cascade,
+  ingredient_id int references gestion_ingredients(id),
+  product_id int references gestion_products(id),
+  quantity numeric(12, 3) not null,
+  unit_cost numeric(12, 2) not null,
+  line_total numeric(12, 2) not null,
+  check (
+    (ingredient_id is not null and product_id is null) or
+    (ingredient_id is null and product_id is not null)
+  )
+);
+
+create index if not exists gestion_purchases_supplier_id_idx on gestion_purchases(supplier_id);
+create index if not exists gestion_purchase_items_purchase_id_idx on gestion_purchase_items(purchase_id);

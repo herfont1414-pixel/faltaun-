@@ -73,6 +73,8 @@ interface CsvIngredient {
   cost: number;
   supplier: string | null;
   unit: string;
+  trackStock: boolean;
+  stockQty: number | null;
 }
 
 // Parser manual, no una librería de CSV: el archivo es simple (sin comas ni
@@ -84,6 +86,7 @@ function parseIngredientesCsv(raw: string): CsvIngredient[] {
     .filter((line) => line.trim())
     .map((line) => {
       const cols = line.split(",");
+      const stockRaw = (cols[7] ?? "").trim();
       return {
         externalId: Number(cols[0]),
         category: (cols[1] ?? "").trim(),
@@ -91,6 +94,8 @@ function parseIngredientesCsv(raw: string): CsvIngredient[] {
         cost: Number(cols[3]) || 0,
         supplier: (cols[4] ?? "").trim() || null,
         unit: (cols[5] ?? "").trim() || "unid.",
+        trackStock: (cols[6] ?? "").trim().toLowerCase() === "si",
+        stockQty: stockRaw ? Number(stockRaw) : null,
       };
     })
     .filter((ing) => ing.name && Number.isFinite(ing.externalId));
@@ -116,13 +121,14 @@ async function syncIngredients(client: DbClient) {
       [ing.externalId]
     );
     const { rows } = await client.query<{ id: number }>(
-      `insert into gestion_ingredients (external_id, category, name, cost, supplier, unit)
-       values ($1, $2, $3, $4, $5, $6)
+      `insert into gestion_ingredients (external_id, category, name, cost, supplier, unit, track_stock, stock_qty)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
        on conflict (external_id) do update set
          category = excluded.category, name = excluded.name, cost = excluded.cost,
-         supplier = excluded.supplier, unit = excluded.unit, updated_at = now()
+         supplier = excluded.supplier, unit = excluded.unit, track_stock = excluded.track_stock,
+         updated_at = now()
        returning id`,
-      [ing.externalId, ing.category, ing.name, ing.cost, ing.supplier, ing.unit]
+      [ing.externalId, ing.category, ing.name, ing.cost, ing.supplier, ing.unit, ing.trackStock, ing.stockQty]
     );
     const id = rows[0].id;
     const previousCost = existingRows[0] ? Number(existingRows[0].cost) : null;
@@ -234,6 +240,8 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_shifts", "ingresos_efectivo", "numeric(12, 2) not null default 0");
         await ensureSqliteColumn(client, "gestion_shifts", "retiros_efectivo", "numeric(12, 2) not null default 0");
         await ensureSqliteColumn(client, "gestion_shifts", "ajustes_efectivo", "numeric(12, 2) not null default 0");
+        await ensureSqliteColumn(client, "gestion_ingredients", "track_stock", "boolean not null default 0");
+        await ensureSqliteColumn(client, "gestion_ingredients", "stock_qty", "numeric(12, 3)");
       }
       await client.query(
         `insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')
@@ -316,6 +324,23 @@ export async function ensureSeeded() {
          values ($1, $2, $3, $4, $5, $6)
          on conflict (external_id) do nothing`,
         [m.externalId, customerId, m.date, m.amount, m.type, m.paymentMethod]
+      );
+    }
+
+    const suppliers = readJson("proveedores.json") as {
+      externalId: number;
+      name: string;
+      phone: string | null;
+      address: string | null;
+      active: boolean;
+    }[];
+    for (const s of suppliers) {
+      await client.query(
+        `insert into gestion_suppliers (external_id, name, phone, address, active)
+         values ($1, $2, $3, $4, $5)
+         on conflict (external_id) do update set
+           name = excluded.name, phone = excluded.phone, address = excluded.address, active = excluded.active`,
+        [s.externalId, s.name, s.phone, s.address, s.active]
       );
     }
   } finally {

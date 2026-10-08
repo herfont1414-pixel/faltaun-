@@ -13,9 +13,11 @@ export type StockMovementType =
 // quantity va con signo: negativo si descuenta stock (venta, merma,
 // ajuste_negativo), positivo si lo aumenta (compra, ajuste_positivo,
 // devolucion) — sumar quantity reconstruye el cambio neto de stock.
+// Un movimiento es de un producto O de un ingrediente, nunca los dos.
 export async function recordStockMovement(
   params: {
-    productId: number;
+    productId?: number | null;
+    ingredientId?: number | null;
     type: StockMovementType;
     quantity: number;
     referenceType?: string;
@@ -28,10 +30,11 @@ export async function recordStockMovement(
   const db = client ?? getPool();
   await db.query(
     `insert into gestion_stock_movements
-       (product_id, type, quantity, reference_type, reference_id, note, user_id)
-     values ($1, $2, $3, $4, $5, $6, $7)`,
+       (product_id, ingredient_id, type, quantity, reference_type, reference_id, note, user_id)
+     values ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [
-      params.productId,
+      params.productId ?? null,
+      params.ingredientId ?? null,
       params.type,
       params.quantity,
       params.referenceType ?? null,

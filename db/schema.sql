@@ -434,3 +434,53 @@ create table if not exists gestion_recipe_items (
 );
 
 create index if not exists gestion_recipe_items_recipe_id_idx on gestion_recipe_items(recipe_id);
+
+-- La planilla de ingredientes ya traía "Control de Stock"/"Stock" para
+-- algunos; se agregan acá para poder sumarles cantidad al confirmar una
+-- compra (igual que gestion_products.stock_qty, pero del lado de insumos).
+alter table gestion_ingredients add column if not exists track_stock boolean not null default false;
+alter table gestion_ingredients add column if not exists stock_qty numeric(12, 3);
+
+-- Proveedores (migrado desde data/proveedores.json, igual criterio que
+-- gestion_customers: external_id para no duplicar al re-sincronizar).
+create table if not exists gestion_suppliers (
+  id serial primary key,
+  external_id int unique,
+  name text not null,
+  phone text,
+  address text,
+  active boolean not null default true
+);
+
+-- Una compra puede traer ítems de ingredientes (alimentan recetas) o de
+-- productos (se revenden directo, ej. bebidas) — nunca ambos en el mismo
+-- ítem. Confirmar la compra es lo que efectivamente sube el stock, ajusta
+-- el costo del ingrediente y deja constancia en gestion_stock_movements;
+-- no hay un estado "borrador" separado, se registra ya confirmada.
+create table if not exists gestion_purchases (
+  id uuid primary key default gen_random_uuid(),
+  supplier_id int references gestion_suppliers(id),
+  purchased_at timestamptz not null default now(),
+  payment_method text not null default 'efectivo' check (payment_method in ('efectivo', 'transferencia', 'cuenta_corriente')),
+  total numeric(12, 2) not null default 0,
+  note text,
+  user_id int references gestion_users(id),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists gestion_purchase_items (
+  id uuid primary key default gen_random_uuid(),
+  purchase_id uuid not null references gestion_purchases(id) on delete cascade,
+  ingredient_id int references gestion_ingredients(id),
+  product_id int references gestion_products(id),
+  quantity numeric(12, 3) not null,
+  unit_cost numeric(12, 2) not null,
+  line_total numeric(12, 2) not null,
+  check (
+    (ingredient_id is not null and product_id is null) or
+    (ingredient_id is null and product_id is not null)
+  )
+);
+
+create index if not exists gestion_purchases_supplier_id_idx on gestion_purchases(supplier_id);
+create index if not exists gestion_purchase_items_purchase_id_idx on gestion_purchase_items(purchase_id);

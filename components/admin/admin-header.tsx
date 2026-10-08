@@ -23,6 +23,7 @@ const SECTION_LABEL: Record<Section, string> = {
   usuarios: "Usuarios",
   auditoria: "Auditoría",
   ingredientes: "Ingredientes",
+  compras: "Compras",
 };
 
 const ROLE_LABEL: Record<string, string> = {
