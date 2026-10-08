@@ -18,4 +18,5 @@ export type Section =
   | "impresion"
   | "configuracion"
   | "usuarios"
-  | "auditoria";
+  | "auditoria"
+  | "ingredientes";

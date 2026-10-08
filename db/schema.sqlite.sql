@@ -305,3 +305,43 @@ create table if not exists gestion_stock_movements (
 
 create index if not exists gestion_stock_movements_product_id_idx on gestion_stock_movements(product_id);
 create index if not exists gestion_stock_movements_created_at_idx on gestion_stock_movements(created_at);
+
+create table if not exists gestion_ingredients (
+  id integer primary key autoincrement,
+  external_id int unique,
+  category text,
+  name text not null,
+  cost numeric(12, 2) not null default 0,
+  supplier text,
+  unit text not null default 'unid.',
+  active boolean not null default 1,
+  created_at text not null default (now()),
+  updated_at text not null default (now())
+);
+
+create table if not exists gestion_ingredient_price_history (
+  id integer primary key autoincrement,
+  ingredient_id int not null references gestion_ingredients(id) on delete cascade,
+  cost numeric(12, 2) not null,
+  created_at text not null default (now())
+);
+
+create index if not exists gestion_ingredient_price_history_ingredient_id_idx
+  on gestion_ingredient_price_history(ingredient_id);
+
+create table if not exists gestion_recipes (
+  id integer primary key autoincrement,
+  product_id int unique not null references gestion_products(id) on delete cascade,
+  created_at text not null default (now()),
+  updated_at text not null default (now())
+);
+
+create table if not exists gestion_recipe_items (
+  id integer primary key autoincrement,
+  recipe_id int not null references gestion_recipes(id) on delete cascade,
+  ingredient_id int not null references gestion_ingredients(id) on delete cascade,
+  quantity numeric(12, 3) not null,
+  unique (recipe_id, ingredient_id)
+);
+
+create index if not exists gestion_recipe_items_recipe_id_idx on gestion_recipe_items(recipe_id);

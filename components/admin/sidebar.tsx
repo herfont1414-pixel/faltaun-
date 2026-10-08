@@ -18,6 +18,7 @@ import {
   Printer,
   UserCog,
   History,
+  Carrot,
   X,
 } from "lucide-react";
 import { BrandLogo } from "@/components/admin/brand-logo";
@@ -47,6 +48,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     title: "Gestión",
     items: [
       { label: "Productos", Icon: Package, section: "productos" },
+      { label: "Ingredientes", Icon: Carrot, section: "ingredientes" },
       { label: "Clientes", Icon: Users, section: "clientes" },
       { label: "Caja", Icon: Wallet, section: "caja" },
       { label: "Reportes", Icon: BarChart3, section: "reportes" },

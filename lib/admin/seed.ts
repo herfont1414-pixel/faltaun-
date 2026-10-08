@@ -66,6 +66,81 @@ async function syncCatalog(client: DbClient) {
   );
 }
 
+interface CsvIngredient {
+  externalId: number;
+  category: string;
+  name: string;
+  cost: number;
+  supplier: string | null;
+  unit: string;
+}
+
+// Parser manual, no una librería de CSV: el archivo es simple (sin comas ni
+// comillas dentro de los campos), así que no hace falta una dependencia más.
+function parseIngredientesCsv(raw: string): CsvIngredient[] {
+  const lines = raw.trim().split(/\r?\n/);
+  return lines
+    .slice(1)
+    .filter((line) => line.trim())
+    .map((line) => {
+      const cols = line.split(",");
+      return {
+        externalId: Number(cols[0]),
+        category: (cols[1] ?? "").trim(),
+        name: (cols[2] ?? "").trim(),
+        cost: Number(cols[3]) || 0,
+        supplier: (cols[4] ?? "").trim() || null,
+        unit: (cols[5] ?? "").trim() || "unid.",
+      };
+    })
+    .filter((ing) => ing.name && Number.isFinite(ing.externalId));
+}
+
+// Igual que syncCatalog: vuelve a sincronizar cada vez que cambia el CSV
+// (por hash), no solo la primera vez, y deja constancia en el historial de
+// costos cuando el costo de un ingrediente efectivamente cambió.
+async function syncIngredients(client: DbClient) {
+  const raw = readFileSync(path.join(process.cwd(), "data", "ingredientes.csv"), "utf-8");
+  const hash = crypto.createHash("sha256").update(raw).digest("hex");
+
+  const { rows: metaRows } = await client.query<{ value: string }>(
+    "select value from gestion_meta where key = $1",
+    ["ingredients_hash"]
+  );
+  if (metaRows[0]?.value === hash) return;
+
+  const ingredients = parseIngredientesCsv(raw);
+  for (const ing of ingredients) {
+    const { rows: existingRows } = await client.query<{ id: number; cost: string | number }>(
+      "select id, cost from gestion_ingredients where external_id = $1",
+      [ing.externalId]
+    );
+    const { rows } = await client.query<{ id: number }>(
+      `insert into gestion_ingredients (external_id, category, name, cost, supplier, unit)
+       values ($1, $2, $3, $4, $5, $6)
+       on conflict (external_id) do update set
+         category = excluded.category, name = excluded.name, cost = excluded.cost,
+         supplier = excluded.supplier, unit = excluded.unit, updated_at = now()
+       returning id`,
+      [ing.externalId, ing.category, ing.name, ing.cost, ing.supplier, ing.unit]
+    );
+    const id = rows[0].id;
+    const previousCost = existingRows[0] ? Number(existingRows[0].cost) : null;
+    if (previousCost === null || previousCost !== ing.cost) {
+      await client.query("insert into gestion_ingredient_price_history (ingredient_id, cost) values ($1, $2)", [
+        id,
+        ing.cost,
+      ]);
+    }
+  }
+
+  await client.query(
+    `insert into gestion_meta (key, value) values ('ingredients_hash', $1)
+     on conflict (key) do update set value = excluded.value`,
+    [hash]
+  );
+}
+
 // A diferencia de Postgres, SQLite no soporta "alter table add column if not
 // exists": "create table if not exists" tampoco agrega columnas a una tabla
 // que ya existía de antes. Por eso las columnas nuevas en tablas viejas se
@@ -171,6 +246,7 @@ export async function ensureSeeded() {
     }
 
     await syncCatalog(client);
+    await syncIngredients(client);
     await ensureDefaultAdminUser(client);
 
     const { rows: zoneRows } = await client.query("select count(*) as count from gestion_zones");

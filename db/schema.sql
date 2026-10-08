@@ -384,3 +384,53 @@ create table if not exists gestion_stock_movements (
 
 create index if not exists gestion_stock_movements_product_id_idx on gestion_stock_movements(product_id);
 create index if not exists gestion_stock_movements_created_at_idx on gestion_stock_movements(created_at);
+
+-- Ingredientes para recetas/costos (semilla desde data/ingredientes.csv).
+-- external_id es el ID de esa planilla, para poder volver a sincronizar
+-- sin duplicar si se actualiza el archivo.
+create table if not exists gestion_ingredients (
+  id serial primary key,
+  external_id int unique,
+  category text,
+  name text not null,
+  cost numeric(12, 2) not null default 0,
+  supplier text,
+  unit text not null default 'unid.',
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Historial de costo: cada vez que cambia gestion_ingredients.cost queda
+-- una fila acá, para poder ver la tendencia de precio de un ingrediente.
+create table if not exists gestion_ingredient_price_history (
+  id serial primary key,
+  ingredient_id int not null references gestion_ingredients(id) on delete cascade,
+  cost numeric(12, 2) not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists gestion_ingredient_price_history_ingredient_id_idx
+  on gestion_ingredient_price_history(ingredient_id);
+
+-- Una receta por producto (opcional: no todos los productos necesitan
+-- una). El costo se recalcula siempre desde el costo ACTUAL de cada
+-- ingrediente — no se guarda un costo congelado acá a propósito, porque
+-- lo que se congela para no alterar ventas pasadas es el precio de venta
+-- del pedido (gestion_order_items.price), nunca el costo de la receta.
+create table if not exists gestion_recipes (
+  id serial primary key,
+  product_id int unique not null references gestion_products(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists gestion_recipe_items (
+  id serial primary key,
+  recipe_id int not null references gestion_recipes(id) on delete cascade,
+  ingredient_id int not null references gestion_ingredients(id) on delete cascade,
+  quantity numeric(12, 3) not null,
+  unique (recipe_id, ingredient_id)
+);
+
+create index if not exists gestion_recipe_items_recipe_id_idx on gestion_recipe_items(recipe_id);
