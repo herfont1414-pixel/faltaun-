@@ -156,6 +156,9 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_orders", "party_size", "int");
         await ensureSqliteColumn(client, "gestion_orders", "waiter", "text");
         await ensureSqliteColumn(client, "gestion_order_items", "product_id", "int");
+        await ensureSqliteColumn(client, "gestion_shifts", "ingresos_efectivo", "numeric(12, 2) not null default 0");
+        await ensureSqliteColumn(client, "gestion_shifts", "retiros_efectivo", "numeric(12, 2) not null default 0");
+        await ensureSqliteColumn(client, "gestion_shifts", "ajustes_efectivo", "numeric(12, 2) not null default 0");
       }
       await client.query(
         `insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')

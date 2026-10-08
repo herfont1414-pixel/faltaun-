@@ -139,6 +139,9 @@ export interface Shift {
   salesTransferencia: number;
   salesCuentaCorriente: number;
   expensesEfectivo: number;
+  ingresosEfectivo: number;
+  retirosEfectivo: number;
+  ajustesEfectivo: number;
   notes: string | null;
 }
 

@@ -139,10 +139,14 @@ create table if not exists gestion_shifts (
   sales_transferencia numeric(12, 2) not null default 0,
   sales_cuenta_corriente numeric(12, 2) not null default 0,
   notes text,
-  expenses_efectivo numeric(12, 2) not null default 0
+  expenses_efectivo numeric(12, 2) not null default 0,
+  ingresos_efectivo numeric(12, 2) not null default 0,
+  retiros_efectivo numeric(12, 2) not null default 0,
+  ajustes_efectivo numeric(12, 2) not null default 0
 );
 
 create index if not exists gestion_shifts_status_idx on gestion_shifts(status);
+create unique index if not exists gestion_shifts_single_open_idx on gestion_shifts(status) where status = 'abierto';
 
 create table if not exists gestion_meta (
   key text primary key,
@@ -272,3 +276,16 @@ create table if not exists gestion_audit_log (
 
 create index if not exists gestion_audit_log_created_at_idx on gestion_audit_log(created_at);
 create index if not exists gestion_audit_log_entity_idx on gestion_audit_log(entity, entity_id);
+
+create table if not exists gestion_cash_movements (
+  id text primary key default (gen_random_uuid()),
+  shift_id text references gestion_shifts(id) on delete cascade,
+  type text not null check (type in ('retiro', 'ingreso', 'ajuste')),
+  amount numeric(12, 2) not null,
+  payment_method text not null default 'efectivo' check (payment_method in ('efectivo', 'transferencia')),
+  note text,
+  user_id int references gestion_users(id),
+  created_at text not null default (now())
+);
+
+create index if not exists gestion_cash_movements_shift_id_idx on gestion_cash_movements(shift_id);

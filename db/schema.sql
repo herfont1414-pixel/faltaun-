@@ -170,8 +170,16 @@ create table if not exists gestion_shifts (
 );
 
 alter table gestion_shifts add column if not exists expenses_efectivo numeric(12, 2) not null default 0;
+alter table gestion_shifts add column if not exists ingresos_efectivo numeric(12, 2) not null default 0;
+alter table gestion_shifts add column if not exists retiros_efectivo numeric(12, 2) not null default 0;
+alter table gestion_shifts add column if not exists ajustes_efectivo numeric(12, 2) not null default 0;
 
 create index if not exists gestion_shifts_status_idx on gestion_shifts(status);
+
+-- Un solo turno abierto a la vez, reforzado a nivel de base (no solo con el
+-- "select ... where status = 'abierto'" de openShift(), que por sí solo
+-- tiene una ventana de carrera entre el select y el insert).
+create unique index if not exists gestion_shifts_single_open_idx on gestion_shifts(status) where status = 'abierto';
 
 create table if not exists gestion_meta (
   key text primary key,
@@ -336,3 +344,21 @@ create table if not exists gestion_audit_log (
 
 create index if not exists gestion_audit_log_created_at_idx on gestion_audit_log(created_at);
 create index if not exists gestion_audit_log_entity_idx on gestion_audit_log(entity, entity_id);
+
+-- Movimientos de caja que no tienen otra tabla propia: retiro de dinero
+-- (distinto de un gasto — sale efectivo de la caja pero no es un costo del
+-- negocio), ingreso extra, y ajuste manual. Las ventas y los gastos ya se
+-- pueden reconstruir desde gestion_order_payments y gestion_expenses
+-- respectivamente, así que no se duplican acá.
+create table if not exists gestion_cash_movements (
+  id uuid primary key default gen_random_uuid(),
+  shift_id uuid references gestion_shifts(id) on delete cascade,
+  type text not null check (type in ('retiro', 'ingreso', 'ajuste')),
+  amount numeric(12, 2) not null,
+  payment_method text not null default 'efectivo' check (payment_method in ('efectivo', 'transferencia')),
+  note text,
+  user_id int references gestion_users(id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists gestion_cash_movements_shift_id_idx on gestion_cash_movements(shift_id);

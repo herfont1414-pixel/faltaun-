@@ -1,6 +1,7 @@
 import { getPool } from "@/lib/admin/db";
 import { ensureSeeded } from "@/lib/admin/seed";
 import { sumExpenses } from "@/lib/admin/expenses";
+import { sumCashMovements } from "@/lib/admin/cash-movements";
 import type { PaymentMethod, Shift } from "@/lib/admin/types";
 
 function money(value: string | number) {
@@ -21,6 +22,9 @@ function mapShiftRow(row: any): Shift {
     salesTransferencia: money(row.sales_transferencia),
     salesCuentaCorriente: money(row.sales_cuenta_corriente),
     expensesEfectivo: money(row.expenses_efectivo),
+    ingresosEfectivo: money(row.ingresos_efectivo ?? 0),
+    retirosEfectivo: money(row.retiros_efectivo ?? 0),
+    ajustesEfectivo: money(row.ajustes_efectivo ?? 0),
     notes: row.notes,
   };
 }
@@ -47,6 +51,26 @@ async function sumSalesByMethod(fromISO: string, toISO: string) {
   return totals;
 }
 
+// Fórmula del efectivo esperado en caja:
+// inicial + ventas efectivo + ingresos - gastos efectivo - retiros + ajustes
+function computeExpectedCash(params: {
+  openingCash: number;
+  salesEfectivo: number;
+  expensesEfectivo: number;
+  ingresosEfectivo: number;
+  retirosEfectivo: number;
+  ajustesEfectivo: number;
+}) {
+  return (
+    params.openingCash +
+    params.salesEfectivo +
+    params.ingresosEfectivo -
+    params.expensesEfectivo -
+    params.retirosEfectivo +
+    params.ajustesEfectivo
+  );
+}
+
 export async function getCurrentShift(): Promise<Shift | null> {
   await ensureSeeded();
   const pool = getPool();
@@ -58,6 +82,7 @@ export async function getCurrentShift(): Promise<Shift | null> {
   const nowISO = new Date().toISOString();
   const sales = await sumSalesByMethod(shift.opened_at, nowISO);
   const expensesEfectivo = await sumExpenses(shift.opened_at, nowISO, "efectivo");
+  const movements = await sumCashMovements(shift.id);
   return {
     id: shift.id,
     status: "abierto",
@@ -65,12 +90,22 @@ export async function getCurrentShift(): Promise<Shift | null> {
     openedAt: shift.opened_at,
     closedAt: null,
     countedCash: null,
-    expectedCash: money(shift.opening_cash) + sales.efectivo - expensesEfectivo,
+    expectedCash: computeExpectedCash({
+      openingCash: money(shift.opening_cash),
+      salesEfectivo: sales.efectivo,
+      expensesEfectivo,
+      ingresosEfectivo: movements.ingreso,
+      retirosEfectivo: movements.retiro,
+      ajustesEfectivo: movements.ajuste,
+    }),
     difference: null,
     salesEfectivo: sales.efectivo,
     salesTransferencia: sales.transferencia,
     salesCuentaCorriente: sales.cuenta_corriente,
     expensesEfectivo,
+    ingresosEfectivo: movements.ingreso,
+    retirosEfectivo: movements.retiro,
+    ajustesEfectivo: movements.ajuste,
     notes: shift.notes,
   };
 }
@@ -134,14 +169,32 @@ export async function closeShift(countedCash: number, notes: string | null): Pro
     );
     const expensesEfectivo = money(expenseRows[0].total);
 
-    const expectedCash = money(shift.opening_cash) + sales.efectivo - expensesEfectivo;
+    const { rows: movementRows } = await client.query<{ type: string; total: string | number }>(
+      `select type, sum(amount) as total from gestion_cash_movements
+       where shift_id = $1 and payment_method = 'efectivo'
+       group by type`,
+      [shift.id]
+    );
+    const movements = { retiro: 0, ingreso: 0, ajuste: 0 };
+    for (const r of movementRows) {
+      if (r.type in movements) movements[r.type as keyof typeof movements] = money(r.total);
+    }
+
+    const expectedCash = computeExpectedCash({
+      openingCash: money(shift.opening_cash),
+      salesEfectivo: sales.efectivo,
+      expensesEfectivo,
+      ingresosEfectivo: movements.ingreso,
+      retirosEfectivo: movements.retiro,
+      ajustesEfectivo: movements.ajuste,
+    });
     const difference = countedCash - expectedCash;
 
     await client.query(
       `update gestion_shifts
        set status = 'cerrado', closed_at = $2, counted_cash = $3, expected_cash = $4, difference = $5,
            sales_efectivo = $6, sales_transferencia = $7, sales_cuenta_corriente = $8, notes = $9,
-           expenses_efectivo = $10
+           expenses_efectivo = $10, ingresos_efectivo = $11, retiros_efectivo = $12, ajustes_efectivo = $13
        where id = $1`,
       [
         shift.id,
@@ -154,6 +207,9 @@ export async function closeShift(countedCash: number, notes: string | null): Pro
         sales.cuenta_corriente,
         notes,
         expensesEfectivo,
+        movements.ingreso,
+        movements.retiro,
+        movements.ajuste,
       ]
     );
 
