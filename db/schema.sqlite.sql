@@ -68,7 +68,8 @@ create table if not exists gestion_orders (
   delivery_zone text,
   shipping_cost numeric(10, 2) not null default 0,
   delivery_person text,
-  delivery_status text check (delivery_status in ('preparando', 'en_camino', 'entregado'))
+  delivery_status text check (delivery_status in ('preparando', 'en_camino', 'entregado')),
+  notes text
 );
 
 create table if not exists gestion_order_items (
@@ -196,4 +197,15 @@ create table if not exists gestion_afip_config (
   punto_venta int,
   condicion_iva text,
   habilitado boolean not null default 0
+);
+
+create table if not exists gestion_print_config (
+  id int primary key default 1,
+  paper_width_mm int not null default 80,
+  header_text text,
+  footer_text text,
+  paper_saving_mode boolean not null default 0,
+  font_size_header text not null default 'normal',
+  font_size_body text not null default 'normal',
+  font_size_footer text not null default 'normal'
 );

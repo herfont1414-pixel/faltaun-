@@ -1,0 +1,197 @@
+import { money } from "@/lib/admin/format";
+import type { PrintConfig } from "@/lib/admin/types";
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function fontPx(size: "normal" | "pequena", base: number) {
+  return size === "pequena" ? Math.round(base * 0.8) : base;
+}
+
+function baseStyles(config: PrintConfig) {
+  return `
+    @page { size: ${config.paperWidthMm}mm auto; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      width: ${config.paperWidthMm}mm;
+      padding: 6px 8px 14px;
+      font-family: "Courier New", monospace;
+      color: #000;
+      background: #fff;
+    }
+    .center { text-align: center; }
+    .right { text-align: right; }
+    .bold { font-weight: 700; }
+    .row { display: flex; justify-content: space-between; gap: 8px; }
+    hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+    .header-text { font-size: ${fontPx(config.fontSizeHeader, 16)}px; }
+    .body-text { font-size: ${fontPx(config.fontSizeBody, 13)}px; }
+    .footer-text { font-size: ${fontPx(config.fontSizeFooter, 11)}px; }
+  `;
+}
+
+function groupForPrint<T extends { name: string; qty: number }>(items: T[], paperSaving: boolean): T[] {
+  if (!paperSaving) return items;
+  const order: string[] = [];
+  const map = new Map<string, T>();
+  for (const item of items) {
+    const existing = map.get(item.name);
+    if (existing) {
+      existing.qty += item.qty;
+    } else {
+      map.set(item.name, { ...item });
+      order.push(item.name);
+    }
+  }
+  return order.map((name) => map.get(name)!);
+}
+
+function wrap(config: PrintConfig, body: string) {
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Impresión</title>
+<style>${baseStyles(config)}</style>
+</head>
+<body>
+${body}
+</body>
+</html>`;
+}
+
+export interface ComandaPrintData {
+  orderId: string;
+  tableNumber: number | null;
+  origin: "mesa" | "mostrador" | "delivery";
+  customerName: string | null;
+  openedAt: string;
+  notes: string | null;
+  areas: { name: string; items: { name: string; qty: number }[] }[];
+}
+
+export function renderComandaHtml(data: ComandaPrintData, config: PrintConfig): string {
+  const originLabel =
+    data.origin === "delivery" ? "Delivery" : data.tableNumber ? `Mesa ${data.tableNumber}` : "Mostrador";
+  const time = new Date(data.openedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
+  const shortId = data.orderId.slice(0, 8).toUpperCase();
+
+  const areasHtml = data.areas
+    .map((area) => {
+      const items = groupForPrint(area.items, config.paperSavingMode);
+      if (items.length === 0) return "";
+      return `
+        <div style="margin-top: 10px">
+          <div class="bold body-text">— ${escapeHtml(area.name.toUpperCase())} —</div>
+          ${items
+            .map(
+              (item) => `
+            <div class="row body-text">
+              <span>${escapeHtml(item.name)}</span>
+              <span class="bold">x${item.qty}</span>
+            </div>`
+            )
+            .join("")}
+        </div>`;
+    })
+    .join("");
+
+  const body = `
+    ${config.headerText ? `<div class="center bold header-text">${escapeHtml(config.headerText)}</div>` : ""}
+    <div class="center bold header-text" style="margin-top: 4px">${escapeHtml(originLabel)}</div>
+    <div class="center body-text">Venta #${shortId} · ${time}</div>
+    ${data.customerName ? `<div class="center body-text">${escapeHtml(data.customerName)}</div>` : ""}
+    <hr />
+    ${areasHtml || `<div class="center body-text">Sin productos enviados</div>`}
+    ${data.notes ? `<hr /><div class="bold body-text">Notas:</div><div class="body-text">${escapeHtml(data.notes)}</div>` : ""}
+    ${config.footerText ? `<hr /><div class="center footer-text">${escapeHtml(config.footerText)}</div>` : ""}
+  `;
+
+  return wrap(config, body);
+}
+
+export interface TicketPrintData {
+  orderId: string;
+  tableNumber: number | null;
+  origin: "mesa" | "mostrador";
+  isDelivery: boolean;
+  status: "abierta" | "cerrada";
+  customerName: string | null;
+  customerPhone: string | null;
+  customerAddress: string | null;
+  openedAt: string;
+  items: { name: string; qty: number; price: number }[];
+  shippingCost: number;
+  total: number;
+  paymentMethod: string | null;
+}
+
+const PAYMENT_LABELS: Record<string, string> = {
+  efectivo: "Efectivo",
+  transferencia: "Transferencia",
+  cuenta_corriente: "Cta. Cte.",
+};
+
+export function renderTicketHtml(data: TicketPrintData, config: PrintConfig): string {
+  const originLabel = data.isDelivery
+    ? "Delivery"
+    : data.tableNumber
+      ? `Mesa ${data.tableNumber}`
+      : "Mostrador";
+  const time = new Date(data.openedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
+  const shortId = data.orderId.slice(0, 8).toUpperCase();
+  const items = groupForPrint(data.items, config.paperSavingMode);
+
+  const itemsHtml = items
+    .map(
+      (item) => `
+      <div class="row body-text">
+        <span>${item.qty}x ${escapeHtml(item.name)}</span>
+        <span>${money(item.price * item.qty)}</span>
+      </div>`
+    )
+    .join("");
+
+  const paymentLine =
+    data.status === "cerrada"
+      ? `<div class="row body-text bold"><span>Medio de pago</span><span>${
+          data.paymentMethod ? PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod : "—"
+        }</span></div>`
+      : `<div class="row body-text"><span>Estado</span><span>Precuenta (sin cobrar)</span></div>`;
+
+  const customerHtml =
+    data.customerName || data.customerPhone || data.customerAddress
+      ? `
+        <hr />
+        ${data.customerName ? `<div class="body-text">${escapeHtml(data.customerName)}</div>` : ""}
+        ${data.customerPhone ? `<div class="body-text">${escapeHtml(data.customerPhone)}</div>` : ""}
+        ${data.customerAddress ? `<div class="body-text">${escapeHtml(data.customerAddress)}</div>` : ""}
+      `
+      : "";
+
+  const body = `
+    ${config.headerText ? `<div class="center bold header-text">${escapeHtml(config.headerText)}</div>` : ""}
+    <div class="center bold header-text" style="margin-top: 4px">${escapeHtml(originLabel)}</div>
+    <div class="center body-text">Pedido #${shortId} · ${time}</div>
+    ${customerHtml}
+    <hr />
+    ${itemsHtml || `<div class="center body-text">Sin productos</div>`}
+    ${
+      data.isDelivery && data.shippingCost > 0
+        ? `<div class="row body-text"><span>Envío</span><span>${money(data.shippingCost)}</span></div>`
+        : ""
+    }
+    <hr />
+    <div class="row bold header-text"><span>TOTAL</span><span>${money(data.total)}</span></div>
+    ${paymentLine}
+    ${config.footerText ? `<hr /><div class="center footer-text">${escapeHtml(config.footerText)}</div>` : ""}
+  `;
+
+  return wrap(config, body);
+}

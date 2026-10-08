@@ -78,6 +78,7 @@ alter table gestion_orders add column if not exists shipping_cost numeric(10, 2)
 alter table gestion_orders add column if not exists delivery_person text;
 alter table gestion_orders add column if not exists delivery_status text
   check (delivery_status in ('preparando', 'en_camino', 'entregado'));
+alter table gestion_orders add column if not exists notes text;
 
 create table if not exists gestion_order_items (
   id uuid primary key default gen_random_uuid(),
@@ -218,3 +219,19 @@ create table if not exists gestion_afip_config (
   condicion_iva text,
   habilitado boolean not null default false
 );
+
+-- Configuración del motor de impresión térmica: una única fila (id = 1)
+-- con las opciones de ancho de papel, textos de encabezado/pie, modo
+-- ahorro de papel y tamaños de letra por sección.
+create table if not exists gestion_print_config (
+  id int primary key default 1,
+  paper_width_mm int not null default 80,
+  header_text text,
+  footer_text text,
+  paper_saving_mode boolean not null default false,
+  font_size_header text not null default 'normal',
+  font_size_body text not null default 'normal',
+  font_size_footer text not null default 'normal'
+);
+
+insert into gestion_print_config (id) values (1) on conflict (id) do nothing;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, Printer } from "lucide-react";
 import { money } from "@/lib/admin/format";
 import { PaymentPicker } from "@/components/admin/payment-picker";
 import type { Catalog, Order, PaymentMethod } from "@/lib/admin/types";
@@ -20,6 +20,8 @@ interface OrderPanelProps {
   onRequestBill: () => void;
   onFinalize: (method: PaymentMethod, customerId: number | null, loyaltyPhone: string | null) => void;
   onChangeDeliveryStatus?: (status: "preparando" | "en_camino" | "entregado") => void;
+  onChangeNotes: (notes: string) => void;
+  onPrintTicket: () => void;
 }
 
 const DELIVERY_STATUS_LABEL: Record<string, string> = {
@@ -42,8 +44,18 @@ export function OrderPanel({
   onRequestBill,
   onFinalize,
   onChangeDeliveryStatus,
+  onChangeNotes,
+  onPrintTicket,
 }: OrderPanelProps) {
   const [showPayment, setShowPayment] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(order?.notes ?? "");
+
+  useEffect(() => {
+    setSheetOpen(false);
+    setShowPayment(false);
+    setNotesDraft(order?.notes ?? "");
+  }, [order?.id]);
 
   if (!order) {
     return (
@@ -55,6 +67,11 @@ export function OrderPanel({
 
   const categories = Object.keys(catalog);
   const products = catalog[activeCategory] ?? [];
+  const itemCount = order.items.reduce((sum, it) => sum + it.qty, 0);
+
+  function saveNotes() {
+    if (notesDraft !== (order!.notes ?? "")) onChangeNotes(notesDraft);
+  }
 
   return (
     <div className="side-panel show">
@@ -66,14 +83,7 @@ export function OrderPanel({
             </div>
             <div className="op-sub">{order.items.length} producto(s)</div>
           </div>
-          <button
-            type="button"
-            className="op-close"
-            onClick={() => {
-              setShowPayment(false);
-              onClose();
-            }}
-          >
+          <button type="button" className="op-close" onClick={onClose}>
             <X className="mx-auto h-4 w-4" />
           </button>
         </div>
@@ -111,99 +121,128 @@ export function OrderPanel({
           ))}
         </div>
 
-        {order.isDelivery && (
-          <div className="delivery-info">
-            <div>
-              {order.customerName} · {order.customerPhone}
-            </div>
-            <div>{order.customerAddress}</div>
-            {order.deliveryZone && (
+        <button type="button" className="mobile-cart-bar" onClick={() => setSheetOpen(true)}>
+          <span>
+            Ver pedido ({itemCount} ítem{itemCount === 1 ? "" : "s"})
+          </span>
+          <span>{money(order.total)}</span>
+        </button>
+
+        {sheetOpen && <div className="sheet-backdrop" onClick={() => setSheetOpen(false)} />}
+
+        <div className={`order-ticket ${sheetOpen ? "sheet-open" : ""}`}>
+          <div className="sheet-handle" onClick={() => setSheetOpen(false)} />
+
+          {order.isDelivery && (
+            <div className="delivery-info">
               <div>
-                Zona: {order.deliveryZone} · Envío {money(order.shippingCost)}
+                {order.customerName} · {order.customerPhone}
               </div>
+              <div>{order.customerAddress}</div>
+              {order.deliveryZone && (
+                <div>
+                  Zona: {order.deliveryZone} · Envío {money(order.shippingCost)}
+                </div>
+              )}
+              {onChangeDeliveryStatus && (
+                <div className="delivery-status-row">
+                  {(["preparando", "en_camino", "entregado"] as const).map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      className={`btn btn-sm ${order.deliveryStatus === status ? "active" : ""}`}
+                      onClick={() => onChangeDeliveryStatus(status)}
+                    >
+                      {DELIVERY_STATUS_LABEL[status]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="ticket-wrap">
+            <div className="ticket-title">Pedido actual</div>
+            {order.items.length === 0 ? (
+              <div className="ticket-empty">Todavía no agregaste productos</div>
+            ) : (
+              order.items.map((item) => (
+                <div key={item.id} className="ticket-item">
+                  <div className="qty-ctrl">
+                    <button type="button" onClick={() => onChangeQty(item.id, -1)}>
+                      −
+                    </button>
+                    <span>{item.qty}</span>
+                    <button type="button" onClick={() => onChangeQty(item.id, 1)}>
+                      +
+                    </button>
+                  </div>
+                  <div className="ti-name">
+                    {item.name}
+                    {item.sentToKitchen && <span style={{ color: "var(--text-faint)" }}> · enviado</span>}
+                  </div>
+                  <div className="ti-price">{money(item.price * item.qty)}</div>
+                </div>
+              ))
             )}
-            {onChangeDeliveryStatus && (
-              <div className="delivery-status-row">
-                {(["preparando", "en_camino", "entregado"] as const).map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    className={`btn btn-sm ${order.deliveryStatus === status ? "active" : ""}`}
-                    onClick={() => onChangeDeliveryStatus(status)}
-                  >
-                    {DELIVERY_STATUS_LABEL[status]}
-                  </button>
-                ))}
+            {order.isDelivery && order.shippingCost > 0 && (
+              <div className="ticket-item">
+                <div />
+                <div className="ti-name">Envío</div>
+                <div className="ti-price">{money(order.shippingCost)}</div>
               </div>
             )}
           </div>
-        )}
 
-        <div className="ticket-wrap">
-          <div className="ticket-title">Pedido actual</div>
-          {order.items.length === 0 ? (
-            <div className="ticket-empty">Todavía no agregaste productos</div>
+          <div className="notes-field">
+            <div className="notes-label">Notas del pedido</div>
+            <textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              onBlur={saveNotes}
+              placeholder="Ej: sin cebolla, alergia a maní..."
+              rows={2}
+            />
+          </div>
+
+          {showPayment ? (
+            <PaymentPicker
+              total={order.total}
+              onCancel={() => setShowPayment(false)}
+              onConfirm={(method, customerId, loyaltyPhone) => {
+                setShowPayment(false);
+                setSheetOpen(false);
+                onFinalize(method, customerId, loyaltyPhone);
+              }}
+            />
           ) : (
-            order.items.map((item) => (
-              <div key={item.id} className="ticket-item">
-                <div className="qty-ctrl">
-                  <button type="button" onClick={() => onChangeQty(item.id, -1)}>
-                    −
-                  </button>
-                  <span>{item.qty}</span>
-                  <button type="button" onClick={() => onChangeQty(item.id, 1)}>
-                    +
-                  </button>
-                </div>
-                <div className="ti-name">
-                  {item.name}
-                  {item.sentToKitchen && <span style={{ color: "var(--text-faint)" }}> · enviado</span>}
-                </div>
-                <div className="ti-price">{money(item.price * item.qty)}</div>
+            <div className="op-footer">
+              <div className="total-row">
+                <span className="tl-label">Total</span>
+                <span className="tl-value">{money(order.total)}</span>
               </div>
-            ))
-          )}
-          {order.isDelivery && order.shippingCost > 0 && (
-            <div className="ticket-item">
-              <div />
-              <div className="ti-name">Envío</div>
-              <div className="ti-price">{money(order.shippingCost)}</div>
+              <div className="footer-actions">
+                <button type="button" className="btn" onClick={onSendKitchen}>
+                  Enviar a cocina
+                </button>
+                <button type="button" className="btn btn-icon" onClick={onPrintTicket}>
+                  <Printer className="mx-auto h-4 w-4" />
+                  Imprimir
+                </button>
+              </div>
+              <div className="footer-actions footer-row2">
+                <button type="button" className="btn btn-primary" onClick={() => setShowPayment(true)}>
+                  Cobrar
+                </button>
+                {tableNumber && (
+                  <button type="button" className="btn" onClick={onRequestBill}>
+                    Pedir cuenta
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
-
-        {showPayment ? (
-          <PaymentPicker
-            total={order.total}
-            onCancel={() => setShowPayment(false)}
-            onConfirm={(method, customerId, loyaltyPhone) => {
-              setShowPayment(false);
-              onFinalize(method, customerId, loyaltyPhone);
-            }}
-          />
-        ) : (
-          <div className="op-footer">
-            <div className="total-row">
-              <span className="tl-label">Total</span>
-              <span className="tl-value">{money(order.total)}</span>
-            </div>
-            <div className="footer-actions">
-              <button type="button" className="btn" onClick={onSendKitchen}>
-                Enviar a cocina
-              </button>
-              <button type="button" className="btn btn-primary" onClick={() => setShowPayment(true)}>
-                Cobrar
-              </button>
-            </div>
-            {tableNumber && (
-              <div className="footer-actions footer-row2">
-                <button type="button" className="btn" onClick={onRequestBill}>
-                  Pedir cuenta
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

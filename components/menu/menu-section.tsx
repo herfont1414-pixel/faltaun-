@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { CategoryFilter } from "@/components/menu/category-filter";
-import { MenuCard } from "@/components/menu/menu-card";
+import { MenuRow } from "@/components/menu/menu-row";
 import { MenuModal } from "@/components/menu/menu-modal";
 import type { MenuItem } from "@/lib/types";
 
@@ -11,18 +11,64 @@ interface MenuSectionProps {
   items: MenuItem[];
 }
 
+const EMOJI_KEYWORDS: { keywords: string[]; emoji: string }[] = [
+  { keywords: ["entrada", "picada"], emoji: "🥟" },
+  { keywords: ["burger", "hamburguesa"], emoji: "🍔" },
+  { keywords: ["pizza"], emoji: "🍕" },
+  { keywords: ["sandwich", "sándwich", "sanguche"], emoji: "🥪" },
+  { keywords: ["ensalada", "salad"], emoji: "🥗" },
+  { keywords: ["postre", "dulce", "helado"], emoji: "🍰" },
+  { keywords: ["bebida", "gaseosa", "jugo"], emoji: "🥤" },
+  { keywords: ["vino", "trago", "cocktail", "coctel", "barra"], emoji: "🍷" },
+  { keywords: ["café", "cafe", "infusion", "infusión"], emoji: "☕" },
+  { keywords: ["pescado", "mar", "sushi"], emoji: "🐟" },
+  { keywords: ["empanada"], emoji: "🥟" },
+];
+
+function emojiFor(category: string) {
+  const normalized = category.toLowerCase();
+  const match = EMOJI_KEYWORDS.find((entry) => entry.keywords.some((kw) => normalized.includes(kw)));
+  return match?.emoji ?? "🍽️";
+}
+
 export function MenuSection({ items }: MenuSectionProps) {
   const categories = useMemo(() => Array.from(new Set(items.map((item) => item.category))), [items]);
-  const [activeCategory, setActiveCategory] = useState<string>("Todos");
+  const [activeCategory, setActiveCategory] = useState<string>(categories[0] ?? "Todos");
   const [query, setQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const filteredItems = useMemo(() => {
-    let result = activeCategory === "Todos" ? items : items.filter((item) => item.category === activeCategory);
-    const q = query.trim().toLowerCase();
-    if (q) result = result.filter((item) => item.name.toLowerCase().includes(q));
-    return result;
-  }, [items, activeCategory, query]);
+  const q = query.trim().toLowerCase();
+  const groups = useMemo(() => {
+    return categories
+      .map((category) => ({
+        category,
+        items: items.filter((item) => item.category === category && (!q || item.name.toLowerCase().includes(q))),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [items, categories, q]);
+
+  function goToCategory(category: string) {
+    setActiveCategory(category);
+    sectionRefs.current[category]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  useEffect(() => {
+    if (q) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        const top = visible[0]?.target.getAttribute("data-category");
+        if (top) setActiveCategory(top);
+      },
+      { rootMargin: "-110px 0px -70% 0px", threshold: 0 }
+    );
+    const nodes = Object.values(sectionRefs.current).filter((el): el is HTMLDivElement => !!el);
+    nodes.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [groups, q]);
 
   return (
     <section id="menu" className="py-6">
@@ -42,16 +88,34 @@ export function MenuSection({ items }: MenuSectionProps) {
       </div>
 
       <div className="mt-4">
-        <CategoryFilter categories={categories} active={activeCategory} onChange={setActiveCategory} />
+        <CategoryFilter categories={categories} active={activeCategory} onChange={goToCategory} />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 px-5 sm:grid-cols-3">
-        {filteredItems.map((item) => (
-          <MenuCard key={item.id} item={item} onSelect={setSelectedItem} />
+      <div className="mt-2">
+        {groups.map((group) => (
+          <div
+            key={group.category}
+            ref={(el) => {
+              sectionRefs.current[group.category] = el;
+            }}
+            data-category={group.category}
+          >
+            <div className="sticky top-[69px] z-20 border-b border-white/5 bg-base px-5 py-3">
+              <h3 className="font-display text-xl text-stone-50">
+                <span className="mr-2">{emojiFor(group.category)}</span>
+                {group.category}
+              </h3>
+            </div>
+            <div className="flex flex-col divide-y divide-white/5 px-5">
+              {group.items.map((item) => (
+                <MenuRow key={item.id} item={item} onSelect={setSelectedItem} />
+              ))}
+            </div>
+          </div>
         ))}
 
-        {filteredItems.length === 0 && (
-          <p className="col-span-full py-8 text-center text-sm text-stone-500">
+        {groups.length === 0 && (
+          <p className="py-8 text-center text-sm text-stone-500">
             No encontramos platos que coincidan con la búsqueda.
           </p>
         )}

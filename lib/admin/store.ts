@@ -104,6 +104,7 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
       shippingCost,
       deliveryPerson: o.delivery_person ?? null,
       deliveryStatus: o.delivery_status ?? null,
+      notes: o.notes ?? null,
     };
   });
 }
@@ -340,6 +341,12 @@ export async function setDeliveryStatus(orderId: string, status: "preparando" | 
 export async function setDeliveryPerson(orderId: string, deliveryPerson: string | null) {
   const pool = getPool();
   await pool.query("update gestion_orders set delivery_person = $2 where id = $1", [orderId, deliveryPerson]);
+  return getOrderRow(orderId);
+}
+
+export async function setOrderNotes(orderId: string, notes: string | null) {
+  const pool = getPool();
+  await pool.query("update gestion_orders set notes = $2 where id = $1", [orderId, notes]);
   return getOrderRow(orderId);
 }
 
