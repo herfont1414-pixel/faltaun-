@@ -188,7 +188,8 @@ create table if not exists gestion_delivery_customers (
   phone text primary key,
   name text not null,
   address text,
-  updated_at text not null default (now())
+  updated_at text not null default (now()),
+  created_at text not null default (now())
 );
 
 create table if not exists gestion_loyalty_accounts (

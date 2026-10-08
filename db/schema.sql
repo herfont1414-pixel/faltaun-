@@ -224,6 +224,14 @@ create table if not exists gestion_delivery_customers (
   updated_at timestamptz not null default now()
 );
 
+-- Para "clientes nuevos hoy" en el dashboard (Fase 12). No existía una
+-- fecha de alta — para los registros que ya existían antes de esta
+-- migración, created_at queda en el momento en que corre la migración
+-- (no se puede reconstruir la fecha real de su primer pedido), así que el
+-- día que se aplique esta migración va a mostrar a todos como "nuevos" por
+-- única vez; de ahí en más es una fecha de alta real.
+alter table gestion_delivery_customers add column if not exists created_at timestamptz not null default now();
+
 create table if not exists gestion_loyalty_accounts (
   phone text primary key,
   stamps int not null default 0,

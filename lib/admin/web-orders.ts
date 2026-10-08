@@ -78,8 +78,8 @@ export async function createWebOrder(input: {
   const total = items.reduce((sum, it) => sum + it.price * it.qty, 0) + shippingCost;
 
   await pool.query(
-    `insert into gestion_delivery_customers (phone, name, address, updated_at)
-     values ($1, $2, $3, now())
+    `insert into gestion_delivery_customers (phone, name, address, updated_at, created_at)
+     values ($1, $2, $3, now(), now())
      on conflict (phone) do update set name = excluded.name,
        address = coalesce(excluded.address, gestion_delivery_customers.address),
        updated_at = excluded.updated_at`,

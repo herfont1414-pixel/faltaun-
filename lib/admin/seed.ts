@@ -242,6 +242,10 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_shifts", "ajustes_efectivo", "numeric(12, 2) not null default 0");
         await ensureSqliteColumn(client, "gestion_ingredients", "track_stock", "boolean not null default 0");
         await ensureSqliteColumn(client, "gestion_ingredients", "stock_qty", "numeric(12, 3)");
+        await ensureSqliteColumn(client, "gestion_delivery_customers", "created_at", "text");
+        await client.query(
+          "update gestion_delivery_customers set created_at = updated_at where created_at is null"
+        );
       }
       await client.query(
         `insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')

@@ -409,8 +409,8 @@ export async function createDeliveryOrder(customer: {
 }) {
   const pool = getPool();
   await pool.query(
-    `insert into gestion_delivery_customers (phone, name, address, updated_at)
-     values ($1, $2, $3, now())
+    `insert into gestion_delivery_customers (phone, name, address, updated_at, created_at)
+     values ($1, $2, $3, now(), now())
      on conflict (phone) do update set name = excluded.name, address = excluded.address, updated_at = excluded.updated_at`,
     [customer.phone, customer.name, customer.address]
   );
