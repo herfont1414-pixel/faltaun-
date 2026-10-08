@@ -15,6 +15,8 @@ const SECTION_LABEL: Record<Section, string> = {
   delivery: "Delivery",
   express: "Mostrador express",
   reservas: "Reservas",
+  clientes: "Clientes",
+  impresion: "Impresión",
 };
 
 function fmtDateTime(d: Date) {

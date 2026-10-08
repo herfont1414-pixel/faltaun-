@@ -13,4 +13,6 @@ export type Section =
   | "gastos"
   | "delivery"
   | "express"
-  | "reservas";
+  | "reservas"
+  | "clientes"
+  | "impresion";

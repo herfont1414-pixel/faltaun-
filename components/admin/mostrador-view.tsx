@@ -8,6 +8,8 @@ interface MostradorViewProps {
   closedOrders: Order[];
   onNewOrder: () => void;
   onOpenOrder: (orderId: string) => void;
+  title?: string;
+  newLabel?: string;
 }
 
 function formatTime(ts: string) {
@@ -28,15 +30,22 @@ function formatDateTime(ts: string) {
   });
 }
 
-export function MostradorView({ openOrders, closedOrders, onNewOrder, onOpenOrder }: MostradorViewProps) {
+export function MostradorView({
+  openOrders,
+  closedOrders,
+  onNewOrder,
+  onOpenOrder,
+  title = "Mostrador",
+  newLabel = "+ Nuevo pedido",
+}: MostradorViewProps) {
   const enCurso = openOrders.filter((order) => order.items.length > 0);
 
   return (
     <div className="mostrador">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <h1>Mostrador</h1>
+        <h1>{title}</h1>
         <button type="button" className="m-new-btn" onClick={onNewOrder}>
-          + Nuevo pedido
+          {newLabel}
         </button>
       </div>
 

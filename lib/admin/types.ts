@@ -96,6 +96,7 @@ export interface AdminProduct {
   inStock: boolean;
   stockQty: number | null;
   category: string;
+  printAreaId: number | null;
 }
 
 export interface Customer {

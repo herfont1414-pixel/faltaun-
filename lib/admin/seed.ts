@@ -129,7 +129,12 @@ export async function ensureSeeded() {
           "numeric(12, 2) not null default 0"
         );
         await ensureSqliteColumn(client, "gestion_loyalty_accounts", "origin", "text");
+        await ensureSqliteColumn(client, "gestion_products", "print_area_id", "int");
       }
+      await client.query(
+        `insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')
+         on conflict (nombre) do nothing`
+      );
       schemaApplied = true;
     }
 
