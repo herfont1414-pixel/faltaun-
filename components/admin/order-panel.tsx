@@ -18,7 +18,7 @@ interface OrderPanelProps {
   onClose: () => void;
   onSendKitchen: () => void;
   onRequestBill: () => void;
-  onFinalize: (method: PaymentMethod, customerId: number | null) => void;
+  onFinalize: (method: PaymentMethod, customerId: number | null, loyaltyPhone: string | null) => void;
   onChangeDeliveryStatus?: (status: "preparando" | "en_camino" | "entregado") => void;
 }
 
@@ -174,9 +174,9 @@ export function OrderPanel({
           <PaymentPicker
             total={order.total}
             onCancel={() => setShowPayment(false)}
-            onConfirm={(method, customerId) => {
+            onConfirm={(method, customerId, loyaltyPhone) => {
               setShowPayment(false);
-              onFinalize(method, customerId);
+              onFinalize(method, customerId, loyaltyPhone);
             }}
           />
         ) : (

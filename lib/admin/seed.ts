@@ -120,6 +120,7 @@ export async function ensureSeeded() {
           "shipping_cost",
           "numeric(10, 2) not null default 0"
         );
+        await ensureSqliteColumn(client, "gestion_loyalty_accounts", "name", "text");
       }
       schemaApplied = true;
     }
