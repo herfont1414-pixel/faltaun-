@@ -21,6 +21,7 @@ const SECTION_LABEL: Record<Section, string> = {
   impresion: "Impresión",
   configuracion: "Configuración",
   usuarios: "Usuarios",
+  auditoria: "Auditoría",
 };
 
 const ROLE_LABEL: Record<string, string> = {

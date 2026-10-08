@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { ok } from "@/lib/admin/api-helpers";
 import { finalizeOrder } from "@/lib/admin/store";
 import { addStamp } from "@/lib/admin/loyalty";
+import { recordAudit } from "@/lib/admin/auth";
 import type { OrderPayment } from "@/lib/admin/types";
 
 export async function POST(request: NextRequest) {
@@ -11,9 +12,16 @@ export async function POST(request: NextRequest) {
     customerId: number | null;
     loyaltyPhone?: string | null;
   };
-  return ok(request, async () => {
+  return ok(request, async (actor) => {
     const result = await finalizeOrder(orderId, payments, customerId ?? null);
     if (loyaltyPhone) await addStamp(loyaltyPhone, { orderTotal: result.total, origin: result.origin });
+    await recordAudit({
+      userId: actor.id,
+      action: "order_close",
+      entity: "gestion_orders",
+      entityId: orderId,
+      newValue: { total: result.total, origin: result.origin, payments },
+    });
     return result;
   });
 }
