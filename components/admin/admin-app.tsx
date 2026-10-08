@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
-import { Home, LayoutGrid, BarChart3, Receipt, Package, Users, Truck, Monitor, Settings, Wallet } from "lucide-react";
+import { Sidebar } from "@/components/admin/sidebar";
+import { AdminHeader } from "@/components/admin/admin-header";
 import { OrderPanel } from "@/components/admin/order-panel";
 import { DashboardView } from "@/components/admin/dashboard-view";
 import { MostradorView } from "@/components/admin/mostrador-view";
@@ -23,28 +23,6 @@ const MESA_STATUS_LABEL: Record<TableRow["status"], string> = {
   atencion: "Pidió cuenta",
   cobrando: "Cobrando",
 };
-
-const SECTION_TABS: { value: Section; label: string }[] = [
-  { value: "mesas", label: "Mesas" },
-  { value: "mostrador", label: "Mostrador" },
-  { value: "pedidos-web", label: "Pedidos web" },
-  { value: "delivery", label: "Delivery" },
-  { value: "express", label: "Mostrador express" },
-  { value: "reservas", label: "Reservas" },
-];
-
-const NAV_ICONS = [
-  { Icon: Home, title: "Inicio" },
-  { Icon: LayoutGrid, title: "Mesas" },
-  { Icon: Wallet, title: "Caja" },
-  { Icon: BarChart3, title: "Reportes" },
-  { Icon: Receipt, title: "Gastos" },
-  { Icon: Package, title: "Productos" },
-  { Icon: Users, title: "Clientes" },
-  { Icon: Truck, title: "Delivery config" },
-  { Icon: Monitor, title: "Cocina (KDS)" },
-  { Icon: Settings, title: "Configuración" },
-];
 
 async function postJson(url: string, body?: unknown) {
   const res = await fetch(url, {
@@ -250,92 +228,28 @@ export function AdminApp() {
 
   return (
     <div className="admin-root">
-      <div className="topnav">
-        <div className="topnav-left">
-          <Image
-            src="/logo-light.png"
-            alt="Madero Restó"
-            width={480}
-            height={225}
-            className="h-9 w-auto"
-          />
-          <div style={{ display: "flex", gap: 4 }}>
-            {NAV_ICONS.map(({ Icon, title }) => {
-              const isActive =
-                (title === "Inicio" && section === "inicio") ||
-                (title === "Mesas" && section === "mesas") ||
-                (title === "Productos" && section === "productos") ||
-                (title === "Caja" && section === "caja") ||
-                (title === "Reportes" && section === "reportes") ||
-                (title === "Gastos" && section === "gastos") ||
-                (title === "Delivery config" && section === "delivery");
-              return (
-                <div
-                  key={title}
-                  title={title}
-                  onClick={() => {
-                    if (title === "Inicio") setSection("inicio");
-                    else if (title === "Mesas") setSection("mesas");
-                    else if (title === "Productos") setSection("productos");
-                    else if (title === "Caja") setSection("caja");
-                    else if (title === "Reportes") setSection("reportes");
-                    else if (title === "Gastos") setSection("gastos");
-                    else if (title === "Delivery config") setSection("delivery");
-                    else if (title === "Cocina (KDS)") window.open("/admin/kds", "_blank");
-                    else showToast(`${title}: lo sumamos en el próximo paso`);
-                  }}
-                  style={{
-                    width: 34,
-                    height: 34,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 9,
-                    cursor: "pointer",
-                    color: isActive ? "#fff" : "#8a8a86",
-                    background: isActive ? "var(--orange)" : "transparent",
-                  }}
-                >
-                  <Icon size={18} />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div className="topnav-right">
-          <div className="user-box">
-            <div className="u1">MADERO RESTO</div>
-            <div className="u2">gestión interna</div>
-          </div>
-        </div>
-      </div>
+      <Sidebar activeSection={section} onNavigate={setSection} onToast={showToast} />
 
-      <div className="section-tabs">
-        {SECTION_TABS.map((tab) => (
-          <div
-            key={tab.value}
-            className={`section-tab ${section === tab.value ? "active" : ""}`}
-            onClick={() => setSection(tab.value)}
-          >
-            {tab.label}
-          </div>
-        ))}
-      </div>
+      <div className="admin-main">
+        <AdminHeader section={section} />
 
-      {section === "mesas" && (
-        <div className="zone-row">
-          <div className="zones">
-            <div className={`zone-tab ${zone === "salon" ? "active" : ""}`} onClick={() => setZone("salon")}>
-              Salón
-            </div>
-            <div className={`zone-tab ${zone === "terraza" ? "active" : ""}`} onClick={() => setZone("terraza")}>
-              Terraza
+        {section === "mesas" && (
+          <div className="zone-row">
+            <div className="zones">
+              <div className={`zone-tab ${zone === "salon" ? "active" : ""}`} onClick={() => setZone("salon")}>
+                Salón
+              </div>
+              <div
+                className={`zone-tab ${zone === "terraza" ? "active" : ""}`}
+                onClick={() => setZone("terraza")}
+              >
+                Terraza
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {section === "inicio" ? (
+        {section === "inicio" ? (
         <DashboardView
           tables={data.tables}
           onGoTo={(target) => setSection(target)}
@@ -413,6 +327,7 @@ export function AdminApp() {
           <div className="pv-sub">Este módulo lo construimos en el próximo paso.</div>
         </div>
       )}
+      </div>
 
       {toastMsg && (
         <div className="toast-wrap">
