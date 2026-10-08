@@ -57,6 +57,7 @@ export function AdminApp() {
   const [selectedTableNumber, setSelectedTableNumber] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/state")
@@ -240,10 +241,16 @@ export function AdminApp() {
 
   return (
     <div className="admin-root">
-      <Sidebar activeSection={section} onNavigate={setSection} onToast={showToast} />
+      <Sidebar
+        activeSection={section}
+        onNavigate={setSection}
+        onToast={showToast}
+        mobileOpen={sidebarOpen}
+        onCloseMobile={() => setSidebarOpen(false)}
+      />
 
       <div className="admin-main">
-        <AdminHeader section={section} />
+        <AdminHeader section={section} onOpenMenu={() => setSidebarOpen(true)} />
 
         {section === "mesas" && (
           <div className="zone-row">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Menu } from "lucide-react";
 import type { Section } from "@/lib/admin/client-types";
 
 const SECTION_LABEL: Record<Section, string> = {
@@ -25,7 +26,7 @@ function fmtDateTime(d: Date) {
   return `${date} · ${time}`;
 }
 
-export function AdminHeader({ section }: { section: Section }) {
+export function AdminHeader({ section, onOpenMenu }: { section: Section; onOpenMenu: () => void }) {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -35,15 +36,27 @@ export function AdminHeader({ section }: { section: Section }) {
   }, []);
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 bg-white px-6">
-      <div className="text-sm text-gray-500">
-        <span className="text-gray-400">Panel</span>
-        <span className="mx-1.5 text-gray-300">/</span>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 bg-white px-4 lg:px-6">
+      <div className="flex items-center gap-3 text-sm text-gray-500">
+        <button
+          type="button"
+          onClick={onOpenMenu}
+          aria-label="Abrir menú"
+          className="-ml-1 rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 lg:hidden"
+        >
+          <Menu size={20} />
+        </button>
+        <span className="hidden text-gray-400 sm:inline">Panel</span>
+        <span className="mx-1.5 hidden text-gray-300 sm:inline">/</span>
         <span className="font-semibold text-gray-900">{SECTION_LABEL[section] ?? section}</span>
       </div>
 
       <div className="flex items-center gap-4">
-        {now && <span className="text-xs capitalize text-gray-400">{fmtDateTime(now)}</span>}
+        {now && (
+          <span className="hidden whitespace-nowrap text-xs capitalize text-gray-400 sm:inline">
+            {fmtDateTime(now)}
+          </span>
+        )}
         <div className="flex items-center gap-2.5 border-l border-gray-100 pl-4">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-900 text-[11px] font-bold text-white">
             MR

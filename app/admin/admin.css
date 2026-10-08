@@ -447,6 +447,7 @@
 .mostrador {
   padding: 26px;
   overflow-y: auto;
+  overflow-x: auto;
   flex: 1;
   background: var(--bg);
 }

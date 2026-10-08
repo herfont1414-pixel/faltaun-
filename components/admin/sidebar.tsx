@@ -16,6 +16,7 @@ import {
   Monitor,
   Settings,
   Printer,
+  X,
 } from "lucide-react";
 import { BrandLogo } from "@/components/admin/brand-logo";
 import type { Section } from "@/lib/admin/client-types";
@@ -64,10 +65,13 @@ interface SidebarProps {
   activeSection: Section;
   onNavigate: (section: Section) => void;
   onToast: (message: string) => void;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
 }
 
-export function Sidebar({ activeSection, onNavigate, onToast }: SidebarProps) {
+export function Sidebar({ activeSection, onNavigate, onToast, mobileOpen, onCloseMobile }: SidebarProps) {
   function handleClick(item: NavItem) {
+    onCloseMobile();
     if (item.section) {
       onNavigate(item.section);
       return;
@@ -80,40 +84,57 @@ export function Sidebar({ activeSection, onNavigate, onToast }: SidebarProps) {
   }
 
   return (
-    <aside className="flex h-full w-56 shrink-0 flex-col overflow-y-auto bg-slate-950 py-5">
-      <div className="px-5 pb-5">
-        <BrandLogo />
-      </div>
+    <>
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onCloseMobile} />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col overflow-y-auto bg-slate-950 py-5 transition-transform duration-200 ease-out lg:static lg:z-auto lg:w-56 lg:translate-x-0 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between px-5 pb-5">
+          <BrandLogo />
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            aria-label="Cerrar menú"
+            className="rounded-lg p-1 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-      <nav className="flex flex-1 flex-col gap-5 px-3">
-        {NAV_GROUPS.map((group) => (
-          <div key={group.title}>
-            <div className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-              {group.title}
+        <nav className="flex flex-1 flex-col gap-5 px-3">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.title}>
+              <div className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                {group.title}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {group.items.map((item) => {
+                  const isActive = item.section && item.section === activeSection;
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => handleClick(item)}
+                      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium transition ${
+                        isActive
+                          ? "bg-white/10 text-white"
+                          : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
+                      }`}
+                    >
+                      <item.Icon size={16} className="shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex flex-col gap-0.5">
-              {group.items.map((item) => {
-                const isActive = item.section && item.section === activeSection;
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => handleClick(item)}
-                    className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium transition ${
-                      isActive
-                        ? "bg-white/10 text-white"
-                        : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
-                    }`}
-                  >
-                    <item.Icon size={16} className="shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
-    </aside>
+          ))}
+        </nav>
+      </aside>
+    </>
   );
 }
