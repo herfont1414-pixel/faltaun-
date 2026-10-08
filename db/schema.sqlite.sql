@@ -202,6 +202,19 @@ create table if not exists gestion_loyalty_accounts (
   origin text
 );
 
+create table if not exists gestion_loyalty_transactions (
+  id integer primary key autoincrement,
+  phone text not null,
+  order_id text,
+  type text not null default 'stamp',
+  stamps int not null default 0,
+  amount numeric(12, 2) not null default 0,
+  created_at text not null default (now()),
+  unique (order_id, type)
+);
+
+create index if not exists gestion_loyalty_transactions_phone_idx on gestion_loyalty_transactions(phone);
+
 -- Infraestructura de preparación (sin UI todavía): ver schema.sql.
 create table if not exists gestion_payment_methods (
   id integer primary key autoincrement,

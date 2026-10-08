@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   };
   return ok(request, async (actor) => {
     const result = await finalizeOrder(orderId, payments, customerId ?? null, actor.id);
-    if (loyaltyPhone) await addStamp(loyaltyPhone, { orderTotal: result.total, origin: result.origin });
+    if (loyaltyPhone) await addStamp(loyaltyPhone, orderId, { orderTotal: result.total, origin: result.origin });
     await recordAudit({
       userId: actor.id,
       action: "order_close",

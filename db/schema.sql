@@ -236,6 +236,24 @@ alter table gestion_loyalty_accounts add column if not exists order_count int no
 alter table gestion_loyalty_accounts add column if not exists total_spent numeric(12, 2) not null default 0;
 alter table gestion_loyalty_accounts add column if not exists origin text;
 
+-- Un pedido = una sola operación de fidelidad, incluso si addStamp() se
+-- llama dos veces para el mismo pedido (doble click, reintento de red):
+-- el unique (order_id, type) hace que la segunda inserción sea un no-op
+-- (ver "on conflict do nothing" en loyalty.ts), así nunca se suma un sello
+-- de más por el mismo pedido.
+create table if not exists gestion_loyalty_transactions (
+  id serial primary key,
+  phone text not null,
+  order_id text,
+  type text not null default 'stamp',
+  stamps int not null default 0,
+  amount numeric(12, 2) not null default 0,
+  created_at timestamptz not null default now(),
+  unique (order_id, type)
+);
+
+create index if not exists gestion_loyalty_transactions_phone_idx on gestion_loyalty_transactions(phone);
+
 -- Infraestructura de preparación (sin UI todavía): medios de pago
 -- configurables, áreas de impresión de comandas y datos de facturación
 -- AFIP, listas para que un módulo futuro las use sin tener que migrar

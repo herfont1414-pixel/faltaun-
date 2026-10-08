@@ -110,7 +110,7 @@ export async function respondWebOrder(id: string, status: WebOrderStatus, etaMin
       [id, status, etaMinutes]
     );
     if (rows[0]?.customer_phone) {
-      await addStamp(rows[0].customer_phone, {
+      await addStamp(rows[0].customer_phone, id, {
         name: rows[0].customer_name,
         orderTotal: money(rows[0].total),
         origin: "web",
