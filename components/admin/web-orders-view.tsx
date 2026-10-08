@@ -64,22 +64,33 @@ export function WebOrdersView() {
   }, []);
 
   async function respond(order: WebOrder, status: "confirmado" | "rechazado", etaMinutes: number | null) {
-    await fetch(`/api/admin/web-orders/${order.id}`, {
+    const res = await fetch(`/api/admin/web-orders/${order.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status, etaMinutes }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { ok: false, error: data.error ?? "No se pudo confirmar el pedido" };
+    }
     setPending((prev) => prev.filter((o) => o.id !== order.id));
     if (newOrder?.id === order.id) setNewOrder(null);
+    return { ok: true };
   }
 
   function confirmAccept(minutes: number) {
     if (!acceptTarget) return;
     const order = acceptTarget;
     setAcceptTarget(null);
-    respond(order, "confirmado", minutes);
     const message = `¡Hola! Recibimos tu pedido en Madero Restó. Estará listo en aprox ${minutes} min.`;
     window.open(waLink(order.customerPhone, message), "_blank");
+    respond(order, "confirmado", minutes).then((result) => {
+      if (!result.ok) {
+        alert(
+          `No se pudo confirmar el pedido de ${order.customerName}: ${result.error}. Avisale por WhatsApp que hubo un problema.`
+        );
+      }
+    });
   }
 
   function confirmReject() {
@@ -89,9 +100,9 @@ export function WebOrdersView() {
     setRejectTarget(null);
     setRejectReason(REJECT_REASONS[0].value);
     setRejectOther("");
-    respond(order, "rechazado", null);
     const message = `Hola, lamentablemente no podemos procesar tu pedido en este momento debido a: ${reason}.`;
     window.open(waLink(order.customerPhone, message), "_blank");
+    respond(order, "rechazado", null);
   }
 
   return (

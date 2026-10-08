@@ -11,6 +11,11 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const { status, etaMinutes } = await request.json();
-  await respondWebOrder(params.id, status, etaMinutes ?? null);
-  return NextResponse.json({ ok: true });
+  try {
+    await respondWebOrder(params.id, status, etaMinutes ?? null);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error inesperado";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }
