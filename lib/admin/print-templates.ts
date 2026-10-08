@@ -9,8 +9,12 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
-function fontPx(size: "normal" | "pequena", base: number) {
-  return size === "pequena" ? Math.round(base * 0.8) : base;
+// Tamaños pensados para impresoras térmicas de ticket (58/80mm), que suelen
+// quedar diminutos si se usan los px "de pantalla" típicos de una web. El
+// cuerpo arranca en 16px (~12pt) y el encabezado bien grande para que se lea
+// de lejos; "pequeña" achica pero sin bajar de un piso legible en papel.
+function fontPx(size: "normal" | "pequena", normal: number, pequena: number) {
+  return size === "pequena" ? pequena : normal;
 }
 
 function baseStyles(config: PrintConfig) {
@@ -20,19 +24,23 @@ function baseStyles(config: PrintConfig) {
     html, body { margin: 0; padding: 0; }
     body {
       width: ${config.paperWidthMm}mm;
-      padding: 6px 8px 14px;
+      max-width: ${config.paperWidthMm}mm;
+      padding: 8px 8px 16px;
       font-family: "Courier New", monospace;
       color: #000;
       background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .center { text-align: center; }
     .right { text-align: right; }
     .bold { font-weight: 700; }
-    .row { display: flex; justify-content: space-between; gap: 8px; }
-    hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
-    .header-text { font-size: ${fontPx(config.fontSizeHeader, 16)}px; }
-    .body-text { font-size: ${fontPx(config.fontSizeBody, 13)}px; }
-    .footer-text { font-size: ${fontPx(config.fontSizeFooter, 11)}px; }
+    .row { display: flex; justify-content: space-between; gap: 8px; page-break-inside: avoid; }
+    hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
+    .header-text { font-size: ${fontPx(config.fontSizeHeader, 22, 18)}px; line-height: 1.3; }
+    .body-text { font-size: ${fontPx(config.fontSizeBody, 16, 13)}px; line-height: 1.4; }
+    .footer-text { font-size: ${fontPx(config.fontSizeFooter, 13, 11)}px; line-height: 1.3; }
+    .area-block { margin-top: 10px; page-break-inside: avoid; }
   `;
 }
 
@@ -87,7 +95,7 @@ export function renderComandaHtml(data: ComandaPrintData, config: PrintConfig): 
       const items = groupForPrint(area.items, config.paperSavingMode);
       if (items.length === 0) return "";
       return `
-        <div style="margin-top: 10px">
+        <div class="area-block">
           <div class="bold body-text">— ${escapeHtml(area.name.toUpperCase())} —</div>
           ${items
             .map(
