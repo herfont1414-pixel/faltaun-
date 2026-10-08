@@ -13,9 +13,11 @@ import { CajaView } from "@/components/admin/caja-view";
 import { ReportsView } from "@/components/admin/reports-view";
 import { ReservationsView } from "@/components/admin/reservations-view";
 import { ExpensesView } from "@/components/admin/expenses-view";
+import { ClientesView } from "@/components/admin/clientes-view";
+import { ImpresionView } from "@/components/admin/impresion-view";
 import { money } from "@/lib/admin/format";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
-import type { PaymentMethod, TableRow, Zone } from "@/lib/admin/types";
+import type { Catalog, PaymentMethod, TableRow, Zone } from "@/lib/admin/types";
 
 const MESA_STATUS_LABEL: Record<TableRow["status"], string> = {
   libre: "Libre",
@@ -231,7 +233,10 @@ export function AdminApp() {
     : null;
 
   const visibleTables = data.tables.filter((t) => t.zone === zone);
-  const showMainWrap = section === "mesas" || section === "mostrador" || section === "delivery";
+  const showMainWrap =
+    section === "mesas" || section === "mostrador" || section === "delivery" || section === "express";
+
+  const expressCatalog: Catalog = { Todos: Object.values(data.catalog).flat() };
 
   return (
     <div className="admin-root">
@@ -291,6 +296,15 @@ export function AdminApp() {
               onNewOrder={newDeliveryOrder}
               onOpenOrder={openExistingOrder}
             />
+          ) : section === "express" ? (
+            <MostradorView
+              openOrders={data.openOrders.filter((o) => !o.isDelivery)}
+              closedOrders={data.closedOrders.filter((o) => !o.isDelivery)}
+              onNewOrder={newCounterOrder}
+              onOpenOrder={openExistingOrder}
+              title="Mostrador Express"
+              newLabel="+ Venta rápida"
+            />
           ) : (
             <MostradorView
               openOrders={data.openOrders.filter((o) => !o.isDelivery)}
@@ -304,8 +318,8 @@ export function AdminApp() {
             order={currentOrder}
             tableNumber={selectedTableNumber}
             titleOverride={currentOrder?.isDelivery ? `Delivery · ${currentOrder.customerName}` : null}
-            catalog={data.catalog}
-            activeCategory={activeCategory}
+            catalog={section === "express" ? expressCatalog : data.catalog}
+            activeCategory={section === "express" ? "Todos" : activeCategory}
             onChangeCategory={setActiveCategory}
             onAddProduct={addProduct}
             onChangeQty={changeQty}
@@ -328,12 +342,11 @@ export function AdminApp() {
         <ReservationsView />
       ) : section === "gastos" ? (
         <ExpensesView />
-      ) : (
-        <div className="placeholder-view">
-          <div className="pv-title">{section === "express" && "Mostrador express"}</div>
-          <div className="pv-sub">Este módulo lo construimos en el próximo paso.</div>
-        </div>
-      )}
+      ) : section === "clientes" ? (
+        <ClientesView />
+      ) : section === "impresion" ? (
+        <ImpresionView />
+      ) : null}
       </div>
 
       {toastMsg && (

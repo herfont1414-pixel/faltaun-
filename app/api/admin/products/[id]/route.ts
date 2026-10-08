@@ -12,6 +12,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     active: typeof body.active === "boolean" ? body.active : undefined,
     inStock: typeof body.inStock === "boolean" ? body.inStock : undefined,
     stockQty: "stockQty" in body ? (body.stockQty === null ? null : Number(body.stockQty)) : undefined,
+    printAreaId:
+      "printAreaId" in body ? (body.printAreaId === null ? null : Number(body.printAreaId)) : undefined,
   });
   return NextResponse.json({ ok: true });
 }

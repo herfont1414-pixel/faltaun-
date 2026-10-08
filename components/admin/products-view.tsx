@@ -3,14 +3,23 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AdminProduct } from "@/lib/admin/types";
 
+interface PrintArea {
+  id: number;
+  nombre: string;
+}
+
 export function ProductsView() {
   const [products, setProducts] = useState<AdminProduct[] | null>(null);
+  const [printAreas, setPrintAreas] = useState<PrintArea[]>([]);
   const [savingId, setSavingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/products")
       .then((res) => res.json())
       .then((data) => setProducts(data.products ?? []));
+    fetch("/api/admin/print-areas")
+      .then((res) => res.json())
+      .then((data: { areas: PrintArea[] }) => setPrintAreas(data.areas ?? []));
   }, []);
 
   const grouped = useMemo(() => {
@@ -24,7 +33,13 @@ export function ProductsView() {
 
   async function patch(
     id: number,
-    changes: { price?: number; active?: boolean; inStock?: boolean; stockQty?: number | null }
+    changes: {
+      price?: number;
+      active?: boolean;
+      inStock?: boolean;
+      stockQty?: number | null;
+      printAreaId?: number | null;
+    }
   ) {
     setSavingId(id);
     await fetch(`/api/admin/products/${id}`, {
@@ -51,6 +66,7 @@ export function ProductsView() {
               <tr>
                 <th>Producto</th>
                 <th>Precio</th>
+                <th>Área de impresión</th>
                 <th style={{ textAlign: "right" }}>Stock</th>
                 <th style={{ textAlign: "right" }}>Activo</th>
               </tr>
@@ -76,6 +92,30 @@ export function ProductsView() {
                         fontSize: 13,
                       }}
                     />
+                  </td>
+                  <td>
+                    <select
+                      value={p.printAreaId ?? ""}
+                      disabled={savingId === p.id}
+                      onChange={(e) => {
+                        const value = e.target.value === "" ? null : Number(e.target.value);
+                        patch(p.id, { printAreaId: value });
+                      }}
+                      style={{
+                        padding: "5px 8px",
+                        borderRadius: 6,
+                        border: "1px solid var(--border)",
+                        fontSize: 12.5,
+                        maxWidth: 140,
+                      }}
+                    >
+                      <option value="">Sin asignar</option>
+                      {printAreas.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.nombre}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td style={{ textAlign: "right" }}>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>

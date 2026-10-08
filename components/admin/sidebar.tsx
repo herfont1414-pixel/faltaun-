@@ -15,6 +15,7 @@ import {
   Receipt,
   Monitor,
   Settings,
+  Printer,
 } from "lucide-react";
 import { BrandLogo } from "@/components/admin/brand-logo";
 import type { Section } from "@/lib/admin/client-types";
@@ -43,7 +44,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     title: "Gestión",
     items: [
       { label: "Productos", Icon: Package, section: "productos" },
-      { label: "Clientes", Icon: Users, action: "toast" },
+      { label: "Clientes", Icon: Users, section: "clientes" },
       { label: "Caja", Icon: Wallet, section: "caja" },
       { label: "Reportes", Icon: BarChart3, section: "reportes" },
       { label: "Gastos", Icon: Receipt, section: "gastos" },
@@ -53,6 +54,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     title: "Más",
     items: [
       { label: "Cocina (KDS)", Icon: Monitor, action: "kds" },
+      { label: "Impresión", Icon: Printer, section: "impresion" },
       { label: "Configuración", Icon: Settings, action: "toast" },
     ],
   },

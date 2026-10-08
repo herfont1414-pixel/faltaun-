@@ -17,6 +17,8 @@ create table if not exists gestion_products (
 
 alter table gestion_products add column if not exists in_stock boolean not null default true;
 alter table gestion_products add column if not exists stock_qty int;
+-- print_area_id se agrega más abajo, después de crear gestion_print_areas
+-- (la FK necesita que esa tabla ya exista).
 
 create table if not exists gestion_customers (
   id serial primary key,
@@ -203,6 +205,11 @@ create table if not exists gestion_print_areas (
   id serial primary key,
   nombre text unique not null
 );
+
+alter table gestion_products add column if not exists print_area_id int references gestion_print_areas(id);
+
+insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')
+on conflict (nombre) do nothing;
 
 create table if not exists gestion_afip_config (
   id serial primary key,

@@ -78,18 +78,20 @@ export function OrderPanel({
           </button>
         </div>
 
-        <div className="cat-tabs">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              className={`cat-tab ${cat === activeCategory ? "active" : ""}`}
-              onClick={() => onChangeCategory(cat)}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        {categories.length > 1 && (
+          <div className="cat-tabs">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                className={`cat-tab ${cat === activeCategory ? "active" : ""}`}
+                onClick={() => onChangeCategory(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="product-list">
           {products.map((product) => (

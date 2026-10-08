@@ -1,11 +1,6 @@
 import { getPrintableOrder } from "@/lib/admin/print";
 import { AutoPrint } from "@/components/admin/auto-print";
 
-const STATIONS = [
-  { key: "Barra", label: "BARRA", match: (category: string) => category === "Bebidas" },
-  { key: "Cocina", label: "COCINA", match: (category: string) => category !== "Bebidas" },
-];
-
 export default async function ComandaPage({ params }: { params: { orderId: string } }) {
   const order = await getPrintableOrder(params.orderId);
   const title = order.tableNumber ? `Mesa ${order.tableNumber}` : "Mostrador";
@@ -35,12 +30,12 @@ export default async function ComandaPage({ params }: { params: { orderId: strin
       <div style={{ textAlign: "center", marginBottom: 10 }}>{time}</div>
       <hr />
 
-      {STATIONS.map((station) => {
-        const items = order.items.filter((it) => station.match(it.category));
+      {order.areas.map((area) => {
+        const items = order.items.filter((it) => it.area === area);
         if (items.length === 0) return null;
         return (
-          <div key={station.key} style={{ marginTop: 10 }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>— {station.label} —</div>
+          <div key={area} style={{ marginTop: 10 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>— {area.toUpperCase()} —</div>
             {items.map((item, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>{item.name}</span>

@@ -402,8 +402,10 @@ export async function listAllProducts(): Promise<AdminProduct[]> {
     stock_qty: number | null;
     category_name: string;
     sort_order: number;
+    print_area_id: number | null;
   }>(`
-    select p.id, p.name, p.price, p.active, p.in_stock, p.stock_qty, c.name as category_name, c.sort_order
+    select p.id, p.name, p.price, p.active, p.in_stock, p.stock_qty, p.print_area_id,
+           c.name as category_name, c.sort_order
     from gestion_products p
     join gestion_categories c on c.id = p.category_id
     order by c.sort_order, p.name
@@ -416,12 +418,19 @@ export async function listAllProducts(): Promise<AdminProduct[]> {
     inStock: r.in_stock,
     stockQty: r.stock_qty,
     category: r.category_name,
+    printAreaId: r.print_area_id,
   }));
 }
 
 export async function updateProduct(
   id: number,
-  changes: { price?: number; active?: boolean; inStock?: boolean; stockQty?: number | null }
+  changes: {
+    price?: number;
+    active?: boolean;
+    inStock?: boolean;
+    stockQty?: number | null;
+    printAreaId?: number | null;
+  }
 ) {
   const pool = getPool();
   if (changes.price !== undefined) {
@@ -429,6 +438,12 @@ export async function updateProduct(
   }
   if (changes.active !== undefined) {
     await pool.query("update gestion_products set active = $2 where id = $1", [id, changes.active]);
+  }
+  if (changes.printAreaId !== undefined) {
+    await pool.query("update gestion_products set print_area_id = $2 where id = $1", [
+      id,
+      changes.printAreaId,
+    ]);
   }
   if (changes.stockQty !== undefined) {
     // Editar el número de stock controla el estado "sin stock" directamente:

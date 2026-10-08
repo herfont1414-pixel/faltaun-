@@ -161,7 +161,23 @@ Protegido por PIN (`ADMIN_PIN`, teclado numérico en `/admin/login`).
   panel del pedido. Internamente es un pedido de mostrador marcado como
   delivery, así que no se mezcla con el listado de Mostrador ni afecta la
   numeración de mesas.
-- Placeholder (todavía no construido): Mostrador express.
+- **Mostrador Express**: venta rápida sin categorías — una sola grilla
+  plana con todos los productos activos. Internamente crea un pedido de
+  mostrador igual que "Mostrador" (misma lista de ventas en curso/
+  cerradas), solo cambia la forma de armarlo: menos clics para una venta
+  de uno o dos productos.
+- **Clientes**: lista unificada por teléfono que junta en una sola fila
+  lo que haya en fidelidad (pedidos, gastado, sellos), datos de delivery
+  (dirección) y cuenta corriente heredada de Fudo (saldo), sin duplicar
+  tablas. Buscador por nombre/teléfono y detalle con el historial de
+  pedidos del menú online de cada cliente.
+- **Impresión**: reemplaza el heurístico fijo que mandaba todo lo de la
+  categoría "Bebidas" a Barra y el resto a Cocina. Ahora las áreas de
+  impresión (Barra, Cocina, y las que se agreguen) se gestionan acá, y
+  cada producto se le asigna un área desde **Productos** — la comanda
+  imprimible agrupa según esa asignación (un producto sin asignar cae en
+  el heurístico viejo, para no perder nada mientras se clasifica la
+  carta).
 
 ## Modo local / offline
 
@@ -203,7 +219,7 @@ PWA (`public/icons/`) salen del trébol recortado del mismo logo.
 - `data/ingredientes.csv` y `data/proveedores.json` quedan guardados para
   los futuros módulos de Stock y Gastos.
 - Tablas de preparación ya creadas en la base pero todavía sin pantalla en
-  el panel: `gestion_payment_methods` (medios de pago configurables),
-  `gestion_print_areas` (áreas de impresión de comandas, ej. Barra/Cocina)
-  y `gestion_afip_config` (CUIT, punto de venta, condición de IVA, para
-  cuando se sume facturación).
+  el panel: `gestion_payment_methods` (medios de pago configurables) y
+  `gestion_afip_config` (CUIT, punto de venta, condición de IVA, para
+  cuando se sume facturación). `gestion_print_areas` ya tiene pantalla —
+  ver "Impresión" arriba.
