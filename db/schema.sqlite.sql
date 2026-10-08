@@ -171,5 +171,6 @@ create table if not exists gestion_loyalty_accounts (
   phone text primary key,
   stamps int not null default 0,
   redeemed int not null default 0,
-  updated_at text not null default (now())
+  updated_at text not null default (now()),
+  name text
 );

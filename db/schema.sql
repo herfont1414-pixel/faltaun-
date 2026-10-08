@@ -183,3 +183,5 @@ create table if not exists gestion_loyalty_accounts (
   redeemed int not null default 0,
   updated_at timestamptz not null default now()
 );
+
+alter table gestion_loyalty_accounts add column if not exists name text;

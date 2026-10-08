@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Receipt, Star } from "lucide-react";
 import { OrderHistoryModal } from "@/components/menu/order-history-modal";
-import { LoyaltyCardModal } from "@/components/menu/loyalty-card-modal";
 
 export function Header() {
   const [showHistory, setShowHistory] = useState(false);
-  const [showLoyalty, setShowLoyalty] = useState(false);
 
   return (
     <>
@@ -23,14 +22,13 @@ export function Header() {
             className="h-11 w-auto"
           />
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowLoyalty(true)}
+            <Link
+              href="/fidelidad"
               aria-label="Mi tarjeta de fidelidad"
               className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-stone-300 transition hover:border-white/25"
             >
               <Star className="h-4 w-4" />
-            </button>
+            </Link>
             <button
               type="button"
               onClick={() => setShowHistory(true)}
@@ -50,9 +48,8 @@ export function Header() {
       </header>
 
       {/* Fuera del <header>: su backdrop-blur-md crea un containing block para
-          "position: fixed" y rompía el posicionamiento de estos modales. */}
+          "position: fixed" y rompía el posicionamiento de este modal. */}
       {showHistory && <OrderHistoryModal onClose={() => setShowHistory(false)} />}
-      {showLoyalty && <LoyaltyCardModal onClose={() => setShowLoyalty(false)} />}
     </>
   );
 }

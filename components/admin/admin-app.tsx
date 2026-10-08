@@ -145,7 +145,7 @@ export function AdminApp() {
     showToast(`Mesa ${selectedTableNumber} pidió la cuenta`);
   }
 
-  async function finalizeOrder(method: PaymentMethod, customerId: number | null) {
+  async function finalizeOrder(method: PaymentMethod, customerId: number | null, loyaltyPhone: string | null) {
     if (!selectedOrderId) return;
     const order = data?.openOrders.find((o) => o.id === selectedOrderId);
     if (!order || order.items.length === 0) {
@@ -153,11 +153,18 @@ export function AdminApp() {
       return;
     }
     const state = await safeCall(() =>
-      postJson("/api/admin/finalize-order", { orderId: selectedOrderId, paymentMethod: method, customerId })
+      postJson("/api/admin/finalize-order", {
+        orderId: selectedOrderId,
+        paymentMethod: method,
+        customerId,
+        loyaltyPhone,
+      })
     );
     if (!state) return;
     applyState(state);
-    showToast(`Cobrado · ${money(order.total)}`);
+    showToast(
+      loyaltyPhone ? `Cobrado · ${money(order.total)} · +1 sello de fidelidad` : `Cobrado · ${money(order.total)}`
+    );
     closePanel();
   }
 

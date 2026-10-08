@@ -7,7 +7,7 @@ import type { Customer, PaymentMethod } from "@/lib/admin/types";
 interface PaymentPickerProps {
   total: number;
   onCancel: () => void;
-  onConfirm: (method: PaymentMethod, customerId: number | null) => void;
+  onConfirm: (method: PaymentMethod, customerId: number | null, loyaltyPhone: string | null) => void;
 }
 
 const METHODS: { value: PaymentMethod; label: string }[] = [
@@ -22,6 +22,7 @@ export function PaymentPicker({ total, onCancel, onConfirm }: PaymentPickerProps
   const [results, setResults] = useState<Customer[]>([]);
   const [selected, setSelected] = useState<Customer | null>(null);
   const [searching, setSearching] = useState(false);
+  const [loyaltyPhone, setLoyaltyPhone] = useState("");
 
   async function search(value: string) {
     setQuery(value);
@@ -98,6 +99,21 @@ export function PaymentPicker({ total, onCancel, onConfirm }: PaymentPickerProps
         </div>
       )}
 
+      <div style={{ marginBottom: 10 }}>
+        <input
+          value={loyaltyPhone}
+          onChange={(e) => setLoyaltyPhone(e.target.value)}
+          placeholder="Teléfono (Fidelidad) — opcional"
+          style={{
+            width: "100%",
+            padding: "8px 10px",
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            fontSize: 13,
+          }}
+        />
+      </div>
+
       <div className="footer-actions">
         <button type="button" className="btn" onClick={onCancel}>
           Cancelar
@@ -106,7 +122,7 @@ export function PaymentPicker({ total, onCancel, onConfirm }: PaymentPickerProps
           type="button"
           className="btn btn-primary"
           disabled={!canConfirm}
-          onClick={() => method && onConfirm(method, selected?.id ?? null)}
+          onClick={() => method && onConfirm(method, selected?.id ?? null, loyaltyPhone.trim() || null)}
         >
           Confirmar cobro · {money(total)}
         </button>
