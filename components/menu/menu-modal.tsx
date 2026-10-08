@@ -6,6 +6,7 @@ import { X, UtensilsCrossed, Plus } from "lucide-react";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { buildMenuItemInquiry } from "@/lib/whatsapp";
 import { useCart } from "@/components/menu/cart-context";
+import { useBusinessConfig } from "@/lib/use-business-config";
 import type { MenuItem } from "@/lib/types";
 
 interface MenuModalProps {
@@ -15,6 +16,7 @@ interface MenuModalProps {
 
 export function MenuModal({ item, onClose }: MenuModalProps) {
   const { addItem } = useCart();
+  const businessConfig = useBusinessConfig();
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
 
@@ -102,7 +104,7 @@ export function MenuModal({ item, onClose }: MenuModalProps) {
           )}
 
           <WhatsAppButton
-            href={buildMenuItemInquiry(item)}
+            href={buildMenuItemInquiry(item, businessConfig?.whatsappNumber || undefined)}
             label="Consultar por WhatsApp"
             className="mt-2 w-full"
           />

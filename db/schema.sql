@@ -220,6 +220,21 @@ create table if not exists gestion_afip_config (
   habilitado boolean not null default false
 );
 
+insert into gestion_afip_config (id) values (1) on conflict (id) do nothing;
+
+-- Datos del local: una única fila (id = 1) con nombre, dirección, horario
+-- y el WhatsApp del negocio. Reemplaza en runtime a NEXT_PUBLIC_WHATSAPP_NUMBER
+-- cuando está cargado, para poder cambiar el número sin redeploy.
+create table if not exists gestion_business_config (
+  id int primary key default 1,
+  name text,
+  address text,
+  hours text,
+  whatsapp_number text
+);
+
+insert into gestion_business_config (id) values (1) on conflict (id) do nothing;
+
 -- Configuración del motor de impresión térmica: una única fila (id = 1)
 -- con las opciones de ancho de papel, textos de encabezado/pie, modo
 -- ahorro de papel y tamaños de letra por sección.

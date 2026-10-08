@@ -196,6 +196,20 @@ export interface PrintConfig {
   fontSizeFooter: PrintFontSize;
 }
 
+export interface BusinessConfig {
+  name: string;
+  address: string;
+  hours: string;
+  whatsappNumber: string;
+}
+
+export interface AfipConfig {
+  cuit: string;
+  puntoVenta: number | null;
+  condicionIva: string;
+  habilitado: boolean;
+}
+
 export interface SalesReport {
   from: string;
   to: string;

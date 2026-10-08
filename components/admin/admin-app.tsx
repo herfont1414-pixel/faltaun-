@@ -15,6 +15,7 @@ import { ReservationsView } from "@/components/admin/reservations-view";
 import { ExpensesView } from "@/components/admin/expenses-view";
 import { ClientesView } from "@/components/admin/clientes-view";
 import { ImpresionView } from "@/components/admin/impresion-view";
+import { ConfiguracionView } from "@/components/admin/configuracion-view";
 import { money } from "@/lib/admin/format";
 import { printUrl } from "@/lib/print-client";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
@@ -266,7 +267,6 @@ export function AdminApp() {
       <Sidebar
         activeSection={section}
         onNavigate={setSection}
-        onToast={showToast}
         mobileOpen={sidebarOpen}
         onCloseMobile={() => setSidebarOpen(false)}
       />
@@ -377,6 +377,8 @@ export function AdminApp() {
         <ClientesView />
       ) : section === "impresion" ? (
         <ImpresionView />
+      ) : section === "configuracion" ? (
+        <ConfiguracionView onGoTo={setSection} />
       ) : null}
       </div>
 

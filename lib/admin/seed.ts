@@ -137,6 +137,8 @@ export async function ensureSeeded() {
          on conflict (nombre) do nothing`
       );
       await client.query(`insert into gestion_print_config (id) values (1) on conflict (id) do nothing`);
+      await client.query(`insert into gestion_afip_config (id) values (1) on conflict (id) do nothing`);
+      await client.query(`insert into gestion_business_config (id) values (1) on conflict (id) do nothing`);
       schemaApplied = true;
     }
 

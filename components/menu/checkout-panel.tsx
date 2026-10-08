@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useCart } from "@/components/menu/cart-context";
 import { buildOrderWhatsAppLink } from "@/lib/whatsapp";
+import { useBusinessConfig } from "@/lib/use-business-config";
 
 interface Zone {
   id: number;
@@ -28,6 +29,7 @@ interface CheckoutPanelProps {
 
 export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
   const { items, changeQty, total, clear, fulfillment, setFulfillment, scheduledTime } = useCart();
+  const businessConfig = useBusinessConfig();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -129,6 +131,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
       shippingCost,
       total: grandTotal,
       notes: notes.trim() || null,
+      businessNumber: businessConfig?.whatsappNumber || undefined,
     });
     if (waWindow) waWindow.location.href = waLink;
     else window.open(waLink, "_blank");
