@@ -1,6 +1,5 @@
 import {
   LayoutGrid,
-  Soup,
   Beef,
   Pizza,
   Sandwich,
@@ -12,6 +11,7 @@ import {
   Fish,
   UtensilsCrossed,
 } from "lucide-react";
+import { customCategoryIcon } from "@/components/menu/category-icons";
 
 interface CategoryFilterProps {
   categories: string[];
@@ -19,8 +19,7 @@ interface CategoryFilterProps {
   onChange: (category: string) => void;
 }
 
-const KEYWORD_ICONS: { keywords: string[]; Icon: typeof Soup }[] = [
-  { keywords: ["entrada", "picada"], Icon: Soup },
+const KEYWORD_ICONS: { keywords: string[]; Icon: typeof Beef }[] = [
   { keywords: ["burger", "hamburguesa"], Icon: Beef },
   { keywords: ["pizza"], Icon: Pizza },
   { keywords: ["sandwich", "sándwich", "sanguche"], Icon: Sandwich },
@@ -32,7 +31,10 @@ const KEYWORD_ICONS: { keywords: string[]; Icon: typeof Soup }[] = [
   { keywords: ["pescado", "mar", "sushi"], Icon: Fish },
 ];
 
+// Entradas, Empanadas y Al plato tienen icono propio (category-icons.tsx).
 export function iconFor(category: string) {
+  const custom = customCategoryIcon(category);
+  if (custom) return custom;
   const normalized = category.toLowerCase();
   const match = KEYWORD_ICONS.find((entry) => entry.keywords.some((kw) => normalized.includes(kw)));
   return match?.Icon ?? UtensilsCrossed;

@@ -6,6 +6,7 @@ import { CategoryFilter } from "@/components/menu/category-filter";
 import { MenuRow } from "@/components/menu/menu-row";
 import { MenuModal } from "@/components/menu/menu-modal";
 import { Highlights } from "@/components/menu/highlights";
+import { customCategoryIcon } from "@/components/menu/category-icons";
 import type { MenuHighlights } from "@/lib/menu";
 import type { MenuItem } from "@/lib/types";
 
@@ -128,7 +129,15 @@ export function MenuSection({ items, highlights }: MenuSectionProps) {
           >
             <div className="sticky top-[69px] z-20 border-b border-white/5 bg-base px-5 py-3">
               <h3 className="font-display text-xl text-stone-50">
-                <span className="mr-2">{emojiFor(group.category)}</span>
+                {(() => {
+                  // Entradas, Empanadas y Al plato muestran su icono lineal; el resto, el emoji de siempre.
+                  const Custom = customCategoryIcon(group.category);
+                  return Custom ? (
+                    <Custom className="mr-2 inline-block h-6 w-6 align-[-4px] text-ember" strokeWidth={1.6} />
+                  ) : (
+                    <span className="mr-2">{emojiFor(group.category)}</span>
+                  );
+                })()}
                 {group.category}
               </h3>
             </div>
