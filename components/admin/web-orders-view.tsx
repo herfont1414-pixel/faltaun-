@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { money } from "@/lib/admin/format";
 import { playBeep } from "@/lib/admin/beep";
+import { osmLink } from "@/lib/geo";
 import type { WebOrder } from "@/lib/admin/types";
 
 const ETA_OPTIONS = [15, 30, 45, 60];
@@ -163,6 +164,19 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
                     {order.customerAddress}
                     {order.deliveryZone ? ` · ${order.deliveryZone}` : ""}
                     {order.shippingCost > 0 ? ` · envío ${money(order.shippingCost)}` : ""}
+                    {order.deliveryLat !== null && order.deliveryLng !== null && (
+                      <>
+                        {" · "}
+                        <a
+                          href={osmLink({ lat: order.deliveryLat, lng: order.deliveryLng })}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontWeight: 600 }}
+                        >
+                          Ver en mapa
+                        </a>
+                      </>
+                    )}
                   </span>
                 )}
               </div>

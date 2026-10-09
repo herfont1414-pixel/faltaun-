@@ -6,6 +6,7 @@ import type {
   AdminProduct,
   Catalog,
   Customer,
+  DeliveryZone,
   AdminState,
   Order,
   OrderItem,
@@ -114,6 +115,8 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
       notes: o.notes ?? null,
       partySize: o.party_size ?? null,
       waiter: o.waiter ?? null,
+      deliveryLat: o.delivery_lat === null || o.delivery_lat === undefined ? null : money(o.delivery_lat),
+      deliveryLng: o.delivery_lng === null || o.delivery_lng === undefined ? null : money(o.delivery_lng),
     };
   });
 }
@@ -473,18 +476,29 @@ export async function findDeliveryCustomer(phone: string): Promise<{ name: strin
   return rows[0] ? { name: rows[0].name, address: rows[0].address } : null;
 }
 
-export async function listDeliveryZones(): Promise<{ id: number; name: string; cost: number }[]> {
+export async function listDeliveryZones(): Promise<DeliveryZone[]> {
   const pool = getPool();
-  const { rows } = await pool.query("select id, name, cost from gestion_delivery_zones order by name");
-  return rows.map((r) => ({ id: r.id, name: r.name, cost: money(r.cost) }));
+  const { rows } = await pool.query(
+    "select id, name, cost, max_km from gestion_delivery_zones order by max_km is null, max_km, name"
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    cost: money(r.cost),
+    maxKm: r.max_km === null || r.max_km === undefined ? null : money(r.max_km),
+  }));
 }
 
-export async function upsertDeliveryZone(name: string, cost: number) {
+// maxKm con valor = zona por distancia ("hasta N km del local"); sin valor, zona por nombre.
+export async function upsertDeliveryZone(name: string, cost: number, maxKm: number | null = null) {
+  if (maxKm !== null && (!Number.isFinite(maxKm) || maxKm <= 0 || maxKm > 200)) {
+    throw new Error("Los kilómetros tienen que ser un número entre 0 y 200");
+  }
   const pool = getPool();
   await pool.query(
-    `insert into gestion_delivery_zones (name, cost) values ($1, $2)
-     on conflict (name) do update set cost = excluded.cost`,
-    [name, cost]
+    `insert into gestion_delivery_zones (name, cost, max_km) values ($1, $2, $3)
+     on conflict (name) do update set cost = excluded.cost, max_km = excluded.max_km`,
+    [name, cost, maxKm]
   );
 }
 

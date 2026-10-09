@@ -2,6 +2,8 @@ import { getPool } from "@/lib/admin/db";
 import type { DbClient } from "@/lib/admin/db";
 import { addStamp } from "@/lib/admin/loyalty";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
+import { quoteDelivery } from "@/lib/admin/delivery-quote";
+import { isValidLatLng } from "@/lib/geo";
 import type { Fulfillment, WebOrder, WebOrderStatus } from "@/lib/admin/types";
 
 function money(value: string | number) {
@@ -23,6 +25,8 @@ function mapRow(row: any): WebOrder {
     status: row.status,
     etaMinutes: row.eta_minutes,
     createdAt: row.created_at,
+    deliveryLat: row.delivery_lat === null || row.delivery_lat === undefined ? null : money(row.delivery_lat),
+    deliveryLng: row.delivery_lng === null || row.delivery_lng === undefined ? null : money(row.delivery_lng),
     orderId: row.order_id ?? null,
     orderStatus: row.order_status ?? null,
   };
@@ -36,6 +40,9 @@ export async function createWebOrder(input: {
   fulfillment: Fulfillment;
   customerAddress: string | null;
   deliveryZone: string | null;
+  // Dónde marcó el cliente su dirección en el mapa (opcional).
+  deliveryLat?: number | null;
+  deliveryLng?: number | null;
 }): Promise<WebOrder> {
   const pool = getPool();
 
@@ -65,18 +72,43 @@ export async function createWebOrder(input: {
   }
 
   // El costo de envío NUNCA se confía del cliente (body.shippingCost):
-  // se resuelve siempre contra la zona real guardada en el servidor. Si
-  // la zona no existe (o ya no existe), se rechaza el pedido en vez de
-  // aceptar un envío gratis o inventado.
+  // se resuelve siempre en el servidor. Con la dirección marcada en el mapa y
+  // zonas por distancia cargadas, se calcula por kilómetros desde el local; si
+  // no, contra la zona por nombre guardada. Si la zona no existe, o la
+  // dirección queda fuera del reparto, se rechaza el pedido en vez de aceptar
+  // un envío gratis o inventado.
   let shippingCost = 0;
+  let deliveryZone = input.deliveryZone;
+  let deliveryLat: number | null = null;
+  let deliveryLng: number | null = null;
   if (input.fulfillment === "delivery") {
-    if (!input.deliveryZone) throw new Error("Falta la zona de entrega");
-    const { rows: zoneRows } = await pool.query<{ cost: string | number }>(
-      "select cost from gestion_delivery_zones where name = $1",
-      [input.deliveryZone]
-    );
-    if (!zoneRows[0]) throw new Error("La zona de entrega elegida no existe");
-    shippingCost = money(zoneRows[0].cost);
+    let resolved = false;
+    if (isValidLatLng(input.deliveryLat, input.deliveryLng)) {
+      deliveryLat = input.deliveryLat as number;
+      deliveryLng = input.deliveryLng as number;
+      const quote = await quoteDelivery({ lat: deliveryLat, lng: deliveryLng });
+      if (quote.status === "out_of_range") {
+        throw new Error(`Tu dirección queda fuera de la zona de reparto (hasta ${quote.maxKm} km del local)`);
+      }
+      if (quote.status === "ok") {
+        deliveryZone = quote.zone.name;
+        shippingCost = quote.zone.cost;
+        resolved = true;
+      }
+    }
+    if (!resolved) {
+      if (!deliveryZone) throw new Error("Falta la zona de entrega");
+      const { rows: zoneRows } = await pool.query<{ cost: string | number; max_km: string | number | null }>(
+        "select cost, max_km from gestion_delivery_zones where name = $1",
+        [deliveryZone]
+      );
+      if (!zoneRows[0]) throw new Error("La zona de entrega elegida no existe");
+      // Una zona por distancia solo se puede obtener marcando la dirección en el mapa.
+      if (zoneRows[0].max_km !== null && zoneRows[0].max_km !== undefined) {
+        throw new Error("Marcá tu dirección en el mapa para calcular el envío");
+      }
+      shippingCost = money(zoneRows[0].cost);
+    }
   }
   const total = items.reduce((sum, it) => sum + it.price * it.qty, 0) + shippingCost;
 
@@ -91,19 +123,22 @@ export async function createWebOrder(input: {
 
   const { rows } = await pool.query(
     `insert into gestion_web_orders
-       (customer_name, customer_phone, customer_address, fulfillment, delivery_zone, shipping_cost, notes, items, total)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       (customer_name, customer_phone, customer_address, fulfillment, delivery_zone, shipping_cost, notes, items, total,
+        delivery_lat, delivery_lng)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      returning *`,
     [
       input.customerName,
       input.customerPhone,
       input.customerAddress,
       input.fulfillment,
-      input.deliveryZone,
+      deliveryZone,
       shippingCost,
       input.notes,
       JSON.stringify(items),
       total,
+      deliveryLat,
+      deliveryLng,
     ]
   );
   return mapRow(rows[0]);
@@ -148,6 +183,8 @@ async function createPosOrderForWeb(
     customer_name: string;
     customer_phone: string;
     customer_address: string | null;
+    delivery_lat?: string | number | null;
+    delivery_lng?: string | number | null;
     fulfillment: string;
     delivery_zone: string | null;
     shipping_cost: string | number | null;
@@ -162,8 +199,8 @@ async function createPosOrderForWeb(
   const { rows } = await client.query<{ id: string }>(
     `insert into gestion_orders
        (origin, is_delivery, customer_name, customer_phone, customer_address, delivery_zone, shipping_cost,
-        delivery_status, notes, kitchen_status, kitchen_sent_at)
-     values ('mostrador', ${isDelivery ? "true" : "false"}, $1, $2, $3, $4, $5, $6, $7, $8, now())
+        delivery_status, notes, kitchen_status, kitchen_sent_at, delivery_lat, delivery_lng)
+     values ('mostrador', ${isDelivery ? "true" : "false"}, $1, $2, $3, $4, $5, $6, $7, $8, now(), $9, $10)
      returning id`,
     [
       web.customer_name,
@@ -174,6 +211,8 @@ async function createPosOrderForWeb(
       isDelivery ? "preparando" : null,
       notes,
       kitchenStatus,
+      isDelivery ? (web.delivery_lat ?? null) : null,
+      isDelivery ? (web.delivery_lng ?? null) : null,
     ]
   );
   const orderId = rows[0].id;

@@ -220,6 +220,13 @@ export async function ensureSeeded() {
           "numeric(10, 2) not null default 0"
         );
         await ensureSqliteColumn(client, "gestion_web_orders", "order_id", "text references gestion_orders(id) on delete set null");
+        await ensureSqliteColumn(client, "gestion_delivery_zones", "max_km", "numeric(6, 2)");
+        await ensureSqliteColumn(client, "gestion_business_config", "latitude", "real");
+        await ensureSqliteColumn(client, "gestion_business_config", "longitude", "real");
+        await ensureSqliteColumn(client, "gestion_web_orders", "delivery_lat", "real");
+        await ensureSqliteColumn(client, "gestion_web_orders", "delivery_lng", "real");
+        await ensureSqliteColumn(client, "gestion_orders", "delivery_lat", "real");
+        await ensureSqliteColumn(client, "gestion_orders", "delivery_lng", "real");
         await ensureSqliteColumn(client, "gestion_loyalty_accounts", "name", "text");
         await ensureSqliteColumn(client, "gestion_loyalty_accounts", "order_count", "int not null default 0");
         await ensureSqliteColumn(
