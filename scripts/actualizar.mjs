@@ -137,7 +137,11 @@ async function main() {
     }
     for (const entry of readdirSync(source, { withFileTypes: true })) {
       if (entry.isFile() && !ROOT_FILES_TO_KEEP.has(entry.name)) {
-        cpSync(path.join(source, entry.name), path.join(ROOT, entry.name), { force: true });
+        const from = path.join(source, entry.name);
+        const to = path.join(ROOT, entry.name);
+        // Si no cambió, no se toca: así nunca se reescribe un .bat que se está ejecutando.
+        if (existsSync(to) && readFileSync(from).equals(readFileSync(to))) continue;
+        cpSync(from, to, { force: true });
       }
     }
 

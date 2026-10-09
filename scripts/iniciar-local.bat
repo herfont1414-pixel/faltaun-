@@ -60,7 +60,23 @@ call npm rebuild better-sqlite3
 node -e "const D=require('better-sqlite3');new D(':memory:').close()" >nul 2>&1
 if errorlevel 1 goto :fallo_sqlite
 :sqlite_ok
-echo [OK] Base de datos local lista
+echo [OK] Componentes de base de datos listos
+
+rem ---------- 3b. Que base usar: la misma que Vercel o la local de esta PC ----------
+rem Se pregunta una sola vez (scripts\configurar-base.mjs) y queda en .env.local.
+rem MADERO_FORCE_LOCAL=1 (acceso "SIN INTERNET") fuerza la base local de esta PC.
+set "MODO_BASE=local"
+if "%MADERO_FORCE_LOCAL%"=="1" goto :base_decidida
+if exist "scripts\configurar-base.mjs" node "scripts\configurar-base.mjs"
+findstr /b /c:"DATABASE_URL=postgres" ".env.local" >nul 2>&1
+if not errorlevel 1 set "MODO_BASE=compartida"
+:base_decidida
+if "%MODO_BASE%"=="compartida" goto :msg_compartida
+echo [OK] Base de datos: LOCAL de esta PC ^(no es la de Vercel^)
+goto :base_msg_fin
+:msg_compartida
+echo [OK] Base de datos: la MISMA que Vercel
+:base_msg_fin
 
 rem ---------- 4. Armar la aplicacion (solo si hace falta) ----------
 set "NECESITA_BUILD=0"
@@ -82,7 +98,12 @@ powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing -Uri ht
 if not errorlevel 1 goto :abrir
 echo.
 echo Arrancando el servidor...
+if "%MODO_BASE%"=="compartida" goto :iniciar_compartida
 start "MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "set DATABASE_URL=&& npm start"
+goto :esperar_servidor
+:iniciar_compartida
+start "MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "npm start"
+:esperar_servidor
 powershell -NoProfile -Command "for ($i=0; $i -lt 90; $i++) { try { Invoke-WebRequest -UseBasicParsing -Uri http://localhost:3000/admin/login -TimeoutSec 2 | Out-Null; exit 0 } catch { Start-Sleep -Seconds 1 } }; exit 1"
 if errorlevel 1 goto :fallo_server
 
