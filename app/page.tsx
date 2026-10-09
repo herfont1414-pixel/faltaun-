@@ -3,6 +3,7 @@ import { Hero } from "@/components/hero";
 import { CartProvider } from "@/components/menu/cart-context";
 import { DeliveryToggleCard } from "@/components/menu/delivery-toggle-card";
 import { LoyaltyBanner } from "@/components/menu/loyalty-banner";
+import { ContactFooter } from "@/components/menu/contact-footer";
 import { MenuExperience } from "@/components/menu/menu-experience";
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { getMenuHighlights, getMenuItems } from "@/lib/menu";
@@ -26,6 +27,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-3xl">
           <ReservationForm />
         </div>
+        <ContactFooter />
       </main>
     </CartProvider>
   );
