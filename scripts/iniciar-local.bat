@@ -23,6 +23,8 @@ echo [OK] Node.js %NODEVER%
 
 rem ---------- 1b. Inicio automatico con Windows (se deja listo una sola vez) ----------
 if exist "scripts\autoinicio.mjs" node "scripts\autoinicio.mjs"
+rem Acceso directo "MaderoSys" en el Escritorio (se crea una sola vez).
+if exist "scripts\acceso-directo.mjs" node "scripts\acceso-directo.mjs"
 
 rem ---------- 2. PIN de administrador (solo la primera vez) ----------
 if exist ".env.local" goto :env_ok
@@ -116,7 +118,9 @@ if errorlevel 1 goto :fallo_server
 :abrir
 rem Arranque automatico: no se abre el navegador ni se espera una tecla.
 if "%MADERO_AUTO%"=="1" exit /b 0
-start "" "http://localhost:3000/admin"
+rem Abre MaderoSys en una ventana propia (Edge o Chrome); si no se puede, en el navegador de siempre.
+node "scripts\abrir-ventana.mjs"
+if errorlevel 1 start "" "http://localhost:3000/admin"
 echo.
 echo ============================================================
 echo   LISTO. Se abrio MaderoSys en el navegador.
