@@ -442,18 +442,30 @@ export async function createDeliveryOrder(customer: {
   channel?: "mostrador" | "whatsapp";
 }) {
   const pool = getPool();
-  await pool.query(
-    `insert into gestion_delivery_customers (phone, name, address, updated_at, created_at)
-     values ($1, $2, $3, now(), now())
-     on conflict (phone) do update set name = excluded.name, address = excluded.address, updated_at = excluded.updated_at`,
-    [customer.phone, customer.name, customer.address]
-  );
+  const phone = customer.phone.trim();
+  const address = customer.address.trim();
+  // La agenda de clientes de delivery se indexa por teléfono: sin teléfono no se guarda.
+  if (phone && customer.name.trim()) {
+    await pool.query(
+      `insert into gestion_delivery_customers (phone, name, address, updated_at, created_at)
+       values ($1, $2, $3, now(), now())
+       on conflict (phone) do update set name = excluded.name, address = excluded.address, updated_at = excluded.updated_at`,
+      [phone, customer.name.trim(), address || null]
+    );
+  }
   const { rows } = await pool.query(
     `insert into gestion_orders
        (origin, is_delivery, customer_name, customer_phone, customer_address, delivery_zone, shipping_cost, delivery_status, channel)
      values ('mostrador', true, $1, $2, $3, $4, $5, 'preparando', $6)
      returning id`,
-    [customer.name, customer.phone, customer.address, customer.zone, customer.shippingCost, customer.channel ?? "whatsapp"]
+    [
+      customer.name.trim() || null,
+      phone || null,
+      address || null,
+      customer.zone,
+      customer.shippingCost,
+      customer.channel ?? "whatsapp",
+    ]
   );
   return getOrderRow(rows[0].id);
 }

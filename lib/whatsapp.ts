@@ -1,3 +1,4 @@
+import { whatsappDigits } from "@/lib/phone";
 import type { MenuItem } from "@/lib/types";
 
 // Valor de respaldo para instalaciones que todavía no cargaron el número en
@@ -8,7 +9,7 @@ const DEFAULT_WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
 
 export function buildWhatsAppLink(message: string, number?: string) {
   const encoded = encodeURIComponent(message);
-  return `https://wa.me/${number || DEFAULT_WHATSAPP_NUMBER}?text=${encoded}`;
+  return `https://wa.me/${whatsappDigits(number || DEFAULT_WHATSAPP_NUMBER)}?text=${encoded}`;
 }
 
 export function buildMenuItemInquiry(item: MenuItem, number?: string) {

@@ -1,17 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { money } from "@/lib/admin/format";
 import { CHANNEL_LABEL, DELIVERY_STATUS_LABEL } from "@/lib/admin/order-labels";
-import type { Order } from "@/lib/admin/types";
+import type { DeliveryZone, Order } from "@/lib/admin/types";
+
+// Lo que se pide antes de cargar los productos de un pedido nuevo.
+export interface NewOrderInput {
+  channel: "mostrador" | "whatsapp";
+  delivery: boolean;
+  name: string;
+  zone: string | null;
+  address: string;
+}
 
 interface MostradorViewProps {
   openOrders: Order[];
   closedOrders: Order[];
-  onNewOrder: (channel: "mostrador" | "whatsapp", customer?: { name: string; phone: string }) => void;
+  onNewOrder: (input: NewOrderInput) => void;
   onOpenOrder: (orderId: string) => void;
-  // Solo en el Mostrador completo: ir a cargar un pedido delivery.
-  onGoDelivery?: () => void;
   title?: string;
   newLabel?: string;
   // El Express es solo venta rápida de barra: sin etiquetas de canal ni botones extra.
@@ -61,27 +68,79 @@ function Who({ order }: { order: Order }) {
   );
 }
 
+// Botones chicos para elegir entre pocas opciones (pestañitas).
+function Tabs<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          className={`btn ${value === o.value ? "btn-primary" : ""}`}
+          style={{ flex: "none", padding: "6px 14px", fontSize: 12.5 }}
+          onClick={() => onChange(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function MostradorView({
   openOrders,
   closedOrders,
   onNewOrder,
   onOpenOrder,
-  onGoDelivery,
   title = "Mostrador",
   newLabel = "+ Nuevo pedido",
   simple = false,
 }: MostradorViewProps) {
   const enCurso = openOrders.filter((order) => order.items.length > 0 || order.isDelivery || order.channel === "web");
-  const [askWhatsapp, setAskWhatsapp] = useState(false);
-  const [waName, setWaName] = useState("");
-  const [waPhone, setWaPhone] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("");
+  const [channel, setChannel] = useState<"mostrador" | "whatsapp">("mostrador");
+  const [delivery, setDelivery] = useState(false);
+  const [zones, setZones] = useState<DeliveryZone[]>([]);
+  const [zoneName, setZoneName] = useState("");
+  const [address, setAddress] = useState("");
+  const [formError, setFormError] = useState("");
   const cols = simple ? 4 : 6;
 
-  function createWhatsapp() {
-    onNewOrder("whatsapp", { name: waName, phone: waPhone });
-    setAskWhatsapp(false);
-    setWaName("");
-    setWaPhone("");
+  // Las zonas (y su precio de envío) se piden recién cuando se abre el formulario.
+  useEffect(() => {
+    if (!showForm || simple) return;
+    fetch("/api/admin/delivery-zones")
+      .then((res) => res.json())
+      .then((data: { zones?: DeliveryZone[] }) => setZones(data.zones ?? []))
+      .catch(() => setZones([]));
+  }, [showForm, simple]);
+
+  function resetForm() {
+    setShowForm(false);
+    setName("");
+    setChannel("mostrador");
+    setDelivery(false);
+    setZoneName("");
+    setAddress("");
+    setFormError("");
+  }
+
+  function createOrder() {
+    if (delivery && zones.length > 0 && !zoneName) {
+      setFormError("Elegí la zona para calcular el envío.");
+      return;
+    }
+    onNewOrder({ channel, delivery, name: name.trim(), zone: delivery ? zoneName || null : null, address: address.trim() });
+    resetForm();
   }
 
   return (
@@ -89,65 +148,101 @@ export function MostradorView({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
         <h1>{title}</h1>
         {simple ? (
-          <button type="button" className="m-new-btn" onClick={() => onNewOrder("mostrador")}>
+          <button
+            type="button"
+            className="m-new-btn"
+            onClick={() => onNewOrder({ channel: "mostrador", delivery: false, name: "", zone: null, address: "" })}
+          >
             {newLabel}
           </button>
         ) : (
-          <div className="m-actions">
-            <button type="button" className="m-new-btn" onClick={() => onNewOrder("mostrador")}>
-              + Mostrador
-            </button>
-            <button type="button" className="m-new-btn" onClick={() => setAskWhatsapp(true)}>
-              + WhatsApp
-            </button>
-            {onGoDelivery && (
-              <button type="button" className="m-new-btn" onClick={onGoDelivery}>
-                + Delivery
-              </button>
-            )}
-          </div>
+          <button type="button" className="m-new-btn" onClick={() => (showForm ? resetForm() : setShowForm(true))}>
+            {showForm ? "Cancelar" : newLabel}
+          </button>
         )}
       </div>
 
-      {askWhatsapp && (
+      {showForm && !simple && (
         <div className="m-section">
-          <div className="caja-card">
-            <div className="m-section-title" style={{ marginTop: 0 }}>
-              Pedido por WhatsApp (retira en el local)
+          <div className="caja-card" style={{ maxWidth: 440 }}>
+            <div className="caja-field">
+              <label>Nombre de quien pidió (opcional)</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="caja-input"
+                placeholder="Ej: Carmen"
+              />
             </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <div className="caja-field" style={{ flex: 1 }}>
-                <label>Nombre (opcional)</label>
-                <input
-                  type="text"
-                  value={waName}
-                  onChange={(e) => setWaName(e.target.value)}
-                  className="caja-input"
-                  placeholder="Nombre del cliente"
-                />
-              </div>
-              <div className="caja-field" style={{ flex: 1 }}>
-                <label>Teléfono (opcional)</label>
-                <input
-                  type="text"
-                  value={waPhone}
-                  onChange={(e) => setWaPhone(e.target.value)}
-                  className="caja-input"
-                  placeholder="3755…"
-                />
-              </div>
+
+            <div className="caja-field">
+              <label>Cómo pidió</label>
+              <Tabs
+                value={channel}
+                onChange={setChannel}
+                options={[
+                  { value: "mostrador", label: "En el local" },
+                  { value: "whatsapp", label: "WhatsApp" },
+                ]}
+              />
             </div>
-            <p style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 10 }}>
-              Si es para llevar a domicilio, usá &ldquo;+ Delivery&rdquo;.
-            </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button type="button" className="btn btn-primary" onClick={createWhatsapp}>
-                Crear pedido
-              </button>
-              <button type="button" className="btn" onClick={() => setAskWhatsapp(false)}>
-                Cancelar
-              </button>
+
+            <div className="caja-field">
+              <label>Entrega</label>
+              <Tabs
+                value={delivery ? "delivery" : "retira"}
+                onChange={(v) => setDelivery(v === "delivery")}
+                options={[
+                  { value: "retira", label: "Retira" },
+                  { value: "delivery", label: "Delivery" },
+                ]}
+              />
             </div>
+
+            {delivery && (
+              <>
+                <div className="caja-field">
+                  <label>Zona de envío</label>
+                  {zones.length > 0 ? (
+                    <select
+                      value={zoneName}
+                      onChange={(e) => {
+                        setZoneName(e.target.value);
+                        setFormError("");
+                      }}
+                      className="caja-input"
+                    >
+                      <option value="">Elegí la zona</option>
+                      {zones.map((z) => (
+                        <option key={z.id} value={z.name}>
+                          {z.name} · {money(z.cost)}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p style={{ fontSize: 12.5, color: "var(--text-dim)" }}>
+                      Todavía no hay zonas cargadas (se cargan en Delivery → Zonas de envío). El envío va sin costo.
+                    </p>
+                  )}
+                </div>
+                <div className="caja-field">
+                  <label>Dirección (opcional)</label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="caja-input"
+                    placeholder="Calle y número"
+                  />
+                </div>
+              </>
+            )}
+
+            {formError && <p style={{ color: "#b91c1c", fontSize: 12.5, marginBottom: 8 }}>{formError}</p>}
+            <button type="button" className="btn btn-primary" style={{ width: "100%" }} onClick={createOrder}>
+              Crear pedido y cargar productos
+            </button>
           </div>
         </div>
       )}
