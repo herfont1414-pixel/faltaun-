@@ -237,6 +237,22 @@ trabaja; al terminar el día se pueden cerrar las dos ventanas.
 - **Sin internet:** `MaderoSys-Iniciar-SIN-INTERNET.bat` arranca con la base local de la
   PC. Lo que se cargue ahí **no** aparece en Vercel, y viceversa.
 
+### Inicio automático con Windows
+
+La primera vez que se abre `MaderoSys-Iniciar.bat` después de actualizar, deja instalado un
+acceso en la carpeta *Inicio* de Windows (`scripts/autoinicio.mjs` crea
+`MaderoSys-Autoinicio.vbs`). Desde entonces, al encender la PC e iniciar sesión, el lanzador
+corre solo en una ventana **minimizada**: se actualiza, arma la aplicación si hace falta y
+levanta el servidor, **sin abrir el navegador** (`MADERO_AUTO=1`). Al abrir
+`http://localhost:3000` ya está funcionando. Después de una actualización con cambios el
+armado puede tardar unos minutos antes de que responda.
+
+- Windows tiene que iniciar sesión solo (sin pedir contraseña) para que arranque sin que nadie
+  toque la PC.
+- **No cierres** la ventana minimizada "MaderoSys - Servidor".
+- Para quitarlo: `MaderoSys-Quitar-Inicio-Automatico.bat` (deja un archivo
+  `.sin-inicio-automatico`; borrarlo y abrir el lanzador lo vuelve a activar).
+
 ### Impresión directa (ESC/POS) en modo local
 
 En `/admin` → **Impresión** hay una sección "Impresión directa (ESC/POS)" que,
