@@ -5,12 +5,13 @@ import { DeliveryToggleCard } from "@/components/menu/delivery-toggle-card";
 import { LoyaltyBanner } from "@/components/menu/loyalty-banner";
 import { MenuExperience } from "@/components/menu/menu-experience";
 import { ReservationForm } from "@/components/reservations/reservation-form";
-import { getMenuItems } from "@/lib/menu";
+import { getMenuHighlights, getMenuItems } from "@/lib/menu";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const items = await getMenuItems();
+  const highlights = await getMenuHighlights(items);
 
   return (
     <CartProvider>
@@ -20,7 +21,7 @@ export default async function HomePage() {
         <DeliveryToggleCard />
         <LoyaltyBanner />
         <div className="mt-8">
-          <MenuExperience items={items} />
+          <MenuExperience items={items} highlights={highlights} />
         </div>
         <div className="mx-auto max-w-3xl">
           <ReservationForm />
