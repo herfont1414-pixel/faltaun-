@@ -14,6 +14,7 @@ interface CrmCustomer {
   origin: string | null;
   cuentaCorriente: boolean;
   ccBalance: number | null;
+  lastOrderAt: string | null;
 }
 
 const ORIGIN_LABEL: Record<string, string> = {
@@ -84,13 +85,14 @@ export function ClientesView() {
               <th style={{ textAlign: "right" }}>Pedidos</th>
               <th style={{ textAlign: "right" }}>Gastado</th>
               <th style={{ textAlign: "right" }}>Sellos</th>
+              <th>Última compra</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="m-empty">
+                <td colSpan={7} className="m-empty">
                   Sin clientes todavía.
                 </td>
               </tr>
@@ -114,6 +116,9 @@ export function ClientesView() {
                   <td style={{ textAlign: "right" }}>{c.orderCount}</td>
                   <td className="m-total">{money(c.totalSpent)}</td>
                   <td style={{ textAlign: "right" }}>{c.stamps}</td>
+                  <td style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    {c.lastOrderAt ? fmtDate(c.lastOrderAt) : "—"}
+                  </td>
                   <td style={{ textAlign: "right", color: "var(--text-faint)" }}>Ver →</td>
                 </tr>
               ))
@@ -181,6 +186,9 @@ export function ClientesView() {
                 <strong>Saldo cta. cte.:</strong> {money(selected.ccBalance ?? 0)}
               </div>
             )}
+            <div style={{ fontSize: 12.5, marginBottom: 8 }}>
+              <strong>Última compra:</strong> {selected.lastOrderAt ? fmtDate(selected.lastOrderAt) : "—"}
+            </div>
 
             <div style={{ marginTop: 14, fontWeight: 700, fontSize: 12.5, marginBottom: 8 }}>
               Pedidos del menú online

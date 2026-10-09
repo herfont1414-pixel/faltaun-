@@ -16,10 +16,16 @@ import { ExpensesView } from "@/components/admin/expenses-view";
 import { ClientesView } from "@/components/admin/clientes-view";
 import { ImpresionView } from "@/components/admin/impresion-view";
 import { ConfiguracionView } from "@/components/admin/configuracion-view";
+import { UsuariosView } from "@/components/admin/usuarios-view";
+import { AuditoriaView } from "@/components/admin/auditoria-view";
+import { IngredientesView } from "@/components/admin/ingredientes-view";
+import { ComprasView } from "@/components/admin/compras-view";
+import { TableOpenModal } from "@/components/admin/table-open-modal";
 import { money } from "@/lib/admin/format";
 import { printOrderDocument } from "@/lib/print-client";
+import { changeCents, fromCents, toCents } from "@/lib/admin/payments";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
-import type { Catalog, PaymentMethod, TableRow, Zone } from "@/lib/admin/types";
+import type { Catalog, OrderPayment, TableRow, Zone } from "@/lib/admin/types";
 
 const MESA_STATUS_LABEL: Record<TableRow["status"], string> = {
   libre: "Libre",
@@ -60,6 +66,8 @@ export function AdminApp() {
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingTable, setPendingTable] = useState<TableRow | null>(null);
+  const [openingTable, setOpeningTable] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/state")
@@ -92,17 +100,38 @@ export function AdminApp() {
     }
   }
 
-  async function openTable(table: TableRow) {
+  function openTable(table: TableRow) {
     if (table.orderId) {
       setSelectedOrderId(table.orderId);
       setSelectedTableNumber(table.number);
       return;
     }
-    const state = await safeCall(() => postJson("/api/admin/open-table", { tableNumber: table.number }));
+    setPendingTable(table);
+  }
+
+  async function confirmOpenTable(details: {
+    partySize: number;
+    customerName: string;
+    waiter: string;
+    notes: string;
+  }) {
+    if (!pendingTable) return;
+    setOpeningTable(true);
+    const state = await safeCall(() =>
+      postJson("/api/admin/open-table", {
+        tableNumber: pendingTable.number,
+        partySize: details.partySize,
+        customerName: details.customerName,
+        waiter: details.waiter,
+        notes: details.notes,
+      })
+    );
+    setOpeningTable(false);
     if (!state) return;
     applyState(state);
     setSelectedOrderId(state.result.id);
-    setSelectedTableNumber(table.number);
+    setSelectedTableNumber(pendingTable.number);
+    setPendingTable(null);
   }
 
   function closePanel() {
@@ -110,10 +139,10 @@ export function AdminApp() {
     setSelectedTableNumber(null);
   }
 
-  async function addProduct(name: string, price: number) {
+  async function addProduct(productId: number) {
     if (!selectedOrderId) return;
     const state = await safeCall(() =>
-      postJson("/api/admin/add-item", { orderId: selectedOrderId, name, price })
+      postJson("/api/admin/add-item", { orderId: selectedOrderId, productId })
     );
     if (state) applyState(state);
   }
@@ -177,7 +206,7 @@ export function AdminApp() {
     showToast(`Mesa ${selectedTableNumber} pidió la cuenta`);
   }
 
-  async function finalizeOrder(method: PaymentMethod, customerId: number | null, loyaltyPhone: string | null) {
+  async function finalizeOrder(payments: OrderPayment[], customerId: number | null, loyaltyPhone: string | null) {
     if (!selectedOrderId) return;
     const orderId = selectedOrderId;
     const order = data?.openOrders.find((o) => o.id === orderId);
@@ -188,7 +217,7 @@ export function AdminApp() {
     const state = await safeCall(() =>
       postJson("/api/admin/finalize-order", {
         orderId,
-        paymentMethod: method,
+        payments,
         customerId,
         loyaltyPhone,
       })
@@ -196,8 +225,18 @@ export function AdminApp() {
     if (!state) return;
     applyState(state);
     printTicket(orderId);
+    const changeToGive = payments.reduce(
+      (sum, p) => sum + (p.received != null ? changeCents(toCents(p.amount), toCents(p.received)) : 0),
+      0
+    );
     showToast(
-      loyaltyPhone ? `Cobrado · ${money(order.total)} · +1 sello de fidelidad` : `Cobrado · ${money(order.total)}`
+      [
+        `Cobrado · ${money(order.total)}`,
+        changeToGive > 0 ? `Vuelto ${money(fromCents(changeToGive))}` : null,
+        loyaltyPhone ? "+1 sello de fidelidad" : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
     );
     closePanel();
   }
@@ -388,6 +427,14 @@ export function AdminApp() {
         <ImpresionView />
       ) : section === "configuracion" ? (
         <ConfiguracionView onGoTo={setSection} />
+      ) : section === "usuarios" ? (
+        <UsuariosView />
+      ) : section === "auditoria" ? (
+        <AuditoriaView />
+      ) : section === "ingredientes" ? (
+        <IngredientesView />
+      ) : section === "compras" ? (
+        <ComprasView />
       ) : null}
       </div>
 
@@ -395,6 +442,15 @@ export function AdminApp() {
         <div className="toast-wrap">
           <div className="toast">{toastMsg}</div>
         </div>
+      )}
+
+      {pendingTable && (
+        <TableOpenModal
+          tableNumber={pendingTable.number}
+          busy={openingTable}
+          onCancel={() => setPendingTable(null)}
+          onConfirm={confirmOpenTable}
+        />
       )}
     </div>
   );

@@ -16,6 +16,10 @@ import {
   Monitor,
   Settings,
   Printer,
+  UserCog,
+  History,
+  Carrot,
+  ShoppingCart,
   X,
 } from "lucide-react";
 import { BrandLogo } from "@/components/admin/brand-logo";
@@ -45,6 +49,8 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     title: "Gestión",
     items: [
       { label: "Productos", Icon: Package, section: "productos" },
+      { label: "Ingredientes", Icon: Carrot, section: "ingredientes" },
+      { label: "Compras", Icon: ShoppingCart, section: "compras" },
       { label: "Clientes", Icon: Users, section: "clientes" },
       { label: "Caja", Icon: Wallet, section: "caja" },
       { label: "Reportes", Icon: BarChart3, section: "reportes" },
@@ -56,6 +62,8 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { label: "Cocina (KDS)", Icon: Monitor, action: "kds" },
       { label: "Impresión", Icon: Printer, section: "impresion" },
+      { label: "Usuarios", Icon: UserCog, section: "usuarios" },
+      { label: "Auditoría", Icon: History, section: "auditoria" },
       { label: "Configuración", Icon: Settings, section: "configuracion" },
     ],
   },

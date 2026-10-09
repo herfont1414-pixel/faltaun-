@@ -1,5 +1,7 @@
 import { getPool } from "@/lib/admin/db";
 import { ensureSeeded } from "@/lib/admin/seed";
+import { recordStockMovement } from "@/lib/admin/stock-movements";
+import { assertPaymentsCoverTotal, normalizePayments } from "@/lib/admin/payments";
 import type {
   AdminProduct,
   Catalog,
@@ -7,6 +9,7 @@ import type {
   AdminState,
   Order,
   OrderItem,
+  OrderPayment,
   PaymentMethod,
   TableRow,
   Zone,
@@ -22,11 +25,12 @@ async function getCatalog(): Promise<Catalog> {
     "select id, name from gestion_categories order by sort_order"
   );
   const products = await pool.query<{
+    id: number;
     category_id: number;
     name: string;
     price: string;
     in_stock: boolean;
-  }>("select category_id, name, price, in_stock from gestion_products where active = true order by id");
+  }>("select id, category_id, name, price, in_stock from gestion_products where active = true order by id");
 
   const catalog: Catalog = {};
   for (const cat of categories.rows) catalog[cat.name] = [];
@@ -34,6 +38,7 @@ async function getCatalog(): Promise<Catalog> {
     const category = categories.rows.find((c) => c.id === product.category_id);
     if (!category) continue;
     catalog[category.name].push({
+      id: product.id,
       name: product.name,
       price: money(product.price),
       inStock: product.in_stock,
@@ -107,6 +112,8 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
       deliveryPerson: o.delivery_person ?? null,
       deliveryStatus: o.delivery_status ?? null,
       notes: o.notes ?? null,
+      partySize: o.party_size ?? null,
+      waiter: o.waiter ?? null,
     };
   });
 }
@@ -154,7 +161,10 @@ async function getOrderRow(orderId: string) {
   return rows[0];
 }
 
-export async function openTable(tableNumber: number) {
+export async function openTable(
+  tableNumber: number,
+  details: { partySize?: number | null; customerName?: string | null; waiter?: string | null; notes?: string | null } = {}
+) {
   const pool = getPool();
   const { rows: tableRows } = await pool.query(
     "select id, status from gestion_tables where number = $1",
@@ -171,25 +181,49 @@ export async function openTable(tableNumber: number) {
   }
 
   const { rows: orderRows } = await pool.query(
-    "insert into gestion_orders (table_id, origin) values ($1, 'mesa') returning id",
-    [tableRows[0].id]
+    `insert into gestion_orders (table_id, origin, party_size, customer_name, waiter, notes)
+     values ($1, 'mesa', $2, $3, $4, $5) returning id`,
+    [
+      tableRows[0].id,
+      details.partySize ?? null,
+      details.customerName?.trim() || null,
+      details.waiter?.trim() || null,
+      details.notes?.trim() || null,
+    ]
   );
   await pool.query("update gestion_tables set status = 'ocupada' where number = $1", [tableNumber]);
   return getOrderRow(orderRows[0].id);
 }
 
-export async function addItem(orderId: string, product: { name: string; price: number }) {
+// El precio y el nombre SIEMPRE se resuelven acá contra gestion_products,
+// nunca se confía en lo que mande el cliente: el frontend solo manda el id
+// del producto (tomado del catálogo que el propio servidor le dio), así que
+// un request manipulado no puede cobrar un producto real a otro precio.
+export async function addItem(orderId: string, productId: number) {
   const pool = getPool();
+  const { rows: productRows } = await pool.query<{
+    id: number;
+    name: string;
+    price: string;
+    active: boolean;
+    in_stock: boolean;
+  }>("select id, name, price, active, in_stock from gestion_products where id = $1", [productId]);
+  const product = productRows[0];
+  if (!product) throw new Error("Ese producto no existe");
+  if (!product.active) throw new Error(`${product.name} ya no está disponible`);
+  if (!product.in_stock) throw new Error(`${product.name} está sin stock`);
+
+  const price = money(product.price);
   const { rows: existing } = await pool.query(
-    "select id, qty from gestion_order_items where order_id = $1 and product_name = $2",
-    [orderId, product.name]
+    "select id, qty from gestion_order_items where order_id = $1 and product_id = $2",
+    [orderId, product.id]
   );
   if (existing[0]) {
     await pool.query("update gestion_order_items set qty = qty + 1 where id = $1", [existing[0].id]);
   } else {
     await pool.query(
-      "insert into gestion_order_items (order_id, product_name, price) values ($1, $2, $3)",
-      [orderId, product.name, product.price]
+      "insert into gestion_order_items (order_id, product_name, price, product_id) values ($1, $2, $3, $4)",
+      [orderId, product.name, price, product.id]
     );
   }
   return getOrderRow(orderId);
@@ -226,9 +260,17 @@ export async function requestBill(tableNumber: number) {
 
 export async function finalizeOrder(
   orderId: string,
-  paymentMethod: PaymentMethod,
-  customerId: number | null
+  rawPayments: OrderPayment[],
+  customerId: number | null,
+  userId: number | null = null
 ) {
+  // Lo que manda el navegador no es de fiar: se valida y normaliza todo acá
+  // (importes > 0 y finitos, método válido, "recibido" solo en efectivo).
+  const payments = normalizePayments(rawPayments);
+  if (customerId !== null && !Number.isInteger(customerId)) {
+    throw new Error("Cliente inválido");
+  }
+
   const pool = getPool();
   const client = await pool.connect();
   try {
@@ -242,50 +284,106 @@ export async function finalizeOrder(
     );
     if (!orderRows[0]) throw new Error(`Pedido ${orderId} no existe`);
     const order = orderRows[0];
+    // Protege contra doble submit (doble click, reintento de red): el lock
+    // "for update" hace que un segundo pedido de cierre para el mismo orderId
+    // espere a que termine el primero, y al despertar ve el estado ya
+    // 'cerrada' y se frena acá — nunca llega a cobrar dos veces.
+    if (order.status !== "abierta") {
+      throw new Error("El pedido ya fue cerrado");
+    }
 
     const { rows: itemRows } = await client.query(
-      "select product_name, price, qty from gestion_order_items where order_id = $1",
+      "select product_name, price, qty, product_id from gestion_order_items where order_id = $1",
       [orderId]
     );
     const itemsTotal = itemRows.reduce((sum, it) => sum + money(it.price) * it.qty, 0);
     const total = order.is_delivery ? itemsTotal + money(order.shipping_cost ?? 0) : itemsTotal;
 
+    // La suma de lo aplicado (sin contar vuelto) tiene que ser exactamente el total.
+    assertPaymentsCoverTotal(payments, total);
+
     // Descuento de stock: solo para productos con stock numérico asignado
-    // (stock_qty null = stock infinito, no se toca). Si llega a 0, se marca
-    // sin stock automáticamente.
+    // (stock_qty null = stock infinito, no se toca). El "for update" bloquea
+    // la fila del producto para que dos cobros simultáneos de ese mismo
+    // producto no lean el mismo stock y sobrevendan; si no queda stock para
+    // cubrir lo pedido, se rechaza toda la venta (no se vende "lo que
+    // alcance" ni se deja en negativo).
     for (const it of itemRows) {
-      const { rows: prodRows } = await client.query<{ id: number; stock_qty: number | null }>(
-        "select id, stock_qty from gestion_products where name = $1",
-        [it.product_name]
+      const { rows: prodRows } = await client.query<{ id: number; name: string; stock_qty: number | null }>(
+        it.product_id != null
+          ? "select id, name, stock_qty from gestion_products where id = $1 for update"
+          : "select id, name, stock_qty from gestion_products where name = $1 for update",
+        [it.product_id != null ? it.product_id : it.product_name]
       );
       const product = prodRows[0];
       if (!product || product.stock_qty === null) continue;
-      const newQty = Math.max(0, product.stock_qty - it.qty);
+      const newQty = product.stock_qty - it.qty;
+      if (newQty < 0) {
+        throw new Error(
+          `No hay suficiente stock de ${product.name} (quedan ${product.stock_qty}, se necesitan ${it.qty})`
+        );
+      }
       await client.query("update gestion_products set stock_qty = $2, in_stock = $3 where id = $1", [
         product.id,
         newQty,
         newQty > 0,
       ]);
+      await recordStockMovement(
+        {
+          productId: product.id,
+          type: "venta",
+          quantity: -it.qty,
+          referenceType: "order",
+          referenceId: orderId,
+          userId,
+        },
+        client
+      );
     }
 
-    if (paymentMethod === "cuenta_corriente") {
+    // El débito a cuenta corriente es solo por la porción pagada con ese
+    // medio, no por el total de la venta (puede venir combinado con
+    // efectivo/transferencia).
+    const ctaCteAmount = payments
+      .filter((p) => p.method === "cuenta_corriente")
+      .reduce((sum, p) => sum + p.amount, 0);
+    if (ctaCteAmount > 0) {
       if (!customerId) throw new Error("Elegí un cliente para cobrar a cuenta corriente");
+      const { rows: customerRows } = await client.query("select id from gestion_customers where id = $1", [
+        customerId,
+      ]);
+      if (!customerRows[0]) throw new Error("El cliente elegido para cuenta corriente no existe");
       await client.query("update gestion_customers set balance = balance - $2 where id = $1", [
         customerId,
-        total,
+        ctaCteAmount,
       ]);
       await client.query(
         `insert into gestion_customer_ledger (customer_id, amount, type, payment_method, note)
          values ($1, $2, 'Pago de Venta', 'Cta. Cte.', $3)`,
-        [customerId, -total, order.table_number ? `Mesa ${order.table_number}` : "Mostrador"]
+        [customerId, -ctaCteAmount, order.table_number ? `Mesa ${order.table_number}` : "Mostrador"]
       );
     }
+
+    // amount es lo aplicado a la venta (lo que suma la caja). received_amount y
+    // change_amount, solo en efectivo, son informativos: el vuelto no es venta.
+    for (const p of payments) {
+      await client.query(
+        `insert into gestion_order_payments (order_id, method, amount, received_amount, change_amount)
+         values ($1, $2, $3, $4, $5)`,
+        [orderId, p.method, p.amount, p.receivedAmount, p.changeAmount]
+      );
+    }
+
+    // Con un solo medio, payment_method queda igual que antes (compatibilidad
+    // con lo que ya lee cualquier pantalla vieja); con varios, queda en null
+    // y gestion_order_payments es la fuente real del desglose.
+    const primaryMethod: PaymentMethod | null = payments.length === 1 ? payments[0].method : null;
 
     await client.query(
       `update gestion_orders
        set status = 'cerrada', closed_at = now(), total = $2, payment_method = $3, customer_id = $4
        where id = $1`,
-      [orderId, total, paymentMethod, customerId]
+      [orderId, total, primaryMethod, customerId]
     );
 
     if (order.table_id) {
@@ -293,7 +391,11 @@ export async function finalizeOrder(
     }
 
     await client.query("commit");
-    return { total, origin: order.is_delivery ? "delivery" : (order.origin as "mesa" | "mostrador") };
+    return {
+      total,
+      origin: order.is_delivery ? "delivery" : (order.origin as "mesa" | "mostrador"),
+      payments,
+    };
   } catch (error) {
     await client.query("rollback");
     throw error;
@@ -319,8 +421,8 @@ export async function createDeliveryOrder(customer: {
 }) {
   const pool = getPool();
   await pool.query(
-    `insert into gestion_delivery_customers (phone, name, address, updated_at)
-     values ($1, $2, $3, now())
+    `insert into gestion_delivery_customers (phone, name, address, updated_at, created_at)
+     values ($1, $2, $3, now(), now())
      on conflict (phone) do update set name = excluded.name, address = excluded.address, updated_at = excluded.updated_at`,
     [customer.phone, customer.name, customer.address]
   );

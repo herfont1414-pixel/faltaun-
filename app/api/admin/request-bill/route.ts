@@ -4,5 +4,5 @@ import { requestBill } from "@/lib/admin/store";
 
 export async function POST(request: NextRequest) {
   const { tableNumber } = await request.json();
-  return ok(() => requestBill(tableNumber));
+  return ok(request, () => requestBill(tableNumber));
 }

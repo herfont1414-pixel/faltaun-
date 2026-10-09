@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createExpense, listRecentExpenses } from "@/lib/admin/expenses";
 import { isDbConfigured } from "@/lib/admin/db";
+import { requireUser, recordAudit } from "@/lib/admin/auth";
 import type { ExpensePaymentMethod } from "@/lib/admin/types";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   if (!isDbConfigured()) {
     return NextResponse.json({ expenses: [] });
+  }
+  if (!(await requireUser(request))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const expenses = await listRecentExpenses(30);
   return NextResponse.json({ expenses });
@@ -16,6 +20,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   if (!isDbConfigured()) {
     return NextResponse.json({ error: "Base de datos no configurada" }, { status: 503 });
+  }
+  const actor = await requireUser(request, ["admin", "encargado"]);
+  if (!actor) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const body = await request.json();
   const concept = String(body.concept ?? "").trim();
@@ -28,6 +36,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const expense = await createExpense({ concept, amount, paymentMethod });
+    await recordAudit({
+      userId: actor.id,
+      action: "expense",
+      entity: "gestion_expenses",
+      entityId: expense.id,
+      newValue: { concept, amount, paymentMethod },
+    });
     return NextResponse.json({ expense });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error inesperado";

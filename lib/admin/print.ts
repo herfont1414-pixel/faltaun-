@@ -13,6 +13,7 @@ export interface PrintableOrder {
   tableNumber: number | null;
   origin: "mesa" | "mostrador" | "delivery";
   customerName: string | null;
+  partySize: number | null;
   openedAt: string;
   notes: string | null;
   items: PrintableItem[];
@@ -30,7 +31,8 @@ function fallbackArea(category: string) {
 export async function getPrintableOrder(orderId: string): Promise<PrintableOrder> {
   const pool = getPool();
   const { rows: orderRows } = await pool.query(
-    `select o.id, o.origin, o.opened_at, o.notes, o.is_delivery, o.customer_name, t.number as table_number
+    `select o.id, o.origin, o.opened_at, o.notes, o.is_delivery, o.customer_name, o.party_size,
+            t.number as table_number
      from gestion_orders o
      left join gestion_tables t on t.id = o.table_id
      where o.id = $1`,
@@ -63,6 +65,7 @@ export async function getPrintableOrder(orderId: string): Promise<PrintableOrder
     tableNumber: orderRow.table_number,
     origin: orderRow.is_delivery ? "delivery" : orderRow.origin,
     customerName: orderRow.customer_name ?? null,
+    partySize: orderRow.party_size ?? null,
     openedAt: orderRow.opened_at,
     notes: orderRow.notes ?? null,
     items,
@@ -84,6 +87,7 @@ export interface PrintableTicket {
   shippingCost: number;
   total: number;
   paymentMethod: string | null;
+  payments: { method: string; amount: number; receivedAmount: number | null; changeAmount: number | null }[];
 }
 
 function toNumber(value: string | number) {
@@ -116,6 +120,17 @@ export async function getPrintableTicket(orderId: string): Promise<PrintableTick
   const itemsTotal = items.reduce((sum, it) => sum + it.price * it.qty, 0);
   const liveTotal = itemsTotal + (order.is_delivery ? shippingCost : 0);
 
+  const { rows: paymentRows } = await pool.query(
+    "select method, amount, received_amount, change_amount from gestion_order_payments where order_id = $1 order by created_at",
+    [orderId]
+  );
+  const payments = paymentRows.map((r) => ({
+    method: r.method,
+    amount: toNumber(r.amount),
+    receivedAmount: r.received_amount === null || r.received_amount === undefined ? null : toNumber(r.received_amount),
+    changeAmount: r.change_amount === null || r.change_amount === undefined ? null : toNumber(r.change_amount),
+  }));
+
   return {
     orderId,
     tableNumber: order.table_number,
@@ -130,5 +145,6 @@ export async function getPrintableTicket(orderId: string): Promise<PrintableTick
     shippingCost,
     total: order.status === "cerrada" ? toNumber(order.total) : liveTotal,
     paymentMethod: order.payment_method ?? null,
+    payments,
   };
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Menu } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LogOut, Menu } from "lucide-react";
 import type { Section } from "@/lib/admin/client-types";
 
 const SECTION_LABEL: Record<Section, string> = {
@@ -19,6 +20,17 @@ const SECTION_LABEL: Record<Section, string> = {
   clientes: "Clientes",
   impresion: "Impresión",
   configuracion: "Configuración",
+  usuarios: "Usuarios",
+  auditoria: "Auditoría",
+  ingredientes: "Ingredientes",
+  compras: "Compras",
+};
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Administrador",
+  encargado: "Encargado",
+  mozo: "Mozo",
+  cocina: "Cocina",
 };
 
 function fmtDateTime(d: Date) {
@@ -28,13 +40,30 @@ function fmtDateTime(d: Date) {
 }
 
 export function AdminHeader({ section, onOpenMenu }: { section: Section; onOpenMenu: () => void }) {
+  const router = useRouter();
   const [now, setNow] = useState<Date | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
     setNow(new Date());
     const timer = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/me")
+      .then((res) => res.json())
+      .then((data) => setUser(data.user ?? null))
+      .catch(() => setUser(null));
+  }, []);
+
+  async function logout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.push("/admin/login");
+    router.refresh();
+  }
+
+  const initials = user ? user.name.slice(0, 2).toUpperCase() : "MR";
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 bg-white px-4 lg:px-6">
@@ -60,12 +89,23 @@ export function AdminHeader({ section, onOpenMenu }: { section: Section; onOpenM
         )}
         <div className="flex items-center gap-2.5 border-l border-gray-100 pl-4">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-900 text-[11px] font-bold text-white">
-            MR
+            {initials}
           </div>
           <div className="leading-tight">
-            <div className="text-[12px] font-semibold text-gray-800">Madero Restó</div>
-            <div className="text-[10.5px] text-gray-400">gestión interna</div>
+            <div className="text-[12px] font-semibold text-gray-800">{user?.name ?? "Madero Restó"}</div>
+            <div className="text-[10.5px] text-gray-400">
+              {user ? ROLE_LABEL[user.role] ?? user.role : "gestión interna"}
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={logout}
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
     </header>

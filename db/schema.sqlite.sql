@@ -69,7 +69,9 @@ create table if not exists gestion_orders (
   shipping_cost numeric(10, 2) not null default 0,
   delivery_person text,
   delivery_status text check (delivery_status in ('preparando', 'en_camino', 'entregado')),
-  notes text
+  notes text,
+  party_size int,
+  waiter text
 );
 
 create table if not exists gestion_order_items (
@@ -79,9 +81,27 @@ create table if not exists gestion_order_items (
   price numeric(10, 2) not null,
   qty int not null default 1,
   sent_to_kitchen boolean not null default false,
-  note text
+  note text,
+  product_id int references gestion_products(id) on delete set null
 );
 
+create table if not exists gestion_order_payments (
+  id text primary key default (gen_random_uuid()),
+  order_id text references gestion_orders(id) on delete cascade,
+  method text not null check (method in ('efectivo', 'transferencia', 'cuenta_corriente')),
+  amount numeric(12, 2) not null,
+  received_amount numeric(12, 2),
+  change_amount numeric(12, 2),
+  created_at text not null default (now())
+);
+
+insert into gestion_order_payments (order_id, method, amount)
+select o.id, o.payment_method, o.total
+from gestion_orders o
+where o.status = 'cerrada' and o.payment_method is not null
+  and not exists (select 1 from gestion_order_payments gop where gop.order_id = o.id);
+
+create index if not exists gestion_order_payments_order_id_idx on gestion_order_payments(order_id);
 create index if not exists gestion_order_items_order_id_idx on gestion_order_items(order_id);
 create index if not exists gestion_orders_status_idx on gestion_orders(status);
 create index if not exists gestion_customer_ledger_customer_id_idx on gestion_customer_ledger(customer_id);
@@ -121,10 +141,14 @@ create table if not exists gestion_shifts (
   sales_transferencia numeric(12, 2) not null default 0,
   sales_cuenta_corriente numeric(12, 2) not null default 0,
   notes text,
-  expenses_efectivo numeric(12, 2) not null default 0
+  expenses_efectivo numeric(12, 2) not null default 0,
+  ingresos_efectivo numeric(12, 2) not null default 0,
+  retiros_efectivo numeric(12, 2) not null default 0,
+  ajustes_efectivo numeric(12, 2) not null default 0
 );
 
 create index if not exists gestion_shifts_status_idx on gestion_shifts(status);
+create unique index if not exists gestion_shifts_single_open_idx on gestion_shifts(status) where status = 'abierto';
 
 create table if not exists gestion_meta (
   key text primary key,
@@ -166,7 +190,8 @@ create table if not exists gestion_delivery_customers (
   phone text primary key,
   name text not null,
   address text,
-  updated_at text not null default (now())
+  updated_at text not null default (now()),
+  created_at text not null default (now())
 );
 
 create table if not exists gestion_loyalty_accounts (
@@ -179,6 +204,19 @@ create table if not exists gestion_loyalty_accounts (
   total_spent numeric(12, 2) not null default 0,
   origin text
 );
+
+create table if not exists gestion_loyalty_transactions (
+  id integer primary key autoincrement,
+  phone text not null,
+  order_id text,
+  type text not null default 'stamp',
+  stamps int not null default 0,
+  amount numeric(12, 2) not null default 0,
+  created_at text not null default (now()),
+  unique (order_id, type)
+);
+
+create index if not exists gestion_loyalty_transactions_phone_idx on gestion_loyalty_transactions(phone);
 
 -- Infraestructura de preparación (sin UI todavía): ver schema.sql.
 create table if not exists gestion_payment_methods (
@@ -221,3 +259,144 @@ create table if not exists gestion_print_config (
   direct_print_enabled boolean not null default 0,
   printer_name text
 );
+
+create table if not exists gestion_users (
+  id integer primary key autoincrement,
+  name text not null,
+  pin_hash text not null,
+  role text not null check (role in ('admin', 'encargado', 'mozo', 'cocina')),
+  active boolean not null default 1,
+  created_at text not null default (now()),
+  updated_at text not null default (now())
+);
+
+create table if not exists gestion_sessions (
+  token text primary key,
+  user_id int not null references gestion_users(id) on delete cascade,
+  created_at text not null default (now()),
+  expires_at text not null
+);
+
+create index if not exists gestion_sessions_user_id_idx on gestion_sessions(user_id);
+
+create table if not exists gestion_audit_log (
+  id integer primary key autoincrement,
+  user_id int references gestion_users(id),
+  action text not null,
+  entity text,
+  entity_id text,
+  old_value text,
+  new_value text,
+  created_at text not null default (now())
+);
+
+create index if not exists gestion_audit_log_created_at_idx on gestion_audit_log(created_at);
+create index if not exists gestion_audit_log_entity_idx on gestion_audit_log(entity, entity_id);
+
+create table if not exists gestion_cash_movements (
+  id text primary key default (gen_random_uuid()),
+  shift_id text references gestion_shifts(id) on delete cascade,
+  type text not null check (type in ('retiro', 'ingreso', 'ajuste')),
+  amount numeric(12, 2) not null,
+  payment_method text not null default 'efectivo' check (payment_method in ('efectivo', 'transferencia')),
+  note text,
+  user_id int references gestion_users(id),
+  created_at text not null default (now())
+);
+
+create index if not exists gestion_cash_movements_shift_id_idx on gestion_cash_movements(shift_id);
+
+create table if not exists gestion_stock_movements (
+  id text primary key default (gen_random_uuid()),
+  product_id int references gestion_products(id) on delete set null,
+  ingredient_id int,
+  type text not null check (type in ('compra', 'venta', 'receta', 'ajuste_positivo', 'ajuste_negativo', 'merma', 'devolucion')),
+  quantity numeric(12, 3) not null,
+  reference_type text,
+  reference_id text,
+  note text,
+  user_id int references gestion_users(id),
+  created_at text not null default (now())
+);
+
+create index if not exists gestion_stock_movements_product_id_idx on gestion_stock_movements(product_id);
+create index if not exists gestion_stock_movements_created_at_idx on gestion_stock_movements(created_at);
+
+create table if not exists gestion_ingredients (
+  id integer primary key autoincrement,
+  external_id int unique,
+  category text,
+  name text not null,
+  cost numeric(12, 2) not null default 0,
+  supplier text,
+  unit text not null default 'unid.',
+  active boolean not null default 1,
+  created_at text not null default (now()),
+  updated_at text not null default (now()),
+  track_stock boolean not null default 0,
+  stock_qty numeric(12, 3)
+);
+
+create table if not exists gestion_ingredient_price_history (
+  id integer primary key autoincrement,
+  ingredient_id int not null references gestion_ingredients(id) on delete cascade,
+  cost numeric(12, 2) not null,
+  created_at text not null default (now())
+);
+
+create index if not exists gestion_ingredient_price_history_ingredient_id_idx
+  on gestion_ingredient_price_history(ingredient_id);
+
+create table if not exists gestion_recipes (
+  id integer primary key autoincrement,
+  product_id int unique not null references gestion_products(id) on delete cascade,
+  created_at text not null default (now()),
+  updated_at text not null default (now())
+);
+
+create table if not exists gestion_recipe_items (
+  id integer primary key autoincrement,
+  recipe_id int not null references gestion_recipes(id) on delete cascade,
+  ingredient_id int not null references gestion_ingredients(id) on delete cascade,
+  quantity numeric(12, 3) not null,
+  unique (recipe_id, ingredient_id)
+);
+
+create index if not exists gestion_recipe_items_recipe_id_idx on gestion_recipe_items(recipe_id);
+
+create table if not exists gestion_suppliers (
+  id integer primary key autoincrement,
+  external_id int unique,
+  name text not null,
+  phone text,
+  address text,
+  active boolean not null default 1
+);
+
+create table if not exists gestion_purchases (
+  id text primary key default (gen_random_uuid()),
+  supplier_id int references gestion_suppliers(id),
+  purchased_at text not null default (now()),
+  payment_method text not null default 'efectivo' check (payment_method in ('efectivo', 'transferencia', 'cuenta_corriente')),
+  total numeric(12, 2) not null default 0,
+  note text,
+  user_id int references gestion_users(id),
+  created_at text not null default (now())
+);
+
+create table if not exists gestion_purchase_items (
+  id text primary key default (gen_random_uuid()),
+  purchase_id text not null references gestion_purchases(id) on delete cascade,
+  ingredient_id int references gestion_ingredients(id),
+  product_id int references gestion_products(id),
+  quantity numeric(12, 3) not null,
+  unit_cost numeric(12, 2) not null,
+  line_total numeric(12, 2) not null,
+  check (
+    (ingredient_id is not null and product_id is null) or
+    (ingredient_id is null and product_id is not null)
+  )
+);
+
+create index if not exists gestion_purchases_supplier_id_idx on gestion_purchases(supplier_id);
+create index if not exists gestion_purchase_items_purchase_id_idx on gestion_purchase_items(purchase_id);

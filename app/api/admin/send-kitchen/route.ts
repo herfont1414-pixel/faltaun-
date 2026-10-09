@@ -4,5 +4,5 @@ import { sendToKitchen } from "@/lib/admin/store";
 
 export async function POST(request: NextRequest) {
   const { orderId } = await request.json();
-  return ok(() => sendToKitchen(orderId));
+  return ok(request, () => sendToKitchen(orderId));
 }

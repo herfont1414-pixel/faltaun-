@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isDbConfigured } from "@/lib/admin/db";
+import { requireUser } from "@/lib/admin/auth";
 import { getPrintableOrder, getPrintableTicket } from "@/lib/admin/print";
 import { getPrintConfig } from "@/lib/admin/print-config";
 import { getBusinessConfig } from "@/lib/admin/business-config";
@@ -11,6 +12,9 @@ import { sendRawToPrinter } from "@/lib/admin/print-direct";
 export async function POST(request: NextRequest) {
   if (!isDbConfigured()) {
     return NextResponse.json({ ok: false, reason: "not_configured" });
+  }
+  if (!(await requireUser(request))) {
+    return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
 
   const body = (await request.json().catch(() => null)) as { type?: string; orderId?: string } | null;

@@ -16,4 +16,8 @@ export type Section =
   | "reservas"
   | "clientes"
   | "impresion"
-  | "configuracion";
+  | "configuracion"
+  | "usuarios"
+  | "auditoria"
+  | "ingredientes"
+  | "compras";

@@ -1,13 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { isDbConfigured } from "@/lib/admin/db";
+import { requireUser } from "@/lib/admin/auth";
 import { getPrintableTicket } from "@/lib/admin/print";
 import { getPrintConfig } from "@/lib/admin/print-config";
 import { getBusinessConfig } from "@/lib/admin/business-config";
 import { renderTicketHtml } from "@/lib/admin/print-templates";
 
-export async function GET(_request: Request, { params }: { params: { orderId: string } }) {
+export async function GET(request: NextRequest, { params }: { params: { orderId: string } }) {
   if (!isDbConfigured()) {
     return NextResponse.json({ error: "Base de datos no configurada" }, { status: 503 });
+  }
+  if (!(await requireUser(request))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const [ticket, config, business] = await Promise.all([
     getPrintableTicket(params.orderId),

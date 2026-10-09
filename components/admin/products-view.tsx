@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { AdminProduct } from "@/lib/admin/types";
+import { RecipeModal } from "@/components/admin/recipe-modal";
 
 interface PrintArea {
   id: number;
@@ -12,6 +13,7 @@ export function ProductsView() {
   const [products, setProducts] = useState<AdminProduct[] | null>(null);
   const [printAreas, setPrintAreas] = useState<PrintArea[]>([]);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [recipeProductId, setRecipeProductId] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/products")
@@ -68,6 +70,7 @@ export function ProductsView() {
                 <th>Precio</th>
                 <th>Área de impresión</th>
                 <th style={{ textAlign: "right" }}>Stock</th>
+                <th style={{ textAlign: "right" }}>Receta</th>
                 <th style={{ textAlign: "right" }}>Activo</th>
               </tr>
             </thead>
@@ -157,6 +160,16 @@ export function ProductsView() {
                   <td style={{ textAlign: "right" }}>
                     <button
                       type="button"
+                      className="btn"
+                      style={{ flex: "none", padding: "6px 12px" }}
+                      onClick={() => setRecipeProductId(p.id)}
+                    >
+                      Receta
+                    </button>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button
+                      type="button"
                       className={`btn ${p.active ? "" : "btn-primary"}`}
                       style={{ flex: "none", padding: "6px 12px" }}
                       disabled={savingId === p.id}
@@ -171,6 +184,10 @@ export function ProductsView() {
           </table>
         </div>
       ))}
+
+      {recipeProductId !== null && (
+        <RecipeModal productId={recipeProductId} onClose={() => setRecipeProductId(null)} />
+      )}
     </div>
   );
 }

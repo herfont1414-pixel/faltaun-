@@ -79,7 +79,9 @@ class EscPosBuilder {
   }
 
   cut() {
-    this.feed(3);
+    // Avance antes de cortar/arrancar: con 3 líneas el pie quedaba pegado al
+    // borde y se cortaba a la mitad en la POS-58.
+    this.feed(5);
     return this.raw([GS, 0x56, 0x00]);
   }
 
@@ -101,11 +103,17 @@ export function renderComandaEscPos(data: ComandaPrintData, config: PrintConfig)
     b.align("center").bold(true).line(config.headerText).bold(false);
   }
 
-  // Título del origen a tamaño doble, como pide la comanda de cocina.
-  b.align("center").size(2, 2).bold(true).line(originLabel).size(1, 1).bold(false);
+  // Título del origen a tamaño normal y negrita (no gigante): se pidió
+  // limpio y legible, no ocupando media comanda.
+  b.align("center").bold(true).line(originLabel).bold(false);
 
-  b.align("left").line(`Venta #${shortId} - ${time}`);
-  if (data.customerName) b.line(data.customerName);
+  const customerLine = [data.customerName, data.partySize ? `${data.partySize} personas` : null]
+    .filter(Boolean)
+    .join(" - ");
+  if (customerLine) b.align("center").line(customerLine);
+
+  b.align("left").line(`Venta #${shortId}`);
+  b.line(time);
   b.hr(width);
 
   let printedAny = false;
@@ -113,9 +121,11 @@ export function renderComandaEscPos(data: ComandaPrintData, config: PrintConfig)
     if (area.items.length === 0) continue;
     printedAny = true;
     b.bold(true).line(`-- ${area.name.toUpperCase()} --`).bold(false);
+    // Platos y notas en negrita: es lo que tiene que leerse rápido desde
+    // lejos en la cocina, el resto de la comanda es solo contexto.
     for (const item of area.items) {
-      b.line(row(item.name, `x${item.qty}`, width));
-      if (item.note) b.line(`  - ${item.note}`);
+      b.bold(true).line(row(item.name, `x${item.qty}`, width)).bold(false);
+      if (item.note) b.bold(true).line(`  - ${item.note}`).bold(false);
     }
     b.feed(1);
   }
@@ -161,7 +171,8 @@ export function renderTicketEscPos(data: TicketPrintData, config: PrintConfig): 
   }
 
   b.align("center").bold(true).line(originLabel).bold(false);
-  b.line(`Pedido #${shortId} - ${time}`);
+  b.line(`Pedido #${shortId}`);
+  b.line(time);
 
   if (data.customerName || data.customerPhone || data.customerAddress) {
     b.hr(width).align("left");
@@ -185,11 +196,25 @@ export function renderTicketEscPos(data: TicketPrintData, config: PrintConfig): 
   }
 
   b.hr(width);
-  b.bold(true).size(2, 1).line(row("TOTAL", money(data.total), Math.ceil(width / 2))).size(1, 1).bold(false);
+  // En letra de doble ancho cada carácter ocupa dos columnas. La POS-58 imprime
+  // 15 (no 16) caracteres dobles por línea: con 16 el último dígito del total
+  // saltaba a la línea siguiente.
+  b.bold(true).size(2, 1).line(row("TOTAL", money(data.total), Math.floor(width / 2) - 1)).size(1, 1).bold(false);
 
   if (data.status === "cerrada") {
-    const label = data.paymentMethod ? PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod : "-";
-    b.line(row("Medio de pago", label, width));
+    if (data.payments.length > 1) {
+      for (const p of data.payments) {
+        b.line(row(PAYMENT_LABELS[p.method] ?? p.method, money(p.amount), width));
+      }
+    } else {
+      const label = data.paymentMethod ? PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod : "-";
+      b.line(row("Medio de pago", label, width));
+    }
+    for (const p of data.payments) {
+      if (p.receivedAmount == null) continue;
+      b.line(row("Recibido", money(p.receivedAmount), width));
+      b.bold(true).line(row("Vuelto", money(p.changeAmount ?? 0), width)).bold(false);
+    }
   } else {
     b.line(row("Estado", "Precuenta (sin cobrar)", width));
   }

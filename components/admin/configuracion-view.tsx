@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Lock, Printer, Truck } from "lucide-react";
+import { Lock, Printer, Truck, UserCog } from "lucide-react";
 import type { AfipConfig, BusinessConfig } from "@/lib/admin/types";
 import type { Section } from "@/lib/admin/client-types";
 
@@ -232,10 +232,11 @@ export function ConfiguracionView({ onGoTo }: ConfiguracionViewProps) {
         <div className="caja-card" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <Lock size={18} style={{ flexShrink: 0, marginTop: 2, color: "var(--text-dim)" }} />
           <div style={{ fontSize: 12.5, color: "var(--text-dim)", lineHeight: 1.6 }}>
-            El PIN de acceso al panel se define con la variable de entorno <code>ADMIN_PIN</code> en el
-            servidor (Vercel u hosting equivalente), no desde acá. Se revisa en cada pedido antes de tocar
-            la base de datos, así que cambiarlo requiere actualizar esa variable y volver a desplegar — es
-            lo que mantiene segura la parte de pagos y clientes aunque alguien acceda a esta pantalla.
+            Cada persona entra con su propio PIN (ver <strong>Usuarios</strong>). El PIN nunca se guarda en
+            texto plano: se hashea antes de guardarse y nunca se usa como token de sesión. Cada inicio y
+            cierre de sesión queda registrado, y cada acción sensible (precios, caja, configuración) se
+            valida en el servidor según el rol de quien la hace, no solo escondiendo botones en la
+            pantalla.
           </div>
         </div>
       </div>
@@ -260,6 +261,15 @@ export function ConfiguracionView({ onGoTo }: ConfiguracionViewProps) {
           >
             <Truck size={15} />
             Zonas de delivery
+          </button>
+          <button
+            type="button"
+            className="btn"
+            style={{ flex: "none", display: "flex", alignItems: "center", gap: 8, padding: "10px 16px" }}
+            onClick={() => onGoTo("usuarios")}
+          >
+            <UserCog size={15} />
+            Usuarios y roles
           </button>
         </div>
       </div>

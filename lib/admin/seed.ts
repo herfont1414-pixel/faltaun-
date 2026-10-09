@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { getDbMode, getPool } from "@/lib/admin/db";
 import type { DbClient } from "@/lib/admin/db";
+import { hashPin } from "@/lib/admin/auth";
 
 function readJson(file: string) {
   return JSON.parse(readFileSync(path.join(process.cwd(), "data", file), "utf-8"));
@@ -65,6 +66,87 @@ async function syncCatalog(client: DbClient) {
   );
 }
 
+interface CsvIngredient {
+  externalId: number;
+  category: string;
+  name: string;
+  cost: number;
+  supplier: string | null;
+  unit: string;
+  trackStock: boolean;
+  stockQty: number | null;
+}
+
+// Parser manual, no una librería de CSV: el archivo es simple (sin comas ni
+// comillas dentro de los campos), así que no hace falta una dependencia más.
+function parseIngredientesCsv(raw: string): CsvIngredient[] {
+  const lines = raw.trim().split(/\r?\n/);
+  return lines
+    .slice(1)
+    .filter((line) => line.trim())
+    .map((line) => {
+      const cols = line.split(",");
+      const stockRaw = (cols[7] ?? "").trim();
+      return {
+        externalId: Number(cols[0]),
+        category: (cols[1] ?? "").trim(),
+        name: (cols[2] ?? "").trim(),
+        cost: Number(cols[3]) || 0,
+        supplier: (cols[4] ?? "").trim() || null,
+        unit: (cols[5] ?? "").trim() || "unid.",
+        trackStock: (cols[6] ?? "").trim().toLowerCase() === "si",
+        stockQty: stockRaw ? Number(stockRaw) : null,
+      };
+    })
+    .filter((ing) => ing.name && Number.isFinite(ing.externalId));
+}
+
+// Igual que syncCatalog: vuelve a sincronizar cada vez que cambia el CSV
+// (por hash), no solo la primera vez, y deja constancia en el historial de
+// costos cuando el costo de un ingrediente efectivamente cambió.
+async function syncIngredients(client: DbClient) {
+  const raw = readFileSync(path.join(process.cwd(), "data", "ingredientes.csv"), "utf-8");
+  const hash = crypto.createHash("sha256").update(raw).digest("hex");
+
+  const { rows: metaRows } = await client.query<{ value: string }>(
+    "select value from gestion_meta where key = $1",
+    ["ingredients_hash"]
+  );
+  if (metaRows[0]?.value === hash) return;
+
+  const ingredients = parseIngredientesCsv(raw);
+  for (const ing of ingredients) {
+    const { rows: existingRows } = await client.query<{ id: number; cost: string | number }>(
+      "select id, cost from gestion_ingredients where external_id = $1",
+      [ing.externalId]
+    );
+    const { rows } = await client.query<{ id: number }>(
+      `insert into gestion_ingredients (external_id, category, name, cost, supplier, unit, track_stock, stock_qty)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       on conflict (external_id) do update set
+         category = excluded.category, name = excluded.name, cost = excluded.cost,
+         supplier = excluded.supplier, unit = excluded.unit, track_stock = excluded.track_stock,
+         updated_at = now()
+       returning id`,
+      [ing.externalId, ing.category, ing.name, ing.cost, ing.supplier, ing.unit, ing.trackStock, ing.stockQty]
+    );
+    const id = rows[0].id;
+    const previousCost = existingRows[0] ? Number(existingRows[0].cost) : null;
+    if (previousCost === null || previousCost !== ing.cost) {
+      await client.query("insert into gestion_ingredient_price_history (ingredient_id, cost) values ($1, $2)", [
+        id,
+        ing.cost,
+      ]);
+    }
+  }
+
+  await client.query(
+    `insert into gestion_meta (key, value) values ('ingredients_hash', $1)
+     on conflict (key) do update set value = excluded.value`,
+    [hash]
+  );
+}
+
 // A diferencia de Postgres, SQLite no soporta "alter table add column if not
 // exists": "create table if not exists" tampoco agrega columnas a una tabla
 // que ya existía de antes. Por eso las columnas nuevas en tablas viejas se
@@ -73,6 +155,23 @@ async function ensureSqliteColumn(client: DbClient, table: string, column: strin
   const { rows } = await client.query<{ name: string }>(`pragma table_info(${table})`);
   if (rows.some((r) => r.name === column)) return;
   await client.query(`alter table ${table} add column ${column} ${definition}`);
+}
+
+// Compatibilidad con el esquema de auth anterior (PIN único en ADMIN_PIN
+// comparado directo): si todavía no hay ningún usuario creado y existe esa
+// variable de entorno, se crea un usuario admin con ese mismo PIN (ya
+// hasheado) para que el local no quede sin acceso al migrar.
+async function ensureDefaultAdminUser(client: DbClient) {
+  const pin = process.env.ADMIN_PIN;
+  if (!pin) return;
+  const { rows } = await client.query<{ count: string | number }>(
+    "select count(*) as count from gestion_users"
+  );
+  if (Number(rows[0].count) > 0) return;
+  await client.query(
+    `insert into gestion_users (name, pin_hash, role, active) values ($1, $2, 'admin', true)`,
+    ["Administrador", hashPin(pin)]
+  );
 }
 
 let schemaApplied = false;
@@ -135,6 +234,20 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_business_config", "logo_url", "text");
         await ensureSqliteColumn(client, "gestion_print_config", "direct_print_enabled", "boolean not null default 0");
         await ensureSqliteColumn(client, "gestion_print_config", "printer_name", "text");
+        await ensureSqliteColumn(client, "gestion_orders", "party_size", "int");
+        await ensureSqliteColumn(client, "gestion_orders", "waiter", "text");
+        await ensureSqliteColumn(client, "gestion_order_items", "product_id", "int");
+        await ensureSqliteColumn(client, "gestion_shifts", "ingresos_efectivo", "numeric(12, 2) not null default 0");
+        await ensureSqliteColumn(client, "gestion_shifts", "retiros_efectivo", "numeric(12, 2) not null default 0");
+        await ensureSqliteColumn(client, "gestion_shifts", "ajustes_efectivo", "numeric(12, 2) not null default 0");
+        await ensureSqliteColumn(client, "gestion_order_payments", "received_amount", "numeric(12, 2)");
+        await ensureSqliteColumn(client, "gestion_order_payments", "change_amount", "numeric(12, 2)");
+        await ensureSqliteColumn(client, "gestion_ingredients", "track_stock", "boolean not null default 0");
+        await ensureSqliteColumn(client, "gestion_ingredients", "stock_qty", "numeric(12, 3)");
+        await ensureSqliteColumn(client, "gestion_delivery_customers", "created_at", "text");
+        await client.query(
+          "update gestion_delivery_customers set created_at = updated_at where created_at is null"
+        );
       }
       await client.query(
         `insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')
@@ -147,6 +260,8 @@ export async function ensureSeeded() {
     }
 
     await syncCatalog(client);
+    await syncIngredients(client);
+    await ensureDefaultAdminUser(client);
 
     const { rows: zoneRows } = await client.query("select count(*) as count from gestion_zones");
     if (Number(zoneRows[0].count) > 0) return;
@@ -215,6 +330,23 @@ export async function ensureSeeded() {
          values ($1, $2, $3, $4, $5, $6)
          on conflict (external_id) do nothing`,
         [m.externalId, customerId, m.date, m.amount, m.type, m.paymentMethod]
+      );
+    }
+
+    const suppliers = readJson("proveedores.json") as {
+      externalId: number;
+      name: string;
+      phone: string | null;
+      address: string | null;
+      active: boolean;
+    }[];
+    for (const s of suppliers) {
+      await client.query(
+        `insert into gestion_suppliers (external_id, name, phone, address, active)
+         values ($1, $2, $3, $4, $5)
+         on conflict (external_id) do update set
+           name = excluded.name, phone = excluded.phone, address = excluded.address, active = excluded.active`,
+        [s.externalId, s.name, s.phone, s.address, s.active]
       );
     }
   } finally {

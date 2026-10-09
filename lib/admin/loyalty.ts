@@ -53,14 +53,30 @@ export async function getLoyalty(phone: string): Promise<LoyaltyAccount> {
 
 // Suma un sello y acumula compras/gasto cada vez que el local confirma un
 // pedido hecho desde el menú online para ese teléfono, o cuando se cobra en
-// el panel con un teléfono de fidelidad cargado (no se duplica: el llamador
-// solo lo invoca una vez por cobro/confirmación). Si se pasa nombre, lo
-// guarda sin pisar uno ya cargado con un valor vacío.
+// el panel con un teléfono de fidelidad cargado. orderId es obligatorio
+// porque es lo que garantiza "un pedido = una sola operación de fidelidad":
+// el insert en gestion_loyalty_transactions tiene un unique(order_id, type),
+// así que si addStamp se llama dos veces para el mismo pedido (doble click,
+// reintento de red), la segunda vez el insert no inserta nada y se corta
+// ahí mismo, sin tocar gestion_loyalty_accounts de nuevo.
 export async function addStamp(
   phone: string,
+  orderId: string,
   options: { name?: string | null; orderTotal?: number; origin?: string } = {}
 ): Promise<LoyaltyAccount> {
   const pool = getPool();
+  const { rows: inserted } = await pool.query<{ id: number }>(
+    `insert into gestion_loyalty_transactions (phone, order_id, type, stamps, amount)
+     values ($1, $2, 'stamp', 1, $3)
+     on conflict (order_id, type) do nothing
+     returning id`,
+    [phone, orderId, options.orderTotal ?? 0]
+  );
+  if (!inserted[0]) {
+    // Ya se sumó el sello de este pedido antes; no se duplica.
+    return getLoyalty(phone);
+  }
+
   await pool.query(
     `insert into gestion_loyalty_accounts (phone, stamps, name, order_count, total_spent, origin, updated_at)
      values ($1, 1, $2, 1, $3, $4, now())

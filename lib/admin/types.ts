@@ -35,6 +35,16 @@ export interface Order {
   deliveryPerson: string | null;
   deliveryStatus: DeliveryStatus | null;
   notes: string | null;
+  partySize: number | null;
+  waiter: string | null;
+}
+
+export interface OrderPayment {
+  method: PaymentMethod;
+  // Importe aplicado a la venta (lo que cuenta la caja).
+  amount: number;
+  // Solo efectivo: lo que entregó el cliente. El vuelto sale de acá menos amount.
+  received?: number | null;
 }
 
 export interface DeliveryZone {
@@ -58,6 +68,7 @@ export interface TableRow {
 }
 
 export interface Product {
+  id: number;
   name: string;
   price: number;
   inStock: boolean;
@@ -131,6 +142,9 @@ export interface Shift {
   salesTransferencia: number;
   salesCuentaCorriente: number;
   expensesEfectivo: number;
+  ingresosEfectivo: number;
+  retirosEfectivo: number;
+  ajustesEfectivo: number;
   notes: string | null;
 }
 
@@ -223,7 +237,11 @@ export interface SalesReport {
   byPaymentMethod: { method: PaymentMethod | "sin_definir"; total: number; count: number }[];
   topProducts: { name: string; qty: number; revenue: number }[];
   byCategory: { category: string; revenue: number }[];
+  byEmployee: { userName: string; orderCount: number; total: number }[];
   orders: SalesReportOrder[];
   totalExpenses: number;
   netTotal: number;
+  costoMercaderiaEstimado: number | null;
+  margenBrutoEstimado: number | null;
+  resultadoOperativoEstimado: number | null;
 }

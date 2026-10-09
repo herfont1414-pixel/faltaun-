@@ -9,30 +9,27 @@ function money(value: string | number) {
 export async function getSalesReport(fromISO: string, toISO: string): Promise<SalesReport> {
   const pool = getPool();
 
-  const { rows: orderRows } = await pool.query<{
-    payment_method: PaymentMethod | null;
-    total: string | number;
-  }>(
-    `select payment_method, total from gestion_orders
+  const { rows: orderRows } = await pool.query<{ total: string | number }>(
+    `select total from gestion_orders
      where status = 'cerrada' and closed_at >= $1 and closed_at <= $2`,
     [fromISO, toISO]
   );
-
-  let totalSales = 0;
-  const byMethodMap = new Map<string, { total: number; count: number }>();
-  for (const o of orderRows) {
-    const total = money(o.total);
-    totalSales += total;
-    const key = o.payment_method ?? "sin_definir";
-    const entry = byMethodMap.get(key) ?? { total: 0, count: 0 };
-    entry.total += total;
-    entry.count += 1;
-    byMethodMap.set(key, entry);
-  }
+  const totalSales = orderRows.reduce((sum, o) => sum + money(o.total), 0);
   const orderCount = orderRows.length;
   const avgTicket = orderCount > 0 ? totalSales / orderCount : 0;
-  const byPaymentMethod = [...byMethodMap.entries()]
-    .map(([method, v]) => ({ method: method as PaymentMethod | "sin_definir", total: v.total, count: v.count }))
+
+  // Desde gestion_order_payments, no desde gestion_orders.payment_method:
+  // una venta puede estar pagada con varios medios combinados.
+  const { rows: paymentRows } = await pool.query<{ method: PaymentMethod; total: string | number; count: string }>(
+    `select gop.method, sum(gop.amount) as total, count(*) as count
+     from gestion_order_payments gop
+     join gestion_orders o on o.id = gop.order_id
+     where o.status = 'cerrada' and o.closed_at >= $1 and o.closed_at <= $2
+     group by gop.method`,
+    [fromISO, toISO]
+  );
+  const byPaymentMethod = paymentRows
+    .map((r) => ({ method: r.method, total: money(r.total), count: Number(r.count) }))
     .sort((a, b) => b.total - a.total);
 
   const { rows: itemRows } = await pool.query<{
@@ -107,6 +104,56 @@ export async function getSalesReport(fromISO: string, toISO: string): Promise<Sa
 
   const totalExpenses = await sumExpenses(fromISO, toISO);
 
+  // Costo y margen bruto estimados: solo sobre los ítems del rango que
+  // tienen una receta cargada (Fase 7), usando el costo ACTUAL de cada
+  // ingrediente — igual criterio que el dashboard de hoy (Fase 12). Si
+  // ningún ítem del rango tiene receta, queda en null en vez de un cero
+  // engañoso.
+  const { rows: recipeCostRows } = await pool.query<{ product_id: number; cost_total: string | number }>(
+    `select r.product_id, sum(ri.quantity * i.cost) as cost_total
+     from gestion_recipes r
+     join gestion_recipe_items ri on ri.recipe_id = r.id
+     join gestion_ingredients i on i.id = ri.ingredient_id
+     group by r.product_id`
+  );
+  const costPerProduct = new Map(recipeCostRows.map((r) => [r.product_id, money(r.cost_total)]));
+
+  const { rows: costItemRows } = await pool.query<{ product_id: number | null; qty: number }>(
+    `select oi.product_id, oi.qty
+     from gestion_order_items oi
+     join gestion_orders o on o.id = oi.order_id
+     where o.status = 'cerrada' and o.closed_at >= $1 and o.closed_at <= $2`,
+    [fromISO, toISO]
+  );
+  let costoMercaderiaEstimado = 0;
+  let anyRecipeCost = false;
+  for (const it of costItemRows) {
+    if (it.product_id == null) continue;
+    const unitCost = costPerProduct.get(it.product_id);
+    if (unitCost === undefined) continue;
+    costoMercaderiaEstimado += unitCost * it.qty;
+    anyRecipeCost = true;
+  }
+  const margenBrutoEstimado = anyRecipeCost ? totalSales - costoMercaderiaEstimado : null;
+  const resultadoOperativoEstimado = margenBrutoEstimado !== null ? margenBrutoEstimado - totalExpenses : null;
+
+  // Ventas por empleado: no existe una columna "cerrado por" en
+  // gestion_orders, así que se reconstruye desde la auditoría (Fase 3),
+  // que ya registra quién cerró cada pedido (action = 'order_close').
+  const { rows: employeeRows } = await pool.query<{ user_name: string | null; total: string | number; count: string }>(
+    `select u.name as user_name, sum(o.total) as total, count(*) as count
+     from gestion_audit_log a
+     join gestion_orders o on cast(o.id as text) = a.entity_id
+     left join gestion_users u on u.id = a.user_id
+     where a.action = 'order_close' and o.status = 'cerrada'
+       and o.closed_at >= $1 and o.closed_at <= $2
+     group by u.name`,
+    [fromISO, toISO]
+  );
+  const byEmployee = employeeRows
+    .map((r) => ({ userName: r.user_name ?? "Sin usuario", orderCount: Number(r.count), total: money(r.total) }))
+    .sort((a, b) => b.total - a.total);
+
   return {
     from: fromISO,
     to: toISO,
@@ -116,8 +163,12 @@ export async function getSalesReport(fromISO: string, toISO: string): Promise<Sa
     byPaymentMethod,
     topProducts,
     byCategory,
+    byEmployee,
     orders,
     totalExpenses,
     netTotal: totalSales - totalExpenses,
+    costoMercaderiaEstimado: anyRecipeCost ? costoMercaderiaEstimado : null,
+    margenBrutoEstimado,
+    resultadoOperativoEstimado,
   };
 }

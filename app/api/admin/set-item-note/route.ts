@@ -4,5 +4,5 @@ import { setItemNote } from "@/lib/admin/store";
 
 export async function POST(request: NextRequest) {
   const { orderId, itemId, note } = await request.json();
-  return ok(() => setItemNote(orderId, itemId, note));
+  return ok(request, () => setItemNote(orderId, itemId, note));
 }

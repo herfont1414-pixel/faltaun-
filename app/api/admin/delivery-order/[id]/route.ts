@@ -8,7 +8,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     status?: DeliveryStatus;
     deliveryPerson?: string | null;
   };
-  return ok(async () => {
+  return ok(request, async () => {
     if (status) await setDeliveryStatus(params.id, status);
     if (deliveryPerson !== undefined) await setDeliveryPerson(params.id, deliveryPerson);
     return { id: params.id };
