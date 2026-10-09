@@ -89,6 +89,9 @@ export interface WebOrderItem {
   qty: number;
 }
 
+// Medios que ofrece el menú online (el link de pago no se usa).
+export type WebPaymentMethod = "efectivo" | "transferencia";
+
 export interface WebOrder {
   id: string;
   customerName: string;
@@ -109,6 +112,8 @@ export interface WebOrder {
   orderStatus: "abierta" | "cerrada" | null;
   deliveryLat: number | null;
   deliveryLng: number | null;
+  // Cómo dijo el cliente que va a pagar; null en pedidos anteriores a esta opción.
+  paymentMethod: WebPaymentMethod | null;
 }
 
 export interface AdminProduct {
@@ -229,6 +234,9 @@ export interface BusinessConfig {
   hours: string;
   whatsappNumber: string;
   logoUrl: string;
+  // Alias (o CBU) y titular a los que el cliente transfiere al hacer el pedido online.
+  transferAlias: string;
+  transferHolder: string;
 }
 
 export interface AfipConfig {

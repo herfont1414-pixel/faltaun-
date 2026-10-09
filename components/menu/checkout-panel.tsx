@@ -21,6 +21,8 @@ interface DistanceInfo {
   maxKm?: number;
 }
 
+type PayMethod = "efectivo" | "transferencia";
+
 type Quote =
   | { status: "ok"; km: number; zoneName: string; cost: number }
   | { status: "out_of_range"; km: number; maxKm: number }
@@ -54,6 +56,10 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
   const [distance, setDistance] = useState<DistanceInfo>({ enabled: false });
   const [point, setPoint] = useState<LatLng | null>(null);
   const [quote, setQuote] = useState<Quote>(null);
+  const [payMethod, setPayMethod] = useState<PayMethod | null>(null);
+  const [copied, setCopied] = useState(false);
+  // El total se guarda al enviar: después el carrito se vacía y ya no se puede recalcular.
+  const [sentTotal, setSentTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
@@ -116,6 +122,17 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
         : zones.find((z) => z.name === zoneName)?.cost ?? 0;
   const resolvedZone = byDistance ? (quote?.status === "ok" ? quote.zoneName : null) : zoneName || null;
   const grandTotal = total + shippingCost;
+  const transferAlias = businessConfig?.transferAlias?.trim() ?? "";
+
+  async function copyAlias() {
+    try {
+      await navigator.clipboard.writeText(transferAlias);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // sin portapapeles el cliente puede copiarlo a mano: el alias está a la vista.
+    }
+  }
   const timeLabel = slotLabel(scheduledTime);
 
   async function submit() {
@@ -125,6 +142,10 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
     }
     if (fulfillment === "delivery" && !address.trim()) {
       setError("Completá la dirección de entrega");
+      return;
+    }
+    if (!payMethod) {
+      setError("Elegí cómo vas a pagar: efectivo o transferencia");
       return;
     }
     if (fulfillment === "delivery" && byDistance) {
@@ -161,6 +182,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
         notes: fullNotes,
         items: items.map((it) => ({ name: it.name, qty: it.qty })),
         fulfillment,
+        paymentMethod: payMethod,
         customerAddress: fulfillment === "delivery" ? address : null,
         deliveryZone: fulfillment === "delivery" ? resolvedZone : null,
         deliveryLat: fulfillment === "delivery" && byDistance ? point?.lat ?? null : null,
@@ -193,11 +215,14 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
       shippingCost,
       total: grandTotal,
       notes: notes.trim() || null,
+      paymentMethod: payMethod,
+      transferAlias: transferAlias || null,
       businessNumber: businessConfig?.whatsappNumber || undefined,
     });
     if (waWindow) waWindow.location.href = waLink;
     else window.open(waLink, "_blank");
 
+    setSentTotal(grandTotal);
     setSent(true);
     clear();
   }
@@ -214,10 +239,36 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
       </div>
 
       {sent ? (
-        <p className="py-6 text-center text-sm text-stone-300">
-          Te abrimos WhatsApp con el resumen de tu pedido — mandanos el mensaje para confirmarlo. Te
-          avisamos el tiempo de espera por ahí mismo. ¡Gracias!
-        </p>
+        <div className="py-6 text-center text-sm text-stone-300">
+          <p>
+            Te abrimos WhatsApp con el resumen de tu pedido — mandanos el mensaje para confirmarlo. Te
+            avisamos el tiempo de espera por ahí mismo. ¡Gracias!
+          </p>
+          {payMethod === "transferencia" && transferAlias && (
+            <div className="mt-4 rounded-lg border border-white/10 p-3 text-left">
+              <p className="text-xs text-stone-400">Para terminar, transferí ${sentTotal.toLocaleString("es-AR")} al alias:</p>
+              <p className="mt-1 text-lg font-semibold text-stone-50">{transferAlias}</p>
+              {businessConfig?.transferHolder && (
+                <p className="text-xs text-stone-400">Titular: {businessConfig.transferHolder}</p>
+              )}
+              <p className="mt-2 text-xs text-stone-400">Mandanos el comprobante por el mismo chat de WhatsApp.</p>
+              <button
+                type="button"
+                onClick={copyAlias}
+                className="mt-3 w-full rounded-lg border border-white/10 px-3 py-2 text-sm font-medium text-stone-200 hover:border-white/25"
+              >
+                {copied ? "¡Alias copiado!" : "Copiar alias"}
+              </button>
+            </div>
+          )}
+          {payMethod === "efectivo" && (
+            <p className="mt-3 text-xs text-stone-400">
+              {fulfillment === "delivery"
+                ? "Pagás en efectivo al repartidor cuando te entregue el pedido."
+                : "Pagás en efectivo en el local cuando retirás tu pedido."}
+            </p>
+          )}
+        </div>
       ) : (
         <>
           <div className="mb-4 space-y-2">
@@ -348,6 +399,72 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
                 )}
               </>
             )}
+
+            <div className="pt-1">
+              <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-stone-400">¿Cómo vas a pagar?</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPayMethod("efectivo");
+                    setError("");
+                  }}
+                  className={`flex-1 rounded-full border px-3 py-2 text-sm font-medium transition ${
+                    payMethod === "efectivo"
+                      ? "border-ember bg-ember text-base"
+                      : "border-white/10 text-stone-300 hover:border-white/25"
+                  }`}
+                >
+                  Efectivo
+                </button>
+                {transferAlias && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPayMethod("transferencia");
+                      setError("");
+                    }}
+                    className={`flex-1 rounded-full border px-3 py-2 text-sm font-medium transition ${
+                      payMethod === "transferencia"
+                        ? "border-ember bg-ember text-base"
+                        : "border-white/10 text-stone-300 hover:border-white/25"
+                    }`}
+                  >
+                    Transferencia
+                  </button>
+                )}
+              </div>
+              {payMethod === "efectivo" && (
+                <p className="mt-2 px-1 text-xs text-stone-400">
+                  {fulfillment === "delivery"
+                    ? "Le pagás en efectivo al repartidor cuando te entregue el pedido."
+                    : "Pagás en efectivo en el local cuando retirás tu pedido."}
+                </p>
+              )}
+              {payMethod === "transferencia" && transferAlias && (
+                <div className="mt-2 rounded-lg border border-white/10 p-3">
+                  <p className="text-xs text-stone-400">
+                    Transferí ${grandTotal.toLocaleString("es-AR")} al alias:
+                  </p>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="text-base font-semibold text-stone-50">{transferAlias}</span>
+                    <button
+                      type="button"
+                      onClick={copyAlias}
+                      className="rounded-lg border border-white/10 px-2.5 py-1 text-xs text-stone-200 hover:border-white/25"
+                    >
+                      {copied ? "¡Copiado!" : "Copiar"}
+                    </button>
+                  </div>
+                  {businessConfig?.transferHolder && (
+                    <p className="text-xs text-stone-400">Titular: {businessConfig.transferHolder}</p>
+                  )}
+                  <p className="mt-2 text-xs text-stone-400">
+                    Al enviar el pedido se abre WhatsApp: mandanos ahí el comprobante.
+                  </p>
+                </div>
+              )}
+            </div>
 
             <textarea
               value={notes}

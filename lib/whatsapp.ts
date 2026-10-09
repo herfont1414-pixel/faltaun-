@@ -29,6 +29,8 @@ export interface OrderSummaryInput {
   shippingCost: number;
   total: number;
   notes?: string | null;
+  paymentMethod?: "efectivo" | "transferencia" | null;
+  transferAlias?: string | null;
   businessNumber?: string;
 }
 
@@ -47,6 +49,17 @@ export function buildOrderWhatsAppLink(input: OrderSummaryInput) {
   lines.push("", `Subtotal: $${input.subtotal.toLocaleString("es-AR")}`);
   if (input.shippingCost > 0) lines.push(`Envío: $${input.shippingCost.toLocaleString("es-AR")}`);
   lines.push(`Total: $${input.total.toLocaleString("es-AR")}`);
+  if (input.paymentMethod === "transferencia") {
+    lines.push(
+      `Pago: Transferencia${input.transferAlias ? ` al alias ${input.transferAlias}` : ""}. Te mando el comprobante por acá.`
+    );
+  } else if (input.paymentMethod === "efectivo") {
+    lines.push(
+      input.fulfillment === "delivery"
+        ? "Pago: Efectivo (le pago al repartidor cuando llegue)"
+        : "Pago: Efectivo (pago en el local al retirar)"
+    );
+  }
   if (input.notes) lines.push("", `Notas: ${input.notes}`);
   lines.push("", "¡Gracias!");
   return buildWhatsAppLink(lines.join("\n"), input.businessNumber);

@@ -10,9 +10,19 @@ export const dynamic = "force-dynamic";
 // entorno fija.
 export async function GET() {
   if (!isDbConfigured()) {
-    return NextResponse.json({ config: { name: "", address: "", hours: "", whatsappNumber: "" } });
+    return NextResponse.json({ config: { name: "", address: "", hours: "", whatsappNumber: "", transferAlias: "", transferHolder: "" } });
   }
   await ensureSeeded();
   const config = await getBusinessConfig();
-  return NextResponse.json({ config });
+  // Solo lo que el menú online necesita mostrar (el alias es información pública para transferir).
+  return NextResponse.json({
+    config: {
+      name: config.name,
+      address: config.address,
+      hours: config.hours,
+      whatsappNumber: config.whatsappNumber,
+      transferAlias: config.transferAlias,
+      transferHolder: config.transferHolder,
+    },
+  });
 }

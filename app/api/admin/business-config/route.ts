@@ -34,6 +34,8 @@ export async function PATCH(request: NextRequest) {
     hours: typeof body.hours === "string" ? body.hours : undefined,
     whatsappNumber: typeof body.whatsappNumber === "string" ? body.whatsappNumber : undefined,
     logoUrl: typeof body.logoUrl === "string" ? body.logoUrl : undefined,
+    transferAlias: typeof body.transferAlias === "string" ? body.transferAlias : undefined,
+    transferHolder: typeof body.transferHolder === "string" ? body.transferHolder : undefined,
   };
   const config = await updateBusinessConfig(patch);
   await recordAudit({
