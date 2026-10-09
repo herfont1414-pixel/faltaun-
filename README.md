@@ -220,6 +220,23 @@ trabaja; al terminar el día se pueden cerrar las dos ventanas.
 - El archivo `maderosys.db` (y sus archivos auxiliares `-shm`/`-wal`) no se
   suben al repositorio (están en `.gitignore`).
 
+### Lanzador de un clic, actualización automática y base compartida
+
+`MaderoSys-Iniciar.bat` reemplaza a `start-local.bat` para el uso diario:
+
+- **Se actualiza solo.** Antes de arrancar, `scripts/actualizar.mjs` baja la última
+  versión de `main` desde GitHub y la aplica **sin tocar** `.env.local` (PIN y
+  configuración), `maderosys.db` (datos locales) ni `node_modules`. No actualiza si el
+  servidor ya está abierto y, si no hay internet o algo falla, sigue con la versión
+  instalada. Si cambian los componentes (`package-lock.json`) los reinstala solo.
+- **Base de datos.** La primera vez pregunta (`scripts/configurar-base.mjs`) si se
+  quiere usar **la misma base que Vercel** (se pega su `DATABASE_URL` una vez; queda en
+  `.env.local`, que no se sube a GitHub) o la base local de esta PC (solo Enter). Con la
+  base compartida, el panel de la PC y el de Vercel muestran los mismos datos; la
+  impresión directa sigue saliendo por el servidor local de Windows.
+- **Sin internet:** `MaderoSys-Iniciar-SIN-INTERNET.bat` arranca con la base local de la
+  PC. Lo que se cargue ahí **no** aparece en Vercel, y viceversa.
+
 ### Impresión directa (ESC/POS) en modo local
 
 En `/admin` → **Impresión** hay una sección "Impresión directa (ESC/POS)" que,
