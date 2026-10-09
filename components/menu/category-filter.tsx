@@ -32,7 +32,7 @@ const KEYWORD_ICONS: { keywords: string[]; Icon: typeof Soup }[] = [
   { keywords: ["pescado", "mar", "sushi"], Icon: Fish },
 ];
 
-function iconFor(category: string) {
+export function iconFor(category: string) {
   const normalized = category.toLowerCase();
   const match = KEYWORD_ICONS.find((entry) => entry.keywords.some((kw) => normalized.includes(kw)));
   return match?.Icon ?? UtensilsCrossed;
