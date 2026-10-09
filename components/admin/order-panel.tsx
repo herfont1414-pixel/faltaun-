@@ -7,6 +7,29 @@ import { money } from "@/lib/admin/format";
 import { PaymentPicker } from "@/components/admin/payment-picker";
 import type { Catalog, Order, OrderPayment } from "@/lib/admin/types";
 
+function plain(text: string) {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+// Todas las palabras escritas tienen que aparecer en el nombre. Primero los que
+// empiezan con lo escrito, después los que tienen una palabra que empieza igual,
+// y al final el resto; dentro de cada grupo, el orden de la carta.
+function searchProducts(catalog: Catalog, query: string) {
+  const words = plain(query).split(/\s+/).filter(Boolean);
+  const rank = (name: string) => {
+    const n = plain(name);
+    if (!words.every((w) => n.includes(w))) return -1;
+    if (n.startsWith(words[0])) return 0;
+    return n.split(/\s+/).some((token) => token.startsWith(words[0])) ? 1 : 2;
+  };
+  return Object.values(catalog)
+    .flat()
+    .map((product, index) => ({ product, index, r: rank(product.name) }))
+    .filter((x) => x.r >= 0)
+    .sort((a, b) => a.r - b.r || a.index - b.index)
+    .map((x) => x.product);
+}
+
 interface OrderPanelProps {
   order: Order | null;
   tableNumber: number | null;
@@ -54,8 +77,10 @@ export function OrderPanel({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState(order?.notes ?? "");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
+    setSearch("");
     setSheetOpen(false);
     setShowPayment(false);
     setNotesDraft(order?.notes ?? "");
@@ -71,7 +96,10 @@ export function OrderPanel({
   }
 
   const categories = Object.keys(catalog);
-  const products = catalog[activeCategory] ?? [];
+  // Buscador: mientras se escribe, muestra los productos de TODAS las categorías que
+  // coinciden (sin importar mayúsculas ni tildes); los que empiezan igual van primero.
+  const searching = search.trim() !== "";
+  const products = searching ? searchProducts(catalog, search) : catalog[activeCategory] ?? [];
   const itemCount = order.items.reduce((sum, it) => sum + it.qty, 0);
 
   function saveNotes() {
@@ -98,14 +126,33 @@ export function OrderPanel({
           </button>
         </div>
 
+        <div className="prod-search">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar producto (ej: bacon)"
+            aria-label="Buscar producto"
+            className="caja-input"
+          />
+          {searching && (
+            <button type="button" className="prod-search-clear" onClick={() => setSearch("")} aria-label="Borrar búsqueda">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
         {categories.length > 1 && (
           <div className="cat-tabs">
             {categories.map((cat) => (
               <button
                 key={cat}
                 type="button"
-                className={`cat-tab ${cat === activeCategory ? "active" : ""}`}
-                onClick={() => onChangeCategory(cat)}
+                className={`cat-tab ${!searching && cat === activeCategory ? "active" : ""}`}
+                onClick={() => {
+                  setSearch("");
+                  onChangeCategory(cat);
+                }}
               >
                 {cat}
               </button>
@@ -114,6 +161,11 @@ export function OrderPanel({
         )}
 
         <div className="product-list">
+          {searching && products.length === 0 && (
+            <div style={{ gridColumn: "1 / -1", fontSize: 13, color: "var(--text-dim)", padding: "6px 2px" }}>
+              No hay productos que coincidan con &ldquo;{search.trim()}&rdquo;.
+            </div>
+          )}
           {products.map((product) => (
             <button
               key={product.id}
@@ -146,10 +198,11 @@ export function OrderPanel({
           {order.isDelivery && (
             <div className="delivery-info">
               <div>
-                {order.customerName} · {order.customerPhone}
+                {order.customerName}
+                {order.customerPhone ? ` · ${order.customerPhone}` : ""}
               </div>
               <div>
-                {order.customerAddress}
+                {order.customerAddress || "Sin dirección cargada"}
                 {order.deliveryLat !== null && order.deliveryLng !== null && (
                   <>
                     {" · "}

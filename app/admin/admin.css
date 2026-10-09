@@ -1022,3 +1022,25 @@
 .deliv-item:hover {
   background: #f5f5f4;
 }
+
+/* Buscador de productos del panel de pedido */
+.prod-search {
+  position: relative;
+  padding: 12px 18px 0;
+}
+.prod-search .caja-input {
+  width: 100%;
+  margin: 0;
+  padding-right: 36px;
+}
+.prod-search-clear {
+  position: absolute;
+  right: 26px;
+  top: 50%;
+  margin-top: 6px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--text-dim);
+}

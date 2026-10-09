@@ -161,3 +161,29 @@ describe("seguimiento del pedido para el cliente", () => {
     expect((await getBusinessConfig()).transferAlias).toBe("madero.resto");
   });
 });
+
+describe("pedido delivery desde Mostrador (solo nombre y zona)", () => {
+  it("sin teléfono ni dirección se crea igual, con su zona y envío, y no ensucia la agenda de clientes", async () => {
+    const before = await getPool().query("select count(*) as n from gestion_delivery_customers");
+    const o = await createDeliveryOrder({
+      name: "  Dani  ",
+      phone: "",
+      address: "",
+      zone: "Centro",
+      shippingCost: 2000,
+      channel: "whatsapp",
+    });
+    expect(o).toMatchObject({ customer_name: "Dani", customer_phone: null, customer_address: null, delivery_zone: "Centro" });
+    const after = await getPool().query("select count(*) as n from gestion_delivery_customers");
+    expect(Number(after.rows[0].n)).toBe(Number(before.rows[0].n));
+    const open = (await getState()).openOrders.find((x) => x.id === o.id)!;
+    expect(open).toMatchObject({ isDelivery: true, channel: "whatsapp", shippingCost: 2000 });
+    expect(orderTitle(open)).toBe("WhatsApp · Delivery · Dani");
+  });
+
+  it("sin nombre tampoco rompe", async () => {
+    const o = await createDeliveryOrder({ name: "", phone: "", address: "", zone: null, shippingCost: 0, channel: "mostrador" });
+    expect(o.customer_name).toBeNull();
+    expect(o.is_delivery === true || o.is_delivery === 1).toBe(true);
+  });
+});

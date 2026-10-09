@@ -24,6 +24,7 @@ import { TableOpenModal } from "@/components/admin/table-open-modal";
 import { money } from "@/lib/admin/format";
 import { printOrderDocument } from "@/lib/print-client";
 import { changeCents, fromCents, toCents } from "@/lib/admin/payments";
+import type { NewOrderInput } from "@/components/admin/mostrador-view";
 import { orderTitle } from "@/lib/admin/order-labels";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
 import type { Catalog, Order, OrderPayment, TableRow, Zone } from "@/lib/admin/types";
@@ -327,6 +328,22 @@ export function AdminApp() {
     setSelectedTableNumber(null);
   }
 
+  // "Nuevo pedido" de Mostrador: retira (pedido común) o delivery (con su zona), en el canal elegido.
+  async function createMostradorOrder(input: NewOrderInput) {
+    if (input.delivery) {
+      await newDeliveryOrder({
+        name: input.name,
+        phone: "",
+        address: input.address,
+        zone: input.zone,
+        shippingCost: 0,
+        channel: input.channel,
+      });
+    } else {
+      await newCounterOrder(input.channel, { name: input.name, phone: "" });
+    }
+  }
+
   async function changeDeliveryStatus(status: "preparando" | "en_camino" | "entregado") {
     if (!selectedOrderId) return;
     const state = await safeCall(() => patchJson(`/api/admin/delivery-order/${selectedOrderId}`, { status }));
@@ -455,9 +472,8 @@ export function AdminApp() {
             <MostradorView
               openOrders={data.openOrders.filter((o) => !o.tableNumber)}
               closedOrders={data.closedOrders.filter((o) => !o.tableNumber)}
-              onNewOrder={newCounterOrder}
+              onNewOrder={createMostradorOrder}
               onOpenOrder={openExistingOrder}
-              onGoDelivery={() => setSection("delivery")}
             />
           )}
 

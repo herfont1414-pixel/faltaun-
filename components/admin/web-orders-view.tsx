@@ -1,5 +1,6 @@
 "use client";
 
+import { whatsappDigits } from "@/lib/phone";
 import { useEffect, useRef, useState } from "react";
 import { money } from "@/lib/admin/format";
 import { playBeep } from "@/lib/admin/beep";
@@ -16,7 +17,7 @@ const REJECT_REASONS = [
 ];
 
 function waLink(phone: string, message: string) {
-  const digits = phone.replace(/\D/g, "");
+  const digits = whatsappDigits(phone);
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
