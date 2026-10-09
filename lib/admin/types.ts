@@ -41,7 +41,10 @@ export interface Order {
 
 export interface OrderPayment {
   method: PaymentMethod;
+  // Importe aplicado a la venta (lo que cuenta la caja).
   amount: number;
+  // Solo efectivo: lo que entregó el cliente. El vuelto sale de acá menos amount.
+  received?: number | null;
 }
 
 export interface DeliveryZone {

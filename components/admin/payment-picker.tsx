@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { money } from "@/lib/admin/format";
+import { changeCents, fromCents, toCents } from "@/lib/admin/payments";
 import type { Customer, OrderPayment, PaymentMethod } from "@/lib/admin/types";
 
 interface PaymentPickerProps {
@@ -20,28 +21,28 @@ const METHODS: { value: PaymentMethod; label: string }[] = [
 
 interface Line {
   key: string;
-  method: PaymentMethod | "";
+  method: PaymentMethod;
   amount: string;
+  received: string;
 }
 
-const selectStyle: React.CSSProperties = {
+const inputStyle: React.CSSProperties = {
   padding: "8px 9px",
   borderRadius: 8,
   border: "1px solid var(--border)",
-  fontSize: 12.5,
-  flex: 1,
-};
-const amountStyle: React.CSSProperties = {
-  width: 92,
-  padding: "8px 9px",
-  borderRadius: 8,
-  border: "1px solid var(--border)",
-  fontSize: 12.5,
+  fontSize: 14,
   textAlign: "right",
+  width: "100%",
 };
 
+function amountToString(cents: number) {
+  return cents > 0 ? String(fromCents(cents)) : "";
+}
+
 export function PaymentPicker({ total, onCancel, onConfirm, onPartial }: PaymentPickerProps) {
-  const [lines, setLines] = useState<Line[]>([{ key: "0", method: "", amount: total.toFixed(2) }]);
+  const [lines, setLines] = useState<Line[]>([
+    { key: "0", method: "efectivo", amount: amountToString(toCents(total)), received: "" },
+  ]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Customer[]>([]);
   const [selected, setSelected] = useState<Customer | null>(null);
@@ -67,110 +68,204 @@ export function PaymentPicker({ total, onCancel, onConfirm, onPartial }: Payment
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   }
 
+  function setMethod(key: string, method: PaymentMethod) {
+    // "Recibido" solo existe para efectivo.
+    updateLine(key, method === "efectivo" ? { method } : { method, received: "" });
+  }
+
+  const totalCents = toCents(total);
+  const lineInfo = lines.map((l) => {
+    const amountCents = toCents(Number(l.amount) || 0);
+    const receivedFilled = l.method === "efectivo" && l.received.trim() !== "";
+    const receivedCents = receivedFilled ? toCents(Number(l.received) || 0) : null;
+    return {
+      amountCents,
+      amountOk: amountCents > 0,
+      receivedFilled,
+      receivedOk: !receivedFilled || (receivedCents !== null && receivedCents >= amountCents),
+      changeCents: changeCents(amountCents, receivedCents),
+    };
+  });
+
+  const paidCents = lineInfo.reduce((s, i) => s + i.amountCents, 0);
+  const remainingCents = totalCents - paidCents;
+  const covered = remainingCents === 0;
+  const needsCustomer = lines.some((l) => l.method === "cuenta_corriente");
+  const canConfirm =
+    covered &&
+    lineInfo.every((i) => i.amountOk && i.receivedOk) &&
+    (!needsCustomer || Boolean(selected));
+
   function addLine() {
-    const sum = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0);
-    const rest = Math.max(0, Math.round((total - sum) * 100) / 100);
-    setLines((prev) => [...prev, { key: `${Date.now()}`, method: "", amount: rest ? rest.toFixed(2) : "" }]);
+    // La línea nueva arranca con lo que falta cubrir y con un medio que todavía
+    // no se usó (lo más común es efectivo + transferencia).
+    const used = new Set(lines.map((l) => l.method));
+    const method = METHODS.find((m) => !used.has(m.value))?.value ?? "transferencia";
+    setLines((prev) => [
+      ...prev,
+      { key: `${Date.now()}`, method, amount: amountToString(Math.max(0, remainingCents)), received: "" },
+    ]);
   }
 
   function removeLine(key: string) {
     setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.key !== key) : prev));
   }
 
-  const sum = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0);
-  const remaining = Math.round((total - sum) * 100) / 100;
-  const sumMatches = Math.abs(remaining) < 0.5;
-  const needsCustomer = lines.some((l) => l.method === "cuenta_corriente");
-  const canConfirm = lines.every((l) => l.method) && sumMatches && (!needsCustomer || Boolean(selected));
-
   function handleConfirm() {
-    const payments: OrderPayment[] = lines.map((l) => ({
-      method: l.method as PaymentMethod,
-      amount: Number(l.amount) || 0,
+    const payments: OrderPayment[] = lines.map((l, i) => ({
+      method: l.method,
+      amount: fromCents(lineInfo[i].amountCents),
+      ...(lineInfo[i].receivedFilled ? { received: Number(l.received) } : {}),
     }));
     onConfirm(payments, selected?.id ?? null, loyaltyPhone.trim() || null);
   }
 
+  const summaryColor = covered ? "var(--green-dark)" : "var(--red)";
+
   return (
-    <div style={{ padding: "12px 18px", borderTop: "1px solid var(--border)" }}>
+    <div style={{ padding: "12px 18px", borderTop: "1px solid var(--border)", maxHeight: "65vh", overflowY: "auto" }}>
       <div className="ticket-title">Medios de pago</div>
 
       {!partial && (
         <>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
-            {lines.map((line) => (
-              <div key={line.key} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <select
-                  value={line.method}
-                  onChange={(e) => updateLine(line.key, { method: e.target.value as PaymentMethod })}
-                  style={selectStyle}
-                >
-                  <option value="" disabled>
-                    Medio de pago...
-                  </option>
-                  {METHODS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  value={line.amount}
-                  onChange={(e) => updateLine(line.key, { amount: e.target.value })}
-                  placeholder="0"
-                  style={amountStyle}
-                />
-                {lines.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeLine(line.key)}
-                    aria-label="Quitar medio de pago"
-                    style={{
-                      flexShrink: 0,
-                      width: 30,
-                      height: 30,
-                      border: "none",
-                      background: "transparent",
-                      color: "var(--text-faint)",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <button type="button" className="btn" style={{ marginBottom: 8 }} onClick={addLine}>
-            + Agregar medio de pago
-          </button>
-
           <div
+            data-testid="pay-summary"
             style={{
-              fontSize: 12.5,
-              fontWeight: 700,
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 6,
               marginBottom: 10,
-              color: sumMatches ? "var(--green-dark)" : "var(--red)",
+              padding: "8px 10px",
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              textAlign: "center",
             }}
           >
-            {sumMatches
-              ? "Cubierto ✓"
-              : remaining > 0
-                ? `Falta cubrir ${money(remaining)}`
-                : `Sobran ${money(-remaining)}`}
+            <div>
+              <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Total</div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{money(total)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Pagado</div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{money(fromCents(paidCents))}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{remainingCents < 0 ? "Sobran" : "Restante"}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: summaryColor }}>
+                {money(fromCents(Math.abs(remainingCents)))}
+              </div>
+            </div>
           </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
+            {lines.map((line, idx) => {
+              const info = lineInfo[idx];
+              return (
+                <div
+                  key={line.key}
+                  data-testid="pay-line"
+                  style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 8 }}
+                >
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ display: "flex", gap: 6, flex: 1 }}>
+                      {METHODS.map((m) => (
+                        <button
+                          key={m.value}
+                          type="button"
+                          className={`btn ${line.method === m.value ? "btn-primary" : ""}`}
+                          style={{ flex: 1, padding: "9px 4px", fontSize: 12.5 }}
+                          aria-pressed={line.method === m.value}
+                          onClick={() => setMethod(line.key, m.value)}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                    {lines.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeLine(line.key)}
+                        aria-label="Quitar medio de pago"
+                        style={{
+                          flexShrink: 0,
+                          width: 30,
+                          height: 30,
+                          border: "none",
+                          background: "transparent",
+                          color: "var(--text-faint)",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <label style={{ flex: 1, fontSize: 11.5, color: "var(--text-dim)" }}>
+                      Monto
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0"
+                        value={line.amount}
+                        onChange={(e) => updateLine(line.key, { amount: e.target.value })}
+                        placeholder="0"
+                        aria-label="Monto"
+                        style={inputStyle}
+                      />
+                    </label>
+                    {line.method === "efectivo" && (
+                      <label style={{ flex: 1, fontSize: 11.5, color: "var(--text-dim)" }}>
+                        Recibido
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          min="0"
+                          value={line.received}
+                          onChange={(e) => updateLine(line.key, { received: e.target.value })}
+                          placeholder="Opcional"
+                          aria-label="Recibido"
+                          style={inputStyle}
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {line.method === "efectivo" && info.receivedFilled && (
+                    <div
+                      data-testid="pay-change"
+                      style={{
+                        marginTop: 6,
+                        fontSize: 14,
+                        fontWeight: 700,
+                        textAlign: "right",
+                        color: info.receivedOk ? "var(--green-dark)" : "var(--red)",
+                      }}
+                    >
+                      {info.receivedOk ? `Vuelto: ${money(fromCents(info.changeCents))}` : "El recibido no alcanza"}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <button type="button" className="btn" style={{ marginBottom: 8, width: "100%" }} onClick={addLine}>
+            + Agregar medio de pago
+          </button>
 
           {needsCustomer && (
             <div style={{ marginBottom: 8 }}>
               <input
                 value={query}
                 onChange={(e) => search(e.target.value)}
-                placeholder="Buscar cliente por nombre..."
+                placeholder="Cuenta corriente: buscar cliente por nombre..."
                 style={{
                   width: "100%",
                   padding: "8px 10px",
@@ -240,7 +335,10 @@ export function PaymentPicker({ total, onCancel, onConfirm, onPartial }: Payment
         Cierre parcial — imprime la cuenta para el cliente sin cerrar la venta todavía
       </label>
 
-      <div className="footer-actions">
+      <div
+        className="footer-actions"
+        style={{ position: "sticky", bottom: 0, background: "var(--card)", paddingTop: 8, paddingBottom: 2 }}
+      >
         <button type="button" className="btn" onClick={onCancel}>
           Cancelar
         </button>

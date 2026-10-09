@@ -87,7 +87,7 @@ export interface PrintableTicket {
   shippingCost: number;
   total: number;
   paymentMethod: string | null;
-  payments: { method: string; amount: number }[];
+  payments: { method: string; amount: number; receivedAmount: number | null; changeAmount: number | null }[];
 }
 
 function toNumber(value: string | number) {
@@ -121,10 +121,15 @@ export async function getPrintableTicket(orderId: string): Promise<PrintableTick
   const liveTotal = itemsTotal + (order.is_delivery ? shippingCost : 0);
 
   const { rows: paymentRows } = await pool.query(
-    "select method, amount from gestion_order_payments where order_id = $1 order by created_at",
+    "select method, amount, received_amount, change_amount from gestion_order_payments where order_id = $1 order by created_at",
     [orderId]
   );
-  const payments = paymentRows.map((r) => ({ method: r.method, amount: toNumber(r.amount) }));
+  const payments = paymentRows.map((r) => ({
+    method: r.method,
+    amount: toNumber(r.amount),
+    receivedAmount: r.received_amount === null || r.received_amount === undefined ? null : toNumber(r.received_amount),
+    changeAmount: r.change_amount === null || r.change_amount === undefined ? null : toNumber(r.change_amount),
+  }));
 
   return {
     orderId,

@@ -90,6 +90,8 @@ create table if not exists gestion_order_payments (
   order_id text references gestion_orders(id) on delete cascade,
   method text not null check (method in ('efectivo', 'transferencia', 'cuenta_corriente')),
   amount numeric(12, 2) not null,
+  received_amount numeric(12, 2),
+  change_amount numeric(12, 2),
   created_at text not null default (now())
 );
 

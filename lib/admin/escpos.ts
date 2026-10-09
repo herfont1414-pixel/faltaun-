@@ -205,6 +205,11 @@ export function renderTicketEscPos(data: TicketPrintData, config: PrintConfig): 
       const label = data.paymentMethod ? PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod : "-";
       b.line(row("Medio de pago", label, width));
     }
+    for (const p of data.payments) {
+      if (p.receivedAmount == null) continue;
+      b.line(row("Recibido", money(p.receivedAmount), width));
+      b.bold(true).line(row("Vuelto", money(p.changeAmount ?? 0), width)).bold(false);
+    }
   } else {
     b.line(row("Estado", "Precuenta (sin cobrar)", width));
   }

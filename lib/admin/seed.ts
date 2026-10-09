@@ -240,6 +240,8 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_shifts", "ingresos_efectivo", "numeric(12, 2) not null default 0");
         await ensureSqliteColumn(client, "gestion_shifts", "retiros_efectivo", "numeric(12, 2) not null default 0");
         await ensureSqliteColumn(client, "gestion_shifts", "ajustes_efectivo", "numeric(12, 2) not null default 0");
+        await ensureSqliteColumn(client, "gestion_order_payments", "received_amount", "numeric(12, 2)");
+        await ensureSqliteColumn(client, "gestion_order_payments", "change_amount", "numeric(12, 2)");
         await ensureSqliteColumn(client, "gestion_ingredients", "track_stock", "boolean not null default 0");
         await ensureSqliteColumn(client, "gestion_ingredients", "stock_qty", "numeric(12, 3)");
         await ensureSqliteColumn(client, "gestion_delivery_customers", "created_at", "text");

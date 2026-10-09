@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       action: "order_close",
       entity: "gestion_orders",
       entityId: orderId,
-      newValue: { total: result.total, origin: result.origin, payments },
+      newValue: { total: result.total, origin: result.origin, payments: result.payments },
     });
     return result;
   });

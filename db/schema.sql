@@ -96,6 +96,11 @@ create table if not exists gestion_order_payments (
   created_at timestamptz not null default now()
 );
 
+-- Solo efectivo: lo que entregó el cliente y el vuelto. Son informativos; la
+-- venta y la caja cuentan siempre "amount" (el importe realmente aplicado).
+alter table gestion_order_payments add column if not exists received_amount numeric(12, 2);
+alter table gestion_order_payments add column if not exists change_amount numeric(12, 2);
+
 create index if not exists gestion_order_payments_order_id_idx on gestion_order_payments(order_id);
 
 -- Backfill idempotente: toda venta cerrada de antes de esta tabla también

@@ -23,6 +23,7 @@ import { ComprasView } from "@/components/admin/compras-view";
 import { TableOpenModal } from "@/components/admin/table-open-modal";
 import { money } from "@/lib/admin/format";
 import { printOrderDocument } from "@/lib/print-client";
+import { changeCents, fromCents, toCents } from "@/lib/admin/payments";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
 import type { Catalog, OrderPayment, TableRow, Zone } from "@/lib/admin/types";
 
@@ -224,8 +225,18 @@ export function AdminApp() {
     if (!state) return;
     applyState(state);
     printTicket(orderId);
+    const changeToGive = payments.reduce(
+      (sum, p) => sum + (p.received != null ? changeCents(toCents(p.amount), toCents(p.received)) : 0),
+      0
+    );
     showToast(
-      loyaltyPhone ? `Cobrado · ${money(order.total)} · +1 sello de fidelidad` : `Cobrado · ${money(order.total)}`
+      [
+        `Cobrado · ${money(order.total)}`,
+        changeToGive > 0 ? `Vuelto ${money(fromCents(changeToGive))}` : null,
+        loyaltyPhone ? "+1 sello de fidelidad" : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
     );
     closePanel();
   }

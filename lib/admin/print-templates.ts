@@ -178,7 +178,7 @@ export interface TicketPrintData {
   shippingCost: number;
   total: number;
   paymentMethod: string | null;
-  payments: { method: string; amount: number }[];
+  payments: { method: string; amount: number; receivedAmount?: number | null; changeAmount?: number | null }[];
   logoUrl?: string | null;
 }
 
@@ -223,6 +223,20 @@ export function renderTicketHtml(data: TicketPrintData, config: PrintConfig): st
           }</span></div>`
       : `<div class="row body-text"><span>Estado</span><span>Precuenta (sin cobrar)</span></div>`;
 
+  // Efectivo con "recibido" cargado: se muestra lo que entregó el cliente y el
+  // vuelto. Es informativo; el total y la caja son siempre el importe aplicado.
+  const cashDetailHtml =
+    data.status === "cerrada"
+      ? data.payments
+          .filter((p) => p.receivedAmount != null)
+          .map(
+            (p) =>
+              `<div class="row body-text"><span>Recibido</span><span>${money(p.receivedAmount ?? 0)}</span></div>` +
+              `<div class="row body-text bold"><span>Vuelto</span><span>${money(p.changeAmount ?? 0)}</span></div>`
+          )
+          .join("")
+      : "";
+
   const customerHtml =
     data.customerName || data.customerPhone || data.customerAddress
       ? `
@@ -249,6 +263,7 @@ export function renderTicketHtml(data: TicketPrintData, config: PrintConfig): st
     <hr />
     <div class="row bold header-text"><span>TOTAL</span><span>${money(data.total)}</span></div>
     ${paymentLine}
+    ${cashDetailHtml}
     ${config.footerText ? `<hr /><div class="center footer-text">${escapeHtml(config.footerText)}</div>` : ""}
   `;
 

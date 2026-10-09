@@ -1,6 +1,7 @@
 import { getPool } from "@/lib/admin/db";
 import { ensureSeeded } from "@/lib/admin/seed";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
+import { assertPaymentsCoverTotal, normalizePayments } from "@/lib/admin/payments";
 import type {
   AdminProduct,
   Catalog,
@@ -259,11 +260,16 @@ export async function requestBill(tableNumber: number) {
 
 export async function finalizeOrder(
   orderId: string,
-  payments: OrderPayment[],
+  rawPayments: OrderPayment[],
   customerId: number | null,
   userId: number | null = null
 ) {
-  if (payments.length === 0) throw new Error("Agregá al menos un medio de pago");
+  // Lo que manda el navegador no es de fiar: se valida y normaliza todo acá
+  // (importes > 0 y finitos, método válido, "recibido" solo en efectivo).
+  const payments = normalizePayments(rawPayments);
+  if (customerId !== null && !Number.isInteger(customerId)) {
+    throw new Error("Cliente inválido");
+  }
 
   const pool = getPool();
   const client = await pool.connect();
@@ -293,13 +299,8 @@ export async function finalizeOrder(
     const itemsTotal = itemRows.reduce((sum, it) => sum + money(it.price) * it.qty, 0);
     const total = order.is_delivery ? itemsTotal + money(order.shipping_cost ?? 0) : itemsTotal;
 
-    const paidSum = payments.reduce((sum, p) => sum + p.amount, 0);
-    // Centavos de tolerancia por redondeo de punto flotante en el cliente.
-    if (Math.round((paidSum - total) * 100) !== 0) {
-      throw new Error(
-        `Los medios de pago suman ${paidSum.toLocaleString("es-AR")} pero el total es ${total.toLocaleString("es-AR")}`
-      );
-    }
+    // La suma de lo aplicado (sin contar vuelto) tiene que ser exactamente el total.
+    assertPaymentsCoverTotal(payments, total);
 
     // Descuento de stock: solo para productos con stock numérico asignado
     // (stock_qty null = stock infinito, no se toca). El "for update" bloquea
@@ -348,6 +349,10 @@ export async function finalizeOrder(
       .reduce((sum, p) => sum + p.amount, 0);
     if (ctaCteAmount > 0) {
       if (!customerId) throw new Error("Elegí un cliente para cobrar a cuenta corriente");
+      const { rows: customerRows } = await client.query("select id from gestion_customers where id = $1", [
+        customerId,
+      ]);
+      if (!customerRows[0]) throw new Error("El cliente elegido para cuenta corriente no existe");
       await client.query("update gestion_customers set balance = balance - $2 where id = $1", [
         customerId,
         ctaCteAmount,
@@ -359,10 +364,13 @@ export async function finalizeOrder(
       );
     }
 
+    // amount es lo aplicado a la venta (lo que suma la caja). received_amount y
+    // change_amount, solo en efectivo, son informativos: el vuelto no es venta.
     for (const p of payments) {
       await client.query(
-        "insert into gestion_order_payments (order_id, method, amount) values ($1, $2, $3)",
-        [orderId, p.method, p.amount]
+        `insert into gestion_order_payments (order_id, method, amount, received_amount, change_amount)
+         values ($1, $2, $3, $4, $5)`,
+        [orderId, p.method, p.amount, p.receivedAmount, p.changeAmount]
       );
     }
 
@@ -383,7 +391,11 @@ export async function finalizeOrder(
     }
 
     await client.query("commit");
-    return { total, origin: order.is_delivery ? "delivery" : (order.origin as "mesa" | "mostrador") };
+    return {
+      total,
+      origin: order.is_delivery ? "delivery" : (order.origin as "mesa" | "mostrador"),
+      payments,
+    };
   } catch (error) {
     await client.query("rollback");
     throw error;
