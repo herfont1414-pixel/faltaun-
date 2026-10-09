@@ -1,5 +1,6 @@
 "use client";
 
+import { osmLink } from "@/lib/geo";
 import { useEffect, useState } from "react";
 import { X, Printer, Pencil } from "lucide-react";
 import { money } from "@/lib/admin/format";
@@ -147,7 +148,22 @@ export function OrderPanel({
               <div>
                 {order.customerName} · {order.customerPhone}
               </div>
-              <div>{order.customerAddress}</div>
+              <div>
+                {order.customerAddress}
+                {order.deliveryLat !== null && order.deliveryLng !== null && (
+                  <>
+                    {" · "}
+                    <a
+                      href={osmLink({ lat: order.deliveryLat, lng: order.deliveryLng })}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: "var(--accent, #ff5a1f)", fontWeight: 600 }}
+                    >
+                      Ver en mapa
+                    </a>
+                  </>
+                )}
+              </div>
               {order.deliveryZone && (
                 <div>
                   Zona: {order.deliveryZone} · Envío {money(order.shippingCost)}

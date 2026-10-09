@@ -159,6 +159,10 @@ alter table gestion_web_orders add column if not exists shipping_cost numeric(10
 -- Al aceptar un pedido web se crea el pedido real (gestion_orders) que se
 -- prepara, se despacha y se cobra desde el panel; este es el vínculo.
 alter table gestion_web_orders add column if not exists order_id uuid references gestion_orders(id) on delete set null;
+alter table gestion_web_orders add column if not exists delivery_lat double precision;
+alter table gestion_web_orders add column if not exists delivery_lng double precision;
+alter table gestion_orders add column if not exists delivery_lat double precision;
+alter table gestion_orders add column if not exists delivery_lng double precision;
 create index if not exists gestion_web_orders_order_id_idx on gestion_web_orders(order_id);
 
 create index if not exists gestion_web_orders_status_idx on gestion_web_orders(status);
@@ -226,6 +230,11 @@ create table if not exists gestion_delivery_zones (
   name text unique not null,
   cost numeric(10, 2) not null default 0
 );
+
+-- Envío por distancia: una zona con max_km es un "anillo" (ej. hasta 2 km),
+-- y el costo se resuelve según la distancia entre el local y la dirección del
+-- cliente. Sin max_km sigue siendo una zona por nombre, como antes.
+alter table gestion_delivery_zones add column if not exists max_km numeric(6, 2);
 
 create table if not exists gestion_delivery_customers (
   phone text primary key,
@@ -316,6 +325,10 @@ create table if not exists gestion_business_config (
 -- logo_url se agregó después de que esta tabla ya existiera en producción;
 -- "create table if not exists" no le agrega columnas a una tabla vieja.
 alter table gestion_business_config add column if not exists logo_url text;
+
+-- Ubicación del local (punto de partida del envío por distancia).
+alter table gestion_business_config add column if not exists latitude double precision;
+alter table gestion_business_config add column if not exists longitude double precision;
 
 insert into gestion_business_config (id) values (1) on conflict (id) do nothing;
 

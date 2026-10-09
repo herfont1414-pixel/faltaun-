@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { money } from "@/lib/admin/format";
+import { LocationPicker } from "@/components/geo/location-picker";
+import type { LatLng } from "@/lib/geo";
 import type { DeliveryZone, Order } from "@/lib/admin/types";
 
 interface DeliveryViewProps {
@@ -47,6 +49,12 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
   const [showZones, setShowZones] = useState(false);
   const [newZoneName, setNewZoneName] = useState("");
   const [newZoneCost, setNewZoneCost] = useState("");
+  const [newZoneKm, setNewZoneKm] = useState("");
+  const [zoneError, setZoneError] = useState("");
+  const [originAddress, setOriginAddress] = useState("");
+  const [originPoint, setOriginPoint] = useState<LatLng | null>(null);
+  const [originSaved, setOriginSaved] = useState<LatLng | null>(null);
+  const [originMsg, setOriginMsg] = useState("");
 
   function loadZones() {
     fetch("/api/admin/delivery-zones")
@@ -57,6 +65,35 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
   useEffect(() => {
     loadZones();
   }, []);
+
+  useEffect(() => {
+    if (!showZones) return;
+    fetch("/api/admin/delivery-origin")
+      .then((res) => res.json())
+      .then((data: { location: LatLng | null; address: string }) => {
+        setOriginSaved(data.location ?? null);
+        setOriginPoint(data.location ?? null);
+        setOriginAddress((prev) => prev || data.address || "");
+      })
+      .catch(() => {});
+  }, [showZones]);
+
+  async function saveOrigin() {
+    if (!originPoint) return;
+    setOriginMsg("");
+    const res = await fetch("/api/admin/delivery-origin", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(originPoint),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setOriginMsg(data.error ?? "No se pudo guardar la ubicación");
+      return;
+    }
+    setOriginSaved(originPoint);
+    setOriginMsg("Ubicación del local guardada");
+  }
 
   async function lookupPhone(value: string) {
     setPhone(value);
@@ -94,13 +131,24 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
 
   async function addZone() {
     if (!newZoneName.trim()) return;
-    await fetch("/api/admin/delivery-zones", {
+    setZoneError("");
+    const res = await fetch("/api/admin/delivery-zones", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newZoneName.trim(), cost: Number(newZoneCost) || 0 }),
+      body: JSON.stringify({
+        name: newZoneName.trim(),
+        cost: Number(newZoneCost) || 0,
+        maxKm: newZoneKm ? Number(newZoneKm) : null,
+      }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setZoneError(data.error ?? "No se pudo guardar la zona");
+      return;
+    }
     setNewZoneName("");
     setNewZoneCost("");
+    setNewZoneKm("");
     loadZones();
   }
 
@@ -122,7 +170,58 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
 
       {showZones && (
         <div className="m-section">
+          <div className="m-section-title">Ubicación del local</div>
+          <div className="caja-card" style={{ marginBottom: 14 }}>
+            <p style={{ fontSize: 12.5, color: "var(--text-dim)", marginBottom: 8 }}>
+              Es el punto desde donde se mide la distancia del envío. Escribí la dirección del local y tocá
+              &ldquo;Ubicar en el mapa&rdquo;, o tocá el mapa directamente.
+            </p>
+            <div className="caja-field">
+              <label>Dirección del local</label>
+              <input
+                type="text"
+                value={originAddress}
+                onChange={(e) => setOriginAddress(e.target.value)}
+                className="caja-input"
+                placeholder="Calle, número y ciudad"
+              />
+            </div>
+            <LocationPicker
+              query={originAddress}
+              value={originPoint}
+              onChange={setOriginPoint}
+              rings={undefined}
+              searchLabel="Ubicar el local en el mapa"
+              buttonClassName="btn"
+              hintClassName="deliv-hint"
+              listClassName="deliv-list"
+              itemClassName="deliv-item"
+            />
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ flex: "none", padding: "10px 16px" }}
+                disabled={
+                  !originPoint ||
+                  (originSaved?.lat === originPoint.lat && originSaved?.lng === originPoint.lng)
+                }
+                onClick={saveOrigin}
+              >
+                Guardar ubicación del local
+              </button>
+              <span style={{ fontSize: 12.5, color: "var(--text-dim)" }}>
+                {originMsg ||
+                  (originSaved ? "Ubicación guardada" : "Todavía no marcaste dónde está el local")}
+              </span>
+            </div>
+          </div>
+
           <div className="m-section-title">Zonas y costo de envío</div>
+          <p style={{ fontSize: 12.5, color: "var(--text-dim)", marginBottom: 8 }}>
+            Para cobrar por distancia, cargá zonas con &ldquo;Hasta (km)&rdquo; (ej. hasta 2 km, hasta 5 km). La
+            distancia se mide en línea recta desde el local. Las zonas sin kilómetros son por nombre, como antes.
+          </p>
           <div className="caja-card">
             <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
               <div className="caja-field" style={{ flex: 1 }}>
@@ -133,6 +232,16 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
                   onChange={(e) => setNewZoneName(e.target.value)}
                   className="caja-input"
                   placeholder="Ej: Centro"
+                />
+              </div>
+              <div className="caja-field" style={{ flex: 1 }}>
+                <label>Hasta (km)</label>
+                <input
+                  type="number"
+                  value={newZoneKm}
+                  onChange={(e) => setNewZoneKm(e.target.value)}
+                  className="caja-input"
+                  placeholder="Opcional"
                 />
               </div>
               <div className="caja-field" style={{ flex: 1 }}>
@@ -150,12 +259,20 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
               </button>
             </div>
           </div>
+          {zoneError && <p style={{ color: "#b91c1c", fontSize: 12.5, marginTop: 6 }}>{zoneError}</p>}
           {zones.length > 0 && (
             <table className="m-table" style={{ marginTop: 10 }}>
               <tbody>
                 {zones.map((z) => (
                   <tr key={z.id}>
-                    <td>{z.name}</td>
+                    <td>
+                      {z.name}
+                      {z.maxKm !== null && (
+                        <span style={{ marginLeft: 8, fontSize: 12, color: "var(--text-dim)" }}>
+                          por distancia · hasta {z.maxKm} km
+                        </span>
+                      )}
+                    </td>
                     <td style={{ textAlign: "right" }}>{money(z.cost)}</td>
                     <td style={{ textAlign: "right" }}>
                       <button type="button" className="btn" onClick={() => removeZone(z.id)}>

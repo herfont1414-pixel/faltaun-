@@ -287,3 +287,12 @@ PWA (`public/icons/`) salen del trébol recortado del mismo logo.
   se puede verificar sin el hardware real (generación de los bytes,
   fallback al flujo normal cuando no corresponde), pero falta la prueba
   final contra la impresora física — ver la sección de arriba.
+
+## Envío por distancia (mapa de OpenStreetMap)
+
+En **Delivery → Zonas de envío** se marca la ubicación del local en el mapa y se cargan zonas con "Hasta (km)"
+(por ejemplo hasta 2 km $1.500, hasta 5 km $3.000). En el menú online el cliente escribe su dirección, toca
+"Ubicar en el mapa" (o ajusta el pin) y ve la distancia y el costo. El precio lo recalcula siempre el servidor;
+la distancia es en línea recta. Las zonas sin kilómetros siguen siendo zonas por nombre. Usa OpenStreetMap
+(Leaflet + Nominatim): no necesita claves ni tarjeta. Las búsquedas pasan por `/api/geocode`, que respeta el
+límite de 1 consulta por segundo de Nominatim.

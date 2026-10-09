@@ -16,6 +16,8 @@ export async function POST(request: NextRequest) {
   const fulfillment: Fulfillment = body.fulfillment === "delivery" ? "delivery" : "retiro";
   const customerAddress = body.customerAddress ? String(body.customerAddress).trim() : null;
   const deliveryZone = body.deliveryZone ? String(body.deliveryZone).trim() : null;
+  const deliveryLat = typeof body.deliveryLat === "number" ? body.deliveryLat : null;
+  const deliveryLng = typeof body.deliveryLng === "number" ? body.deliveryLng : null;
 
   if (!customerName || !customerPhone) {
     return NextResponse.json({ error: "Faltan tu nombre y tu WhatsApp" }, { status: 400 });
@@ -33,6 +35,8 @@ export async function POST(request: NextRequest) {
       fulfillment,
       customerAddress: fulfillment === "delivery" ? customerAddress : null,
       deliveryZone: fulfillment === "delivery" ? deliveryZone : null,
+      deliveryLat: fulfillment === "delivery" ? deliveryLat : null,
+      deliveryLng: fulfillment === "delivery" ? deliveryLng : null,
     });
     return NextResponse.json({ order });
   } catch (error) {

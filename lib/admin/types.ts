@@ -37,6 +37,8 @@ export interface Order {
   notes: string | null;
   partySize: number | null;
   waiter: string | null;
+  deliveryLat: number | null;
+  deliveryLng: number | null;
 }
 
 export interface OrderPayment {
@@ -51,6 +53,8 @@ export interface DeliveryZone {
   id: number;
   name: string;
   cost: number;
+  // Con valor es una zona "por distancia" (hasta N km del local); null es una zona por nombre.
+  maxKm: number | null;
 }
 
 export interface DeliveryCustomer {
@@ -103,6 +107,8 @@ export interface WebOrder {
   orderId: string | null;
   // Estado del pedido real vinculado ('abierta' | 'cerrada'); null si no hay.
   orderStatus: "abierta" | "cerrada" | null;
+  deliveryLat: number | null;
+  deliveryLng: number | null;
 }
 
 export interface AdminProduct {

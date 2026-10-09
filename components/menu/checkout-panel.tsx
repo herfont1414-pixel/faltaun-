@@ -5,12 +5,27 @@ import { X } from "lucide-react";
 import { useCart } from "@/components/menu/cart-context";
 import { buildOrderWhatsAppLink } from "@/lib/whatsapp";
 import { useBusinessConfig } from "@/lib/use-business-config";
+import { LocationPicker } from "@/components/geo/location-picker";
+import type { LatLng } from "@/lib/geo";
 
 interface Zone {
   id: number;
   name: string;
   cost: number;
 }
+
+interface DistanceInfo {
+  enabled: boolean;
+  origin?: LatLng;
+  rings?: { name: string; cost: number; maxKm: number }[];
+  maxKm?: number;
+}
+
+type Quote =
+  | { status: "ok"; km: number; zoneName: string; cost: number }
+  | { status: "out_of_range"; km: number; maxKm: number }
+  | { status: "unavailable" }
+  | null;
 
 const PHONE_KEY = "madero_customer_phone";
 const NAME_KEY = "madero_customer_name";
@@ -36,6 +51,9 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
   const [notes, setNotes] = useState("");
   const [zones, setZones] = useState<Zone[]>([]);
   const [zoneName, setZoneName] = useState("");
+  const [distance, setDistance] = useState<DistanceInfo>({ enabled: false });
+  const [point, setPoint] = useState<LatLng | null>(null);
+  const [quote, setQuote] = useState<Quote>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
@@ -51,8 +69,28 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
     }
     fetch("/api/zones")
       .then((res) => res.json())
-      .then((data: { zones: Zone[] }) => setZones(data.zones ?? []));
+      .then((data: { zones: Zone[]; distance?: DistanceInfo }) => {
+        setZones(data.zones ?? []);
+        setDistance(data.distance ?? { enabled: false });
+      });
   }, []);
+
+  // Vista previa del envío al marcar la dirección. El precio real lo vuelve a
+  // calcular el servidor al enviar el pedido.
+  useEffect(() => {
+    if (!distance.enabled || !point) {
+      setQuote(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/delivery-quote?lat=${point.lat}&lng=${point.lng}`)
+      .then((res) => res.json())
+      .then((data: Quote) => !cancelled && setQuote(data))
+      .catch(() => !cancelled && setQuote(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [distance.enabled, point?.lat, point?.lng]);
 
   async function lookupPhone(value: string) {
     setPhone(value);
@@ -67,7 +105,16 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
     }
   }
 
-  const shippingCost = fulfillment === "delivery" ? zones.find((z) => z.name === zoneName)?.cost ?? 0 : 0;
+  const byDistance = distance.enabled;
+  const shippingCost =
+    fulfillment !== "delivery"
+      ? 0
+      : byDistance
+        ? quote?.status === "ok"
+          ? quote.cost
+          : 0
+        : zones.find((z) => z.name === zoneName)?.cost ?? 0;
+  const resolvedZone = byDistance ? (quote?.status === "ok" ? quote.zoneName : null) : zoneName || null;
   const grandTotal = total + shippingCost;
   const timeLabel = slotLabel(scheduledTime);
 
@@ -79,6 +126,20 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
     if (fulfillment === "delivery" && !address.trim()) {
       setError("Completá la dirección de entrega");
       return;
+    }
+    if (fulfillment === "delivery" && byDistance) {
+      if (!point) {
+        setError("Marcá tu dirección en el mapa para calcular el envío");
+        return;
+      }
+      if (quote?.status === "out_of_range") {
+        setError(`Tu dirección queda fuera de la zona de reparto (hasta ${quote.maxKm} km)`);
+        return;
+      }
+      if (quote?.status !== "ok") {
+        setError("Esperá un momento: estamos calculando el envío");
+        return;
+      }
     }
     setLoading(true);
     setError("");
@@ -101,8 +162,9 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
         items: items.map((it) => ({ name: it.name, qty: it.qty })),
         fulfillment,
         customerAddress: fulfillment === "delivery" ? address : null,
-        deliveryZone: fulfillment === "delivery" ? zoneName || null : null,
-        shippingCost,
+        deliveryZone: fulfillment === "delivery" ? resolvedZone : null,
+        deliveryLat: fulfillment === "delivery" && byDistance ? point?.lat ?? null : null,
+        deliveryLng: fulfillment === "delivery" && byDistance ? point?.lng ?? null : null,
       }),
     });
     setLoading(false);
@@ -125,7 +187,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
       items,
       fulfillment,
       address: fulfillment === "delivery" ? address : null,
-      zone: fulfillment === "delivery" ? zoneName || null : null,
+      zone: fulfillment === "delivery" ? resolvedZone : null,
       scheduleLabel: timeLabel,
       subtotal: total,
       shippingCost,
@@ -235,19 +297,54 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
                   placeholder="Dirección de entrega (calle y número)"
                   className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2.5 text-sm text-stone-100 outline-none placeholder:text-stone-500"
                 />
-                {zones.length > 0 && (
-                  <select
-                    value={zoneName}
-                    onChange={(e) => setZoneName(e.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-base-card px-3 py-2.5 text-sm text-stone-100 outline-none"
-                  >
-                    <option value="">Elegí tu zona</option>
-                    {zones.map((z) => (
-                      <option key={z.id} value={z.name}>
-                        {z.name} · envío ${z.cost.toLocaleString("es-AR")}
-                      </option>
-                    ))}
-                  </select>
+                {byDistance ? (
+                  <div>
+                    <LocationPicker
+                      query={address}
+                      value={point}
+                      onChange={setPoint}
+                      origin={distance.origin}
+                      rings={distance.rings?.map((r) => r.maxKm)}
+                      buttonClassName="w-full rounded-lg border border-white/10 px-3 py-2.5 text-sm font-medium text-stone-200 transition hover:border-white/25 disabled:opacity-50"
+                      hintClassName="px-1 pt-1 text-xs text-stone-500"
+                      listClassName="mt-1 overflow-hidden rounded-lg border border-white/10 bg-base-card text-sm"
+                      itemClassName="block w-full px-3 py-2 text-left text-stone-200 hover:bg-white/5"
+                    />
+                    {quote?.status === "ok" && (
+                      <p className="mt-2 text-sm text-ember-soft">
+                        A {quote.km.toLocaleString("es-AR")} km · envío ${quote.cost.toLocaleString("es-AR")}
+                      </p>
+                    )}
+                    {quote?.status === "out_of_range" && (
+                      <p className="mt-2 text-sm text-red-400">
+                        Estás a {quote.km.toLocaleString("es-AR")} km: queda fuera de la zona de reparto (hasta{" "}
+                        {quote.maxKm} km).
+                      </p>
+                    )}
+                    {distance.rings && !quote && (
+                      <p className="mt-2 text-xs text-stone-500">
+                        Envío:{" "}
+                        {distance.rings
+                          .map((r) => `hasta ${r.maxKm} km $${r.cost.toLocaleString("es-AR")}`)
+                          .join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  zones.length > 0 && (
+                    <select
+                      value={zoneName}
+                      onChange={(e) => setZoneName(e.target.value)}
+                      className="w-full rounded-lg border border-white/10 bg-base-card px-3 py-2.5 text-sm text-stone-100 outline-none"
+                    >
+                      <option value="">Elegí tu zona</option>
+                      {zones.map((z) => (
+                        <option key={z.id} value={z.name}>
+                          {z.name} · envío ${z.cost.toLocaleString("es-AR")}
+                        </option>
+                      ))}
+                    </select>
+                  )
                 )}
               </>
             )}
