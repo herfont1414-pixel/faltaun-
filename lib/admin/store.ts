@@ -9,6 +9,7 @@ import type {
   DeliveryZone,
   AdminState,
   Order,
+  OrderChannel,
   OrderItem,
   OrderPayment,
   PaymentMethod,
@@ -65,6 +66,11 @@ async function getTables(): Promise<TableRow[]> {
   return rows.map((r) => ({ number: r.number, status: r.status, zone: r.zone, orderId: r.order_id }));
 }
 
+// Los pedidos anteriores a la columna "channel" se toman como mostrador.
+function channelOf(o: { channel?: string | null }): OrderChannel {
+  return o.channel === "web" || o.channel === "whatsapp" ? o.channel : "mostrador";
+}
+
 async function attachItems(orderRows: any[]): Promise<Order[]> {
   if (orderRows.length === 0) return [];
   const pool = getPool();
@@ -117,6 +123,14 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
       waiter: o.waiter ?? null,
       deliveryLat: o.delivery_lat === null || o.delivery_lat === undefined ? null : money(o.delivery_lat),
       deliveryLng: o.delivery_lng === null || o.delivery_lng === undefined ? null : money(o.delivery_lng),
+      channel: o.table_id ? null : channelOf(o),
+      paymentHint:
+        o.pay_method_hint === "efectivo" || o.pay_method_hint === "transferencia"
+          ? {
+              method: o.pay_method_hint,
+              cashGiven: o.cash_given === null || o.cash_given === undefined ? null : money(o.cash_given),
+            }
+          : null,
     };
   });
 }
@@ -140,7 +154,7 @@ export async function getState(): Promise<AdminState> {
       left join gestion_tables t on t.id = o.table_id
       where o.status = 'cerrada'
       order by o.closed_at desc
-      limit 5
+      limit 30
     `),
   ]);
 
@@ -407,10 +421,14 @@ export async function finalizeOrder(
   }
 }
 
-export async function createCounterOrder() {
+export async function createCounterOrder(
+  channel: "mostrador" | "whatsapp" = "mostrador",
+  customer: { name?: string | null; phone?: string | null } = {}
+) {
   const pool = getPool();
   const { rows } = await pool.query(
-    "insert into gestion_orders (origin) values ('mostrador') returning id"
+    "insert into gestion_orders (origin, channel, customer_name, customer_phone) values ('mostrador', $1, $2, $3) returning id",
+    [channel, customer.name?.trim() || null, customer.phone?.trim() || null]
   );
   return getOrderRow(rows[0].id);
 }
@@ -421,6 +439,7 @@ export async function createDeliveryOrder(customer: {
   address: string;
   zone: string | null;
   shippingCost: number;
+  channel?: "mostrador" | "whatsapp";
 }) {
   const pool = getPool();
   await pool.query(
@@ -431,10 +450,10 @@ export async function createDeliveryOrder(customer: {
   );
   const { rows } = await pool.query(
     `insert into gestion_orders
-       (origin, is_delivery, customer_name, customer_phone, customer_address, delivery_zone, shipping_cost, delivery_status)
-     values ('mostrador', true, $1, $2, $3, $4, $5, 'preparando')
+       (origin, is_delivery, customer_name, customer_phone, customer_address, delivery_zone, shipping_cost, delivery_status, channel)
+     values ('mostrador', true, $1, $2, $3, $4, $5, 'preparando', $6)
      returning id`,
-    [customer.name, customer.phone, customer.address, customer.zone, customer.shippingCost]
+    [customer.name, customer.phone, customer.address, customer.zone, customer.shippingCost, customer.channel ?? "whatsapp"]
   );
   return getOrderRow(rows[0].id);
 }

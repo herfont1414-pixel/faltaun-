@@ -14,6 +14,7 @@ interface HistoryOrder {
   items: HistoryItem[];
   total: number;
   status: "pendiente" | "confirmado" | "rechazado";
+  progress: "esperando" | "rechazado" | "preparando" | "listo" | "en_camino" | "entregado";
   fulfillment: "retiro" | "delivery";
   etaMinutes: number | null;
   createdAt: string;
@@ -21,11 +22,37 @@ interface HistoryOrder {
 
 const PHONE_KEY = "madero_customer_phone";
 
-const STATUS_LABEL: Record<HistoryOrder["status"], string> = {
-  pendiente: "Esperando confirmación",
-  confirmado: "Confirmado",
+// Pasos que ve el cliente, en orden. Retiro y delivery tienen el suyo.
+const STEPS = {
+  delivery: [
+    { key: "esperando", label: "Recibido" },
+    { key: "preparando", label: "Preparando" },
+    { key: "en_camino", label: "En camino" },
+    { key: "entregado", label: "Entregado" },
+  ],
+  retiro: [
+    { key: "esperando", label: "Recibido" },
+    { key: "preparando", label: "Preparando" },
+    { key: "listo", label: "Listo para retirar" },
+    { key: "entregado", label: "Entregado" },
+  ],
+} as const;
+
+const PROGRESS_LABEL: Record<HistoryOrder["progress"], string> = {
+  esperando: "Esperando confirmación del local",
   rechazado: "Rechazado",
+  preparando: "Preparando tu pedido",
+  listo: "Listo",
+  en_camino: "En camino",
+  entregado: "Entregado",
 };
+
+// "listo" en un delivery (ya preparado, esperando al repartidor) se muestra como preparando.
+function stepIndex(o: HistoryOrder) {
+  const steps = STEPS[o.fulfillment];
+  const key = o.fulfillment === "delivery" && o.progress === "listo" ? "preparando" : o.progress;
+  return Math.max(0, steps.findIndex((s) => s.key === key));
+}
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
@@ -51,14 +78,26 @@ export function OrderHistoryModal({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function load(value: string) {
+  async function load(value: string, silent = false) {
     if (value.trim().length < 6) return;
-    setLoading(true);
-    const res = await fetch(`/api/customer/${encodeURIComponent(value.trim())}/orders`);
-    const data = await res.json();
-    setOrders(data.orders ?? []);
-    setLoading(false);
+    if (!silent) setLoading(true);
+    try {
+      const res = await fetch(`/api/customer/${encodeURIComponent(value.trim())}/orders`);
+      const data = await res.json();
+      setOrders(data.orders ?? []);
+    } catch {
+      // sin conexión: se mantiene lo que ya se veía y se reintenta en el próximo ciclo.
+    }
+    if (!silent) setLoading(false);
   }
+
+  // Mientras el modal está abierto, el estado de los pedidos se refresca solo.
+  useEffect(() => {
+    if (!savedPhone) return;
+    const timer = setInterval(() => load(savedPhone, true), 15000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedPhone]);
 
   return (
     <div
@@ -111,17 +150,44 @@ export function OrderHistoryModal({ onClose }: { onClose: () => void }) {
                       </span>
                       <span
                         className={`rounded-full px-2 py-0.5 font-semibold ${
-                          o.status === "confirmado"
+                          o.progress === "entregado"
                             ? "bg-emerald-500/15 text-emerald-300"
-                            : o.status === "rechazado"
+                            : o.progress === "rechazado"
                               ? "bg-red-500/15 text-red-300"
-                              : "bg-white/10 text-stone-300"
+                              : o.progress === "esperando"
+                                ? "bg-white/10 text-stone-300"
+                                : "bg-ember/20 text-ember-soft"
                         }`}
                       >
-                        {STATUS_LABEL[o.status]}
-                        {o.status === "confirmado" && o.etaMinutes ? ` · ${o.etaMinutes} min` : ""}
+                        {o.progress === "listo" && o.fulfillment === "retiro"
+                          ? "Listo para retirar"
+                          : PROGRESS_LABEL[o.progress]}
+                        {(o.progress === "preparando" || o.progress === "esperando") && o.etaMinutes
+                          ? ` · ~${o.etaMinutes} min`
+                          : ""}
                       </span>
                     </div>
+                    {o.progress !== "rechazado" && o.status !== "pendiente" && (
+                      <div className="mt-3 flex items-start gap-1">
+                        {STEPS[o.fulfillment].map((step, i) => {
+                          const current = stepIndex(o);
+                          return (
+                            <div key={step.key} className="flex-1 text-center">
+                              <div
+                                className={`mx-auto h-1.5 rounded-full ${i <= current ? "bg-ember" : "bg-white/10"}`}
+                              />
+                              <div
+                                className={`mt-1 text-[10px] leading-tight ${
+                                  i === current ? "font-semibold text-stone-100" : "text-stone-500"
+                                }`}
+                              >
+                                {step.label}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     <div className="mt-2 space-y-0.5 text-sm text-stone-200">
                       {o.items.map((it, i) => (
                         <div key={i} className="flex justify-between">

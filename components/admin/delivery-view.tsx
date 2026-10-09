@@ -15,6 +15,7 @@ interface DeliveryViewProps {
     address: string;
     zone: string | null;
     shippingCost: number;
+    channel: "mostrador" | "whatsapp";
   }) => void;
   onOpenOrder: (orderId: string) => void;
 }
@@ -46,6 +47,7 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
   const [address, setAddress] = useState("");
   const [zoneName, setZoneName] = useState("");
   const [lookupMsg, setLookupMsg] = useState<string | null>(null);
+  const [channel, setChannel] = useState<"mostrador" | "whatsapp">("whatsapp");
   const [showZones, setShowZones] = useState(false);
   const [newZoneName, setNewZoneName] = useState("");
   const [newZoneCost, setNewZoneCost] = useState("");
@@ -121,6 +123,7 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
       address: address.trim(),
       zone: zoneName || null,
       shippingCost,
+      channel,
     });
     setPhone("");
     setName("");
@@ -311,6 +314,17 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
                 placeholder="Nombre del cliente"
               />
             </div>
+          </div>
+          <div className="caja-field">
+            <label>Cómo pidió</label>
+            <select
+              value={channel}
+              onChange={(e) => setChannel(e.target.value as "mostrador" | "whatsapp")}
+              className="caja-input"
+            >
+              <option value="whatsapp">WhatsApp / teléfono</option>
+              <option value="mostrador">En el local</option>
+            </select>
           </div>
           <div className="caja-field">
             <label>Dirección</label>

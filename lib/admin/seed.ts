@@ -220,6 +220,10 @@ export async function ensureSeeded() {
           "numeric(10, 2) not null default 0"
         );
         await ensureSqliteColumn(client, "gestion_web_orders", "order_id", "text references gestion_orders(id) on delete set null");
+        await ensureSqliteColumn(client, "gestion_orders", "channel", "text");
+        await ensureSqliteColumn(client, "gestion_orders", "pay_method_hint", "text");
+        await ensureSqliteColumn(client, "gestion_orders", "cash_given", "numeric(12, 2)");
+        await ensureSqliteColumn(client, "gestion_web_orders", "cash_given", "numeric(12, 2)");
         await ensureSqliteColumn(client, "gestion_business_config", "transfer_alias", "text");
         await ensureSqliteColumn(client, "gestion_business_config", "transfer_holder", "text");
         await ensureSqliteColumn(client, "gestion_web_orders", "payment_method", "text");

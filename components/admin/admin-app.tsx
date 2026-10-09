@@ -24,8 +24,14 @@ import { TableOpenModal } from "@/components/admin/table-open-modal";
 import { money } from "@/lib/admin/format";
 import { printOrderDocument } from "@/lib/print-client";
 import { changeCents, fromCents, toCents } from "@/lib/admin/payments";
+import { orderTitle } from "@/lib/admin/order-labels";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
 import type { Catalog, Order, OrderPayment, TableRow, Zone } from "@/lib/admin/types";
+
+// Venta de barra común (la del Mostrador Express): sin mesa, sin delivery y sin ser pedido web ni de WhatsApp.
+function isBarra(o: Order) {
+  return !o.tableNumber && !o.isDelivery && (o.channel ?? "mostrador") === "mostrador";
+}
 
 const MESA_STATUS_LABEL: Record<TableRow["status"], string> = {
   libre: "Libre",
@@ -266,8 +272,17 @@ export function AdminApp() {
     closePanel();
   }
 
-  async function newCounterOrder() {
-    const state = await safeCall(() => postJson("/api/admin/counter-order"));
+  async function newCounterOrder(
+    channel: "mostrador" | "whatsapp" = "mostrador",
+    customer?: { name: string; phone: string }
+  ) {
+    const state = await safeCall(() =>
+      postJson("/api/admin/counter-order", {
+        channel,
+        customerName: customer?.name ?? null,
+        customerPhone: customer?.phone ?? null,
+      })
+    );
     if (!state) return;
     applyState(state);
     setSelectedOrderId(state.result.id);
@@ -286,6 +301,7 @@ export function AdminApp() {
     address: string;
     zone: string | null;
     shippingCost: number;
+    channel?: "mostrador" | "whatsapp";
   }) {
     const state = await safeCall(() => postJson("/api/admin/delivery-order", customer));
     if (!state) return;
@@ -305,7 +321,8 @@ export function AdminApp() {
       showToast("Este pedido ya fue cobrado");
       return;
     }
-    setSection(order.isDelivery ? "delivery" : "mostrador");
+    // Todo lo que no es de mesa (web, WhatsApp, delivery, barra) se atiende desde Mostrador.
+    setSection("mostrador");
     setSelectedOrderId(order.id);
     setSelectedTableNumber(null);
   }
@@ -426,32 +443,28 @@ export function AdminApp() {
             />
           ) : section === "express" ? (
             <MostradorView
-              openOrders={data.openOrders.filter((o) => !o.isDelivery)}
-              closedOrders={data.closedOrders.filter((o) => !o.isDelivery)}
-              onNewOrder={newCounterOrder}
+              openOrders={data.openOrders.filter((o) => isBarra(o))}
+              closedOrders={data.closedOrders.filter((o) => isBarra(o))}
+              onNewOrder={() => newCounterOrder("mostrador")}
               onOpenOrder={openExistingOrder}
               title="Mostrador Express"
               newLabel="+ Venta rápida"
+              simple
             />
           ) : (
             <MostradorView
-              openOrders={data.openOrders.filter((o) => !o.isDelivery)}
-              closedOrders={data.closedOrders.filter((o) => !o.isDelivery)}
+              openOrders={data.openOrders.filter((o) => !o.tableNumber)}
+              closedOrders={data.closedOrders.filter((o) => !o.tableNumber)}
               onNewOrder={newCounterOrder}
               onOpenOrder={openExistingOrder}
+              onGoDelivery={() => setSection("delivery")}
             />
           )}
 
           <OrderPanel
             order={currentOrder}
             tableNumber={selectedTableNumber}
-            titleOverride={
-              currentOrder?.isDelivery
-                ? `Delivery · ${currentOrder.customerName}`
-                : currentOrder?.customerName && !currentOrder.tableNumber
-                  ? `Retiro · ${currentOrder.customerName}`
-                  : null
-            }
+            titleOverride={currentOrder ? orderTitle(currentOrder) : null}
             catalog={section === "express" ? expressCatalog : data.catalog}
             activeCategory={section === "express" ? "Todos" : activeCategory}
             onChangeCategory={setActiveCategory}

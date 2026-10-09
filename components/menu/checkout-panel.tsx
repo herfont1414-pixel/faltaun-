@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { useCart } from "@/components/menu/cart-context";
 import { buildOrderWhatsAppLink } from "@/lib/whatsapp";
 import { useBusinessConfig } from "@/lib/use-business-config";
+import { OrderHistoryModal } from "@/components/menu/order-history-modal";
 import { LocationPicker } from "@/components/geo/location-picker";
 import type { LatLng } from "@/lib/geo";
 
@@ -58,6 +59,8 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
   const [quote, setQuote] = useState<Quote>(null);
   const [payMethod, setPayMethod] = useState<PayMethod | null>(null);
   const [copied, setCopied] = useState(false);
+  const [cashGiven, setCashGiven] = useState("");
+  const [showTrack, setShowTrack] = useState(false);
   // El total se guarda al enviar: después el carrito se vacía y ya no se puede recalcular.
   const [sentTotal, setSentTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -148,6 +151,11 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
       setError("Elegí cómo vas a pagar: efectivo o transferencia");
       return;
     }
+    const cashNumber = payMethod === "efectivo" && cashGiven.trim() !== "" ? Number(cashGiven) : null;
+    if (cashNumber !== null && (!Number.isFinite(cashNumber) || cashNumber < grandTotal)) {
+      setError(`Con cuánto pagás tiene que alcanzar para el total ($${grandTotal.toLocaleString("es-AR")}). Podés dejarlo vacío.`);
+      return;
+    }
     if (fulfillment === "delivery" && byDistance) {
       if (!point) {
         setError("Marcá tu dirección en el mapa para calcular el envío");
@@ -183,6 +191,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
         items: items.map((it) => ({ name: it.name, qty: it.qty })),
         fulfillment,
         paymentMethod: payMethod,
+        cashGiven: cashNumber,
         customerAddress: fulfillment === "delivery" ? address : null,
         deliveryZone: fulfillment === "delivery" ? resolvedZone : null,
         deliveryLat: fulfillment === "delivery" && byDistance ? point?.lat ?? null : null,
@@ -216,6 +225,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
       total: grandTotal,
       notes: notes.trim() || null,
       paymentMethod: payMethod,
+      cashGiven: cashNumber,
       transferAlias: transferAlias || null,
       businessNumber: businessConfig?.whatsappNumber || undefined,
     });
@@ -261,6 +271,13 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
               </button>
             </div>
           )}
+          <button
+            type="button"
+            onClick={() => setShowTrack(true)}
+            className="mt-4 w-full rounded-full bg-ember px-5 py-2.5 text-sm font-medium text-base transition hover:bg-ember-soft"
+          >
+            Seguir mi pedido
+          </button>
           {payMethod === "efectivo" && (
             <p className="mt-3 text-xs text-stone-400">
               {fulfillment === "delivery"
@@ -435,11 +452,27 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
                 )}
               </div>
               {payMethod === "efectivo" && (
-                <p className="mt-2 px-1 text-xs text-stone-400">
-                  {fulfillment === "delivery"
-                    ? "Le pagás en efectivo al repartidor cuando te entregue el pedido."
-                    : "Pagás en efectivo en el local cuando retirás tu pedido."}
-                </p>
+                <div className="mt-2">
+                  <p className="px-1 text-xs text-stone-400">
+                    {fulfillment === "delivery"
+                      ? "Le pagás en efectivo al repartidor cuando te entregue el pedido."
+                      : "Pagás en efectivo en el local cuando retirás tu pedido."}
+                  </p>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={cashGiven}
+                    onChange={(e) => setCashGiven(e.target.value)}
+                    placeholder="¿Con cuánto pagás? (opcional, para llevarte el vuelto justo)"
+                    className="mt-2 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2.5 text-sm text-stone-100 outline-none placeholder:text-stone-500"
+                  />
+                  {cashGiven.trim() !== "" && Number(cashGiven) >= grandTotal && (
+                    <p className="mt-1 px-1 text-xs text-ember-soft">
+                      Vuelto: ${(Number(cashGiven) - grandTotal).toLocaleString("es-AR")}
+                    </p>
+                  )}
+                </div>
               )}
               {payMethod === "transferencia" && transferAlias && (
                 <div className="mt-2 rounded-lg border border-white/10 p-3">
@@ -504,6 +537,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
           </button>
         </>
       )}
+      {showTrack && <OrderHistoryModal onClose={() => setShowTrack(false)} />}
     </>
   );
 }

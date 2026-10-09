@@ -263,6 +263,7 @@ export function OrderPanel({
           {showPayment ? (
             <PaymentPicker
               total={order.total}
+              hint={order.paymentHint}
               onCancel={() => setShowPayment(false)}
               onConfirm={(payments, customerId, loyaltyPhone) => {
                 setShowPayment(false);

@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
   const customerAddress = body.customerAddress ? String(body.customerAddress).trim() : null;
   const deliveryZone = body.deliveryZone ? String(body.deliveryZone).trim() : null;
   const paymentMethod = body.paymentMethod === "efectivo" || body.paymentMethod === "transferencia" ? body.paymentMethod : null;
+  const cashGiven = typeof body.cashGiven === "number" ? body.cashGiven : null;
   const deliveryLat = typeof body.deliveryLat === "number" ? body.deliveryLat : null;
   const deliveryLng = typeof body.deliveryLng === "number" ? body.deliveryLng : null;
 
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
       customerAddress: fulfillment === "delivery" ? customerAddress : null,
       deliveryZone: fulfillment === "delivery" ? deliveryZone : null,
       paymentMethod,
+      cashGiven: paymentMethod === "efectivo" ? cashGiven : null,
       deliveryLat: fulfillment === "delivery" ? deliveryLat : null,
       deliveryLng: fulfillment === "delivery" ? deliveryLng : null,
     });
