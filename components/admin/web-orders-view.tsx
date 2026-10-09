@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { money } from "@/lib/admin/format";
 import { playBeep } from "@/lib/admin/beep";
 import { osmLink } from "@/lib/geo";
+import { buildOrderConfirmationMessage } from "@/lib/order-messages";
 import type { WebOrder } from "@/lib/admin/types";
 
 const ETA_OPTIONS = [15, 30, 45, 60];
@@ -84,7 +85,7 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
     if (!acceptTarget) return;
     const order = acceptTarget;
     setAcceptTarget(null);
-    const message = `¡Hola! Recibimos tu pedido en Madero Restó. Estará listo en aprox ${minutes} min.`;
+    const message = buildOrderConfirmationMessage(order, minutes);
     window.open(waLink(order.customerPhone, message), "_blank");
     respond(order, "confirmado", minutes).then((result) => {
       if (!result.ok) {
