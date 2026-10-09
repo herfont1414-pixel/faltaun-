@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Lock, Printer, Truck, UserCog } from "lucide-react";
 import type { AfipConfig, BusinessConfig } from "@/lib/admin/types";
 import type { Section } from "@/lib/admin/client-types";
+import { MenuSpecialCard } from "@/components/admin/menu-special-card";
 
 interface ConfiguracionViewProps {
   onGoTo: (section: Section) => void;
@@ -188,6 +189,8 @@ export function ConfiguracionView({ onGoTo }: ConfiguracionViewProps) {
           </div>
         </div>
       </div>
+
+      <MenuSpecialCard />
 
       <div className="m-section">
         <div className="m-section-title">Facturación (AFIP)</div>
