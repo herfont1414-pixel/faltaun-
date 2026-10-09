@@ -253,6 +253,16 @@ armado puede tardar unos minutos antes de que responda.
 - Para quitarlo: `MaderoSys-Quitar-Inicio-Automatico.bat` (deja un archivo
   `.sin-inicio-automatico`; borrarlo y abrir el lanzador lo vuelve a activar).
 
+### Acceso directo en el Escritorio
+
+`MaderoSys-Iniciar.bat` crea **una sola vez** un acceso directo **MaderoSys** (con el trébol)
+en el Escritorio de Windows (`scripts/acceso-directo.mjs`). Al abrirlo, MaderoSys se muestra en
+una **ventana propia**, tipo programa, sin pestañas ni barra de direcciones (Edge o Chrome en
+modo `--app`; si no hay ninguno, el navegador de siempre). Si el servidor todavía no está
+andando, el acceso directo arranca primero el lanzador completo, que abre la ventana al
+terminar. Si alguien borra el acceso directo, no se vuelve a crear solo: para que vuelva,
+borrar el archivo `.acceso-directo-creado` y abrir `MaderoSys-Iniciar.bat`.
+
 ### Impresión directa (ESC/POS) en modo local
 
 En `/admin` → **Impresión** hay una sección "Impresión directa (ESC/POS)" que,
