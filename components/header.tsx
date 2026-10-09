@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Receipt, Star } from "lucide-react";
@@ -8,6 +8,15 @@ import { OrderHistoryModal } from "@/components/menu/order-history-modal";
 
 export function Header() {
   const [showHistory, setShowHistory] = useState(false);
+  // En la portada ya está el logo grande: el chico aparece al bajar.
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 180);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <>
@@ -19,7 +28,9 @@ export function Header() {
             width={480}
             height={231}
             priority
-            className="h-11 w-auto"
+            className={`h-11 w-auto [clip-path:inset(2%_0_0_0)] transition-opacity duration-200 ${
+              scrolled ? "opacity-100" : "opacity-0"
+            }`}
           />
           <div className="flex items-center gap-2">
             <Link

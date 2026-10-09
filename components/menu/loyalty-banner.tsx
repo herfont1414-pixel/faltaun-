@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Gift, Star, X } from "lucide-react";
+import { ChevronRight, Gift, Star, X } from "lucide-react";
 
 const PHONE_KEY = "madero_customer_phone";
 const LOYALTY_THRESHOLD = 10;
@@ -26,24 +26,20 @@ export function LoyaltyBanner() {
 
   return (
     <>
-      <div className="mx-auto mt-6 max-w-3xl px-5">
+      <div className="mx-auto mt-3 max-w-3xl px-5">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex w-full items-center gap-3.5 rounded-2xl border border-ember/25 bg-gradient-to-r from-ember/15 via-ember/10 to-transparent p-4 text-left transition hover:border-ember/40 active:scale-[0.99]"
+          className="flex w-full items-center gap-3.5 rounded-2xl border border-ember/25 bg-base-card px-4 py-3 text-left transition hover:border-ember/50 active:scale-[0.99]"
         >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ember/20 text-ember-soft">
-            <Star className="h-5 w-5" fill="currentColor" />
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ember/40 bg-ember/10 text-ember-soft">
+            <Star className="h-5 w-5" fill="currentColor" strokeWidth={1.5} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-stone-50">Sumate a Fidelidad Madero</span>
-            <span className="block text-xs text-stone-400">
-              Ingresá tu WhatsApp y empezá a ganar premios con cada pedido
-            </span>
+            <span className="block text-sm font-semibold text-stone-50">Sumate a la Fidelidad Madero</span>
+            <span className="block text-xs text-stone-400">Acumulá sellos y ganá premios</span>
           </span>
-          <span className="shrink-0 rounded-full bg-ember px-3.5 py-2 text-xs font-semibold text-base">
-            Quiero mi tarjeta
-          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-ember-soft" />
         </button>
       </div>
 

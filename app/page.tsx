@@ -20,7 +20,7 @@ export default async function HomePage() {
         <Hero />
         <DeliveryToggleCard />
         <LoyaltyBanner />
-        <div className="mt-8">
+        <div className="mt-2">
           <MenuExperience items={items} highlights={highlights} />
         </div>
         <div className="mx-auto max-w-3xl">

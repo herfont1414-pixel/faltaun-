@@ -40,6 +40,8 @@ export function MenuSection({ items, highlights }: MenuSectionProps) {
   const [query, setQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const searchRef = useRef<HTMLInputElement>(null);
+  const wasSearching = useRef(false);
 
   // Destacados: mismos productos y precios del catálogo; los agotados no se muestran.
   const popular = useMemo(() => {
@@ -60,6 +62,14 @@ export function MenuSection({ items, highlights }: MenuSectionProps) {
       }))
       .filter((group) => group.items.length > 0);
   }, [items, categories, q]);
+
+  // Al empezar a buscar, los destacados de arriba se ocultan: se lleva la vista al buscador
+  // para que el contenido no "salte" bajo el dedo.
+  useEffect(() => {
+    const searching = q !== "";
+    if (searching && !wasSearching.current) searchRef.current?.scrollIntoView({ block: "start" });
+    wasSearching.current = searching;
+  }, [q]);
 
   function goToCategory(category: string) {
     setActiveCategory(category);
@@ -85,14 +95,17 @@ export function MenuSection({ items, highlights }: MenuSectionProps) {
 
   return (
     <section id="menu" className="py-6">
+      {!q && <Highlights popular={popular} special={special} onSelect={setSelectedItem} />}
+
       <div className="px-5">
-        <h2 className="font-display text-2xl text-stone-50">Nuestro menú</h2>
-        <p className="mt-1 text-sm text-stone-400">Elegí una categoría para explorar la carta.</p>
+        <h2 className="font-display text-2xl text-stone-50">Explorá nuestro menú</h2>
+        <p className="mt-1 text-sm text-stone-400">Elegí una categoría para ver la carta.</p>
 
         <div className="relative mt-4">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-500" />
           <input
             value={query}
+            ref={searchRef}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar en el menú..."
             className="w-full rounded-full border border-white/10 bg-base-card py-2.5 pl-10 pr-4 text-sm text-stone-100 outline-none placeholder:text-stone-500"
@@ -100,9 +113,7 @@ export function MenuSection({ items, highlights }: MenuSectionProps) {
         </div>
       </div>
 
-      {!q && <Highlights popular={popular} special={special} onSelect={setSelectedItem} />}
-
-      <div className="mt-4">
+      <div id="categorias" className="mt-4 scroll-mt-20">
         <CategoryFilter categories={categories} active={activeCategory} onChange={goToCategory} />
       </div>
 
