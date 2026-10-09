@@ -12,11 +12,13 @@ export async function getKitchenTickets(): Promise<KitchenTicket[]> {
     kitchen_sent_at: string;
     is_delivery: boolean;
     customer_name: string | null;
+    web_order_id: string | null;
   }>(
     `select o.id, o.origin, t.number as table_number, o.kitchen_status, o.kitchen_sent_at,
-            o.is_delivery, o.customer_name
+            o.is_delivery, o.customer_name, w.id as web_order_id
      from gestion_orders o
      left join gestion_tables t on t.id = o.table_id
+     left join gestion_web_orders w on w.order_id = o.id
      where o.status = 'abierta' and o.kitchen_status is not null and o.kitchen_status != 'despachado'
      order by o.kitchen_sent_at`
   );
@@ -43,9 +45,9 @@ export async function getKitchenTickets(): Promise<KitchenTicket[]> {
       orderTickets.push({
         id: o.id,
         source: "orden",
-        origin: o.is_delivery ? "delivery" : o.origin,
+        origin: o.is_delivery ? "delivery" : o.web_order_id ? "web" : o.origin,
         tableNumber: o.table_number,
-        customerName: o.is_delivery ? o.customer_name : null,
+        customerName: o.is_delivery || o.web_order_id ? o.customer_name : null,
         items,
         kitchenStatus: o.kitchen_status,
         sentAt: o.kitchen_sent_at,
@@ -62,7 +64,7 @@ export async function getKitchenTickets(): Promise<KitchenTicket[]> {
   }>(
     `select id, customer_name, items, kitchen_status, kitchen_sent_at
      from gestion_web_orders
-     where kitchen_status is not null and kitchen_status != 'despachado'
+     where kitchen_status is not null and kitchen_status != 'despachado' and order_id is null
      order by kitchen_sent_at`
   );
   const webTickets: KitchenTicket[] = webRows.map((w) => {

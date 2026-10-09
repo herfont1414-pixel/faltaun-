@@ -12,8 +12,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
   const { status, etaMinutes } = await request.json();
   try {
-    await respondWebOrder(params.id, status, etaMinutes ?? null);
-    return NextResponse.json({ ok: true });
+    const { orderId } = await respondWebOrder(params.id, status, etaMinutes ?? null);
+    return NextResponse.json({ ok: true, orderId });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error inesperado";
     return NextResponse.json({ error: message }, { status: 400 });

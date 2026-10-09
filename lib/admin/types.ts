@@ -99,6 +99,10 @@ export interface WebOrder {
   status: WebOrderStatus;
   etaMinutes: number | null;
   createdAt: string;
+  // Pedido real (cobrable) que se creó al aceptarlo; null si todavía no existe.
+  orderId: string | null;
+  // Estado del pedido real vinculado ('abierta' | 'cerrada'); null si no hay.
+  orderStatus: "abierta" | "cerrada" | null;
 }
 
 export interface AdminProduct {

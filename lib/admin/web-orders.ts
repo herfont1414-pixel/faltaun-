@@ -1,4 +1,5 @@
 import { getPool } from "@/lib/admin/db";
+import type { DbClient } from "@/lib/admin/db";
 import { addStamp } from "@/lib/admin/loyalty";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import type { Fulfillment, WebOrder, WebOrderStatus } from "@/lib/admin/types";
@@ -22,6 +23,8 @@ function mapRow(row: any): WebOrder {
     status: row.status,
     etaMinutes: row.eta_minutes,
     createdAt: row.created_at,
+    orderId: row.order_id ?? null,
+    orderStatus: row.order_status ?? null,
   };
 }
 
@@ -117,57 +120,180 @@ export async function listWebOrdersByPhone(phone: string, limit = 15): Promise<W
 
 export async function listWebOrders(status?: WebOrderStatus): Promise<WebOrder[]> {
   const pool = getPool();
+  const base = `select w.*, o.status as order_status
+    from gestion_web_orders w
+    left join gestion_orders o on o.id = w.order_id`;
   const { rows } = status
-    ? await pool.query("select * from gestion_web_orders where status = $1 order by created_at desc", [
-        status,
-      ])
-    : await pool.query("select * from gestion_web_orders order by created_at desc limit 30");
+    ? await pool.query(`${base} where w.status = $1 order by w.created_at desc`, [status])
+    : await pool.query(`${base} order by w.created_at desc limit 30`);
   return rows.map(mapRow);
 }
 
-export async function respondWebOrder(id: string, status: WebOrderStatus, etaMinutes: number | null) {
+type WebOrderItemRow = { name: string; qty: number; price: number };
+
+function parseItems(raw: unknown): WebOrderItemRow[] {
+  return (typeof raw === "string" ? JSON.parse(raw) : raw) as WebOrderItemRow[];
+}
+
+// Crea el pedido real (gestion_orders + ítems) que corresponde a un pedido web
+// aceptado. Es lo que permite prepararlo, mandarlo a cocina, marcarlo "en
+// camino"/"entregado", cobrarlo y cerrarlo como cualquier otro pedido, y que
+// entre en caja y reportes. Los precios son los que se le mostraron al cliente
+// (la foto del pedido web), no los de hoy. Corre dentro de la transacción de
+// quien lo llama.
+async function createPosOrderForWeb(
+  client: DbClient,
+  web: {
+    id: string;
+    customer_name: string;
+    customer_phone: string;
+    customer_address: string | null;
+    fulfillment: string;
+    delivery_zone: string | null;
+    shipping_cost: string | number | null;
+    notes: string | null;
+    items: unknown;
+    kitchen_status?: string | null;
+  },
+  kitchenStatus: string | null
+): Promise<string> {
+  const isDelivery = web.fulfillment === "delivery";
+  const notes = ["Pedido web", web.notes?.trim()].filter(Boolean).join(" · ");
+  const { rows } = await client.query<{ id: string }>(
+    `insert into gestion_orders
+       (origin, is_delivery, customer_name, customer_phone, customer_address, delivery_zone, shipping_cost,
+        delivery_status, notes, kitchen_status, kitchen_sent_at)
+     values ('mostrador', ${isDelivery ? "true" : "false"}, $1, $2, $3, $4, $5, $6, $7, $8, now())
+     returning id`,
+    [
+      web.customer_name,
+      web.customer_phone,
+      isDelivery ? web.customer_address : null,
+      isDelivery ? web.delivery_zone : null,
+      isDelivery ? money(web.shipping_cost ?? 0) : 0,
+      isDelivery ? "preparando" : null,
+      notes,
+      kitchenStatus,
+    ]
+  );
+  const orderId = rows[0].id;
+
+  for (const it of parseItems(web.items)) {
+    const { rows: prodRows } = await client.query<{ id: number }>(
+      "select id from gestion_products where name = $1",
+      [it.name]
+    );
+    await client.query(
+      `insert into gestion_order_items (order_id, product_name, price, qty, sent_to_kitchen, product_id)
+       values ($1, $2, $3, $4, true, $5)`,
+      [orderId, it.name, it.price, it.qty, prodRows[0]?.id ?? null]
+    );
+  }
+  await client.query("update gestion_web_orders set order_id = $2 where id = $1", [web.id, orderId]);
+  return orderId;
+}
+
+// Devuelve el id del pedido real vinculado al pedido web, creándolo si hace
+// falta. Sirve para los pedidos que se aceptaron ANTES de que existiera el
+// vínculo: ahí el stock ya se había descontado al aceptar, así que se repone
+// para que el cobro (que es donde se descuenta ahora) no lo reste dos veces.
+export async function ensurePosOrderForWebOrder(webOrderId: string): Promise<string> {
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const { rows } = await client.query(
+      "select * from gestion_web_orders where id = $1 for update",
+      [webOrderId]
+    );
+    const web = rows[0];
+    if (!web) throw new Error("Pedido no encontrado");
+    if (web.status !== "confirmado") throw new Error("Solo se pueden abrir los pedidos aceptados");
+
+    if (web.order_id) {
+      const { rows: existing } = await client.query("select id from gestion_orders where id = $1", [web.order_id]);
+      if (existing[0]) {
+        await client.query("commit");
+        return web.order_id;
+      }
+    }
+
+    for (const it of parseItems(web.items)) {
+      const { rows: prodRows } = await client.query<{ id: number; stock_qty: number | null }>(
+        "select id, stock_qty from gestion_products where name = $1 for update",
+        [it.name]
+      );
+      const product = prodRows[0];
+      if (!product || product.stock_qty === null) continue;
+      const { rows: moved } = await client.query(
+        `select 1 as found from gestion_stock_movements
+         where reference_type = 'web_order' and reference_id = $1 and product_id = $2 and type = 'venta'`,
+        [webOrderId, product.id]
+      );
+      if (!moved[0]) continue;
+      await client.query("update gestion_products set stock_qty = $2, in_stock = true where id = $1", [
+        product.id,
+        product.stock_qty + it.qty,
+      ]);
+      await recordStockMovement(
+        {
+          productId: product.id,
+          type: "devolucion",
+          quantity: it.qty,
+          referenceType: "web_order",
+          referenceId: webOrderId,
+          note: "El stock se descuenta al cobrar el pedido",
+        },
+        client
+      );
+    }
+
+    // Si en la cocina ya figuraba como despachado, el pedido real también.
+    const orderId = await createPosOrderForWeb(client, web, web.kitchen_status ?? null);
+    await client.query("commit");
+    return orderId;
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function respondWebOrder(
+  id: string,
+  status: WebOrderStatus,
+  etaMinutes: number | null
+): Promise<{ orderId: string | null }> {
   const pool = getPool();
   if (status === "confirmado") {
     const client = await pool.connect();
+    let orderId: string | null = null;
     try {
       await client.query("begin");
 
-      const { rows: orderRows } = await client.query(
-        "select status, customer_phone, customer_name, total, items from gestion_web_orders where id = $1 for update",
-        [id]
-      );
-      if (!orderRows[0]) throw new Error("Pedido no encontrado");
+      const { rows: orderRows } = await client.query("select * from gestion_web_orders where id = $1 for update", [id]);
+      const web = orderRows[0];
+      if (!web) throw new Error("Pedido no encontrado");
       // Idempotencia: si ya estaba confirmado (doble click, reintento de
-      // red), no se vuelve a descontar stock ni se reprocesa nada.
-      if (orderRows[0].status !== "pendiente") return;
+      // red), no se vuelve a crear nada.
+      if (web.status !== "pendiente") {
+        await client.query("rollback");
+        return { orderId: web.order_id ?? null };
+      }
 
-      const items = typeof orderRows[0].items === "string" ? JSON.parse(orderRows[0].items) : orderRows[0].items;
-
-      // Re-validar y descontar stock recién ahora, al confirmar (no en la
-      // creación, donde el pedido todavía puede ser rechazado). Se bloquea
-      // cada producto para que dos pedidos web confirmados a la vez no
-      // sobrevendan el mismo stock; si no alcanza, se rechaza toda la
-      // confirmación (igual criterio que finalizeOrder en Fase 4).
-      for (const it of items as { name: string; qty: number }[]) {
-        const { rows: prodRows } = await client.query<{ id: number; stock_qty: number | null }>(
-          "select id, stock_qty from gestion_products where name = $1 for update",
+      // Al aceptar solo se VERIFICA que haya stock; el descuento se hace al
+      // cobrar (finalizeOrder), igual que en mesas y mostrador. Así el stock
+      // se descuenta una sola vez y, si el pedido no se cobra, no se pierde.
+      for (const it of parseItems(web.items)) {
+        const { rows: prodRows } = await client.query<{ stock_qty: number | null }>(
+          "select stock_qty from gestion_products where name = $1",
           [it.name]
         );
         const product = prodRows[0];
-        if (!product || product.stock_qty === null) continue;
-        const newQty = product.stock_qty - it.qty;
-        if (newQty < 0) {
+        if (product && product.stock_qty !== null && product.stock_qty < it.qty) {
           throw new Error(`No hay suficiente stock de ${it.name} para confirmar este pedido`);
         }
-        await client.query("update gestion_products set stock_qty = $2, in_stock = $3 where id = $1", [
-          product.id,
-          newQty,
-          newQty > 0,
-        ]);
-        await recordStockMovement(
-          { productId: product.id, type: "venta", quantity: -it.qty, referenceType: "web_order", referenceId: id },
-          client
-        );
       }
 
       await client.query(
@@ -177,10 +303,11 @@ export async function respondWebOrder(id: string, status: WebOrderStatus, etaMin
          where id = $1`,
         [id, status, etaMinutes]
       );
+      orderId = await createPosOrderForWeb(client, web, "pendiente");
 
       await client.query("commit");
     } catch (error) {
-      await client.query("rollback");
+      await client.query("rollback").catch(() => {});
       throw error;
     } finally {
       client.release();
@@ -197,10 +324,11 @@ export async function respondWebOrder(id: string, status: WebOrderStatus, etaMin
         origin: "web",
       });
     }
-    return;
+    return { orderId };
   }
   await pool.query(
     "update gestion_web_orders set status = $2, eta_minutes = $3, responded_at = now() where id = $1",
     [id, status, etaMinutes]
   );
+  return { orderId: null };
 }

@@ -115,7 +115,7 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
     <div className="mostrador">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <h1>Delivery</h1>
-        <button type="button" className="btn" onClick={() => setShowZones((v) => !v)}>
+        <button type="button" className="btn" style={{ flex: "none", padding: "10px 16px" }} onClick={() => setShowZones((v) => !v)}>
           Zonas de envío
         </button>
       </div>
