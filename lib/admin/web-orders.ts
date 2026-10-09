@@ -4,7 +4,13 @@ import { addStamp } from "@/lib/admin/loyalty";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { quoteDelivery } from "@/lib/admin/delivery-quote";
 import { isValidLatLng } from "@/lib/geo";
-import type { Fulfillment, WebOrder, WebOrderStatus } from "@/lib/admin/types";
+import { getBusinessConfig } from "@/lib/admin/business-config";
+import type { Fulfillment, WebOrder, WebOrderStatus, WebPaymentMethod } from "@/lib/admin/types";
+
+export const PAYMENT_LABEL: Record<WebPaymentMethod, string> = {
+  efectivo: "Efectivo",
+  transferencia: "Transferencia",
+};
 
 function money(value: string | number) {
   return typeof value === "string" ? parseFloat(value) : value;
@@ -27,6 +33,7 @@ function mapRow(row: any): WebOrder {
     createdAt: row.created_at,
     deliveryLat: row.delivery_lat === null || row.delivery_lat === undefined ? null : money(row.delivery_lat),
     deliveryLng: row.delivery_lng === null || row.delivery_lng === undefined ? null : money(row.delivery_lng),
+    paymentMethod: row.payment_method === "efectivo" || row.payment_method === "transferencia" ? row.payment_method : null,
     orderId: row.order_id ?? null,
     orderStatus: row.order_status ?? null,
   };
@@ -43,8 +50,21 @@ export async function createWebOrder(input: {
   // Dónde marcó el cliente su dirección en el mapa (opcional).
   deliveryLat?: number | null;
   deliveryLng?: number | null;
+  // Cómo va a pagar. Opcional solo por compatibilidad con navegadores con la versión vieja del menú.
+  paymentMethod?: WebPaymentMethod | null;
 }): Promise<WebOrder> {
   const pool = getPool();
+
+  // Solo existen efectivo y transferencia (el link de pago no se usa). La
+  // transferencia exige que el local haya cargado su alias, para que el
+  // cliente no se quede sin saber a dónde transferir.
+  const paymentMethod = input.paymentMethod ?? null;
+  if (paymentMethod !== null && paymentMethod !== "efectivo" && paymentMethod !== "transferencia") {
+    throw new Error("Elegí cómo vas a pagar: efectivo o transferencia");
+  }
+  if (paymentMethod === "transferencia" && !(await getBusinessConfig()).transferAlias.trim()) {
+    throw new Error("La transferencia no está disponible por ahora. Elegí efectivo.");
+  }
 
   const { rows: productRows } = await pool.query<{
     name: string;
@@ -124,8 +144,8 @@ export async function createWebOrder(input: {
   const { rows } = await pool.query(
     `insert into gestion_web_orders
        (customer_name, customer_phone, customer_address, fulfillment, delivery_zone, shipping_cost, notes, items, total,
-        delivery_lat, delivery_lng)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        delivery_lat, delivery_lng, payment_method)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      returning *`,
     [
       input.customerName,
@@ -139,6 +159,7 @@ export async function createWebOrder(input: {
       total,
       deliveryLat,
       deliveryLng,
+      paymentMethod,
     ]
   );
   return mapRow(rows[0]);
@@ -189,13 +210,22 @@ async function createPosOrderForWeb(
     delivery_zone: string | null;
     shipping_cost: string | number | null;
     notes: string | null;
+    payment_method?: string | null;
     items: unknown;
     kitchen_status?: string | null;
   },
   kitchenStatus: string | null
 ): Promise<string> {
   const isDelivery = web.fulfillment === "delivery";
-  const notes = ["Pedido web", web.notes?.trim()].filter(Boolean).join(" · ");
+  const payNote =
+    web.payment_method === "transferencia"
+      ? "Paga: transferencia (verificar comprobante)"
+      : web.payment_method === "efectivo"
+        ? isDelivery
+          ? "Paga: efectivo al recibir"
+          : "Paga: efectivo al retirar"
+        : null;
+  const notes = ["Pedido web", payNote, web.notes?.trim()].filter(Boolean).join(" · ");
   const { rows } = await client.query<{ id: string }>(
     `insert into gestion_orders
        (origin, is_delivery, customer_name, customer_phone, customer_address, delivery_zone, shipping_cost,

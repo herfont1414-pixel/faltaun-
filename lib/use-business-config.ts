@@ -7,6 +7,8 @@ export interface PublicBusinessConfig {
   address: string;
   hours: string;
   whatsappNumber: string;
+  transferAlias: string;
+  transferHolder: string;
 }
 
 export function useBusinessConfig() {

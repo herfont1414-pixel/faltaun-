@@ -159,6 +159,18 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
                 <span className={`pill ${order.fulfillment === "delivery" ? "encurso" : "cerrada"}`}>
                   {order.fulfillment === "delivery" ? "Delivery" : "Retira en el local"}
                 </span>
+                {order.paymentMethod && (
+                  <span
+                    className={`pill ${order.paymentMethod === "transferencia" ? "encurso" : "cerrada"}`}
+                    style={{ marginLeft: 8 }}
+                  >
+                    {order.paymentMethod === "transferencia"
+                      ? "Transferencia · pedile el comprobante"
+                      : order.fulfillment === "delivery"
+                        ? "Efectivo al recibir"
+                        : "Efectivo al retirar"}
+                  </span>
+                )}
                 {order.fulfillment === "delivery" && order.customerAddress && (
                   <span style={{ marginLeft: 8, color: "var(--text-dim)" }}>
                     {order.customerAddress}

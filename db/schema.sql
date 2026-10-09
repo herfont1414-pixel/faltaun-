@@ -159,6 +159,8 @@ alter table gestion_web_orders add column if not exists shipping_cost numeric(10
 -- Al aceptar un pedido web se crea el pedido real (gestion_orders) que se
 -- prepara, se despacha y se cobra desde el panel; este es el vínculo.
 alter table gestion_web_orders add column if not exists order_id uuid references gestion_orders(id) on delete set null;
+-- Cómo dijo el cliente que va a pagar al hacer el pedido ('efectivo' | 'transferencia').
+alter table gestion_web_orders add column if not exists payment_method text;
 alter table gestion_web_orders add column if not exists delivery_lat double precision;
 alter table gestion_web_orders add column if not exists delivery_lng double precision;
 alter table gestion_orders add column if not exists delivery_lat double precision;
@@ -327,6 +329,10 @@ create table if not exists gestion_business_config (
 alter table gestion_business_config add column if not exists logo_url text;
 
 -- Ubicación del local (punto de partida del envío por distancia).
+-- Datos para que el cliente transfiera al hacer el pedido online.
+alter table gestion_business_config add column if not exists transfer_alias text;
+alter table gestion_business_config add column if not exists transfer_holder text;
+
 alter table gestion_business_config add column if not exists latitude double precision;
 alter table gestion_business_config add column if not exists longitude double precision;
 

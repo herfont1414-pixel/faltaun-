@@ -133,6 +133,35 @@ export function ConfiguracionView({ onGoTo }: ConfiguracionViewProps) {
           </label>
 
           <label style={{ fontSize: 12.5, fontWeight: 600 }}>
+            Alias para transferencias
+            <input
+              defaultValue={business.transferAlias}
+              onBlur={(e) => saveBusiness({ transferAlias: e.target.value })}
+              placeholder="Ej: madero.resto"
+              className="caja-input"
+              style={{ marginTop: 6, width: "100%" }}
+            />
+            <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "var(--text-faint)" }}>
+              Lo ve el cliente en el menú online cuando elige pagar por transferencia. Si se deja vacío, la
+              opción de transferencia no aparece.
+            </span>
+          </label>
+
+          <label style={{ fontSize: 12.5, fontWeight: 600 }}>
+            Titular de la cuenta (opcional)
+            <input
+              defaultValue={business.transferHolder}
+              onBlur={(e) => saveBusiness({ transferHolder: e.target.value })}
+              placeholder="Ej: Hernán Fontana"
+              className="caja-input"
+              style={{ marginTop: 6, width: "100%" }}
+            />
+            <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "var(--text-faint)" }}>
+              Se muestra junto al alias para que el cliente confirme que transfiere a la cuenta correcta.
+            </span>
+          </label>
+
+          <label style={{ fontSize: 12.5, fontWeight: 600 }}>
             Logo (URL)
             <input
               defaultValue={business.logoUrl}
