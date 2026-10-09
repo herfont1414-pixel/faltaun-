@@ -34,15 +34,29 @@ const MESA_STATUS_LABEL: Record<TableRow["status"], string> = {
   cobrando: "Cobrando",
 };
 
+// Si la sesión venció o no existe (por ejemplo, la cookie quedó de cuando esta PC
+// usaba otra base de datos), se vuelve al login en vez de romper la pantalla.
+function goToLogin() {
+  window.location.href = "/admin/login";
+}
+
+async function readJson(res: Response) {
+  if (res.status === 401) {
+    goToLogin();
+    throw new Error("La sesión venció. Volvé a entrar con tu PIN.");
+  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Error inesperado");
+  return data;
+}
+
 async function postJson(url: string, body?: unknown) {
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Error inesperado");
-  return data;
+  return readJson(res);
 }
 
 async function patchJson(url: string, body?: unknown) {
@@ -51,14 +65,13 @@ async function patchJson(url: string, body?: unknown) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Error inesperado");
-  return data;
+  return readJson(res);
 }
 
 export function AdminApp() {
   const [data, setData] = useState<AdminStateResponse | null>(null);
   const [notConfigured, setNotConfigured] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [section, setSection] = useState<Section>("inicio");
   const [zone, setZone] = useState<Zone>("salon");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -71,15 +84,27 @@ export function AdminApp() {
 
   useEffect(() => {
     fetch("/api/admin/state")
-      .then((res) => res.json())
-      .then((state: AdminStateResponse & { notConfigured?: boolean }) => {
+      .then(async (res) => {
+        if (res.status === 401) {
+          goToLogin();
+          return null;
+        }
+        return (await res.json()) as AdminStateResponse & { notConfigured?: boolean; error?: string };
+      })
+      .then((state) => {
+        if (!state) return;
         if (state.notConfigured) {
           setNotConfigured(true);
           return;
         }
+        if (!state.catalog) {
+          setLoadError(state.error ?? "No se pudo cargar el panel");
+          return;
+        }
         setData(state);
         setActiveCategory(Object.keys(state.catalog)[0] ?? "");
-      });
+      })
+      .catch(() => setLoadError("No se pudo conectar con el servidor"));
   }, []);
 
   const showToast = useCallback((msg: string) => {
@@ -273,6 +298,17 @@ export function AdminApp() {
     if (!selectedOrderId) return;
     const state = await safeCall(() => patchJson(`/api/admin/delivery-order/${selectedOrderId}`, { status }));
     if (state) applyState(state);
+  }
+
+  if (loadError) {
+    return (
+      <div className="admin-root">
+        <div className="placeholder-view">
+          <div className="pv-title">No se pudo abrir el panel</div>
+          <div className="pv-sub">{loadError}. Actualizá la página; si sigue igual, revisá la conexión a internet.</div>
+        </div>
+      </div>
+    );
   }
 
   if (notConfigured) {
