@@ -5,6 +5,9 @@ function ars(amount: number) {
   return `$${amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// Menú online público: ahí el cliente sigue su pedido (ícono "Mis pedidos").
+export const MENU_URL = "https://madero14.vercel.app";
+
 // Referencia corta para el cliente, derivada del id del pedido (no hay un
 // número correlativo de pedidos web): los primeros 6 caracteres en mayúscula.
 export function orderReference(id: string) {
@@ -33,6 +36,11 @@ export function buildOrderConfirmationMessage(
   lines.push(`• *Total: ${ars(order.total)}*`);
   if (order.paymentMethod === "transferencia") lines.push("", "💳 Pago: transferencia");
   else if (order.paymentMethod === "efectivo") lines.push("", "💵 Pago: efectivo");
+  lines.push(
+    "",
+    "Para seguir el avance de tu pedido entrá a nuestro menú online y tocá el ícono 🧾 *Mis pedidos*, arriba:",
+    MENU_URL
+  );
   lines.push("", "¡Gracias por tu compra!", "Madero Restó");
   return lines.join("\n");
 }

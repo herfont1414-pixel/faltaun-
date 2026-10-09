@@ -24,6 +24,9 @@ describe("mensaje de confirmación al cliente", () => {
         "• _Costo de envío_: $4.000,00",
         "• *Total: $18.000,00*",
         "",
+        "Para seguir el avance de tu pedido entrá a nuestro menú online y tocá el ícono 🧾 *Mis pedidos*, arriba:",
+        "https://madero14.vercel.app",
+        "",
         "¡Gracias por tu compra!",
         "Madero Restó",
       ].join("\n")
