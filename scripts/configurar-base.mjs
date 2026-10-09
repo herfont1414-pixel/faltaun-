@@ -33,8 +33,9 @@ function saveSetting(lines, key, value) {
 
 function maskUrl(url) {
   try {
+    // Ni el usuario ni la clave se muestran: en algunas bases el usuario también es una credencial.
     const u = new URL(url);
-    return `${u.protocol}//${decodeURIComponent(u.username)}:***@${u.host}${u.pathname}`;
+    return `${u.protocol}//***:***@${u.host}${u.pathname}`;
   } catch {
     return "(direccion)";
   }
