@@ -1,3 +1,4 @@
+import { startOfBusinessDay } from "@/lib/admin/business-day";
 import { getPool } from "@/lib/admin/db";
 import { sumExpenses } from "@/lib/admin/expenses";
 import { getCurrentShift } from "@/lib/admin/shifts";
@@ -42,9 +43,7 @@ const PEDIDO_PENDIENTE_MINUTOS = 20;
 export async function getDashboardSummary(): Promise<DashboardSummary> {
   const pool = getPool();
   const now = new Date();
-  const from = new Date(now);
-  from.setHours(0, 0, 0, 0);
-  const fromISO = from.toISOString();
+  const fromISO = startOfBusinessDay(now).toISOString();
   const toISO = now.toISOString();
 
   const { rows: orderRows } = await pool.query<{ id: string; total: string | number; is_delivery: boolean }>(
