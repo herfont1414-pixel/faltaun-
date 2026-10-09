@@ -1,5 +1,4 @@
 import {
-  LayoutGrid,
   Beef,
   Pizza,
   Sandwich,
@@ -40,25 +39,22 @@ export function iconFor(category: string) {
   return match?.Icon ?? UtensilsCrossed;
 }
 
+// Grilla de categorías con icono lineal naranja: tocar una lleva a su sección del menú.
 export function CategoryFilter({ categories, active, onChange }: CategoryFilterProps) {
   return (
-    <div className="flex gap-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {["Todos", ...categories].map((category) => {
-        const isActive = category === active;
-        const Icon = category === "Todos" ? LayoutGrid : iconFor(category);
+    <div className="grid grid-cols-3 gap-2.5 px-5 sm:grid-cols-4">
+      {categories.map((category) => {
+        const Icon = iconFor(category);
         return (
           <button
             key={category}
             type="button"
             onClick={() => onChange(category)}
-            className={`flex shrink-0 flex-col items-center gap-1.5 rounded-2xl border px-4 py-2.5 text-center transition ${
-              isActive
-                ? "border-ember bg-ember/15 text-ember-soft"
-                : "border-white/5 bg-base-card text-stone-400 hover:border-white/15"
-            }`}
+            aria-current={category === active ? "true" : undefined}
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-gradient-to-b from-base-card to-base px-2 py-4 text-center transition hover:border-ember/40 active:scale-[0.97]"
           >
-            <Icon className="h-5 w-5" strokeWidth={1.75} />
-            <span className="whitespace-nowrap text-[11px] font-medium">{category}</span>
+            <Icon className="h-8 w-8 text-ember" strokeWidth={1.4} />
+            <span className="text-[12.5px] font-medium leading-tight text-stone-100">{category}</span>
           </button>
         );
       })}
