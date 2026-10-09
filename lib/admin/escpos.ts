@@ -79,7 +79,9 @@ class EscPosBuilder {
   }
 
   cut() {
-    this.feed(3);
+    // Avance antes de cortar/arrancar: con 3 líneas el pie quedaba pegado al
+    // borde y se cortaba a la mitad en la POS-58.
+    this.feed(5);
     return this.raw([GS, 0x56, 0x00]);
   }
 
@@ -194,7 +196,10 @@ export function renderTicketEscPos(data: TicketPrintData, config: PrintConfig): 
   }
 
   b.hr(width);
-  b.bold(true).size(2, 1).line(row("TOTAL", money(data.total), Math.ceil(width / 2))).size(1, 1).bold(false);
+  // En letra de doble ancho cada carácter ocupa dos columnas. La POS-58 imprime
+  // 15 (no 16) caracteres dobles por línea: con 16 el último dígito del total
+  // saltaba a la línea siguiente.
+  b.bold(true).size(2, 1).line(row("TOTAL", money(data.total), Math.floor(width / 2) - 1)).size(1, 1).bold(false);
 
   if (data.status === "cerrada") {
     if (data.payments.length > 1) {

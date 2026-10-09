@@ -146,6 +146,15 @@ describe("ESC/POS a 58 mm", () => {
     expect(Math.max(...lines.map((l) => l.length))).toBeLessThanOrEqual(32);
   });
 
+  it("la línea TOTAL en letra doble no pasa de 15 caracteres (a la POS-58 le entran 15 dobles), aun con totales grandes", () => {
+    for (const total of [16500, 116500, 1116500]) {
+      const lines = printedLines(renderTicketEscPos({ ...ticket, total }, config58));
+      const totalLine = lines.find((l) => l.startsWith("TOTA"))!;
+      expect(totalLine.length).toBeLessThanOrEqual(15);
+      expect(totalLine.endsWith(`$${total.toLocaleString("es-AR")}`)).toBe(true);
+    }
+  });
+
   it("la comanda tampoco supera las 32 columnas", () => {
     const comanda: ComandaPrintData = {
       orderId: ticket.orderId,
