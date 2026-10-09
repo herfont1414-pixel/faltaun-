@@ -120,7 +120,7 @@ export function MenuSection({ items, highlights }: MenuSectionProps) {
                 {group.category}
               </h3>
             </div>
-            <div className="flex flex-col gap-2.5 px-5 pb-4 pt-3">
+            <div className="flex flex-col gap-2 px-5 pb-4 pt-3">
               {group.items.map((item) => (
                 <MenuRow key={item.id} item={item} onSelect={setSelectedItem} popular={popularIds.has(item.id)} />
               ))}

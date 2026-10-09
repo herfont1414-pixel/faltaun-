@@ -21,23 +21,23 @@ export function MenuRow({ item, onSelect, popular = false }: MenuRowProps) {
     <button
       type="button"
       onClick={() => onSelect(item)}
-      className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition active:scale-[0.99] ${
+      className={`flex w-full items-center gap-2.5 rounded-[14px] border px-3.5 py-[7px] text-left transition active:scale-[0.99] ${
         item.inStock
           ? "border-white/10 bg-base-card active:bg-white/5"
           : "border-white/5 bg-base-soft/60"
       }`}
     >
       <span
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
           item.inStock ? "bg-ember/10 text-ember" : "bg-white/5 text-stone-600"
         }`}
       >
-        <Icon className="h-6 w-6" strokeWidth={1.5} />
+        <Icon className="h-5 w-5" strokeWidth={1.5} />
       </span>
 
       <div className="min-w-0 flex-1">
         <p
-          className={`line-clamp-2 text-[15px] font-semibold leading-snug ${
+          className={`line-clamp-2 text-[14.5px] font-semibold leading-snug ${
             item.inStock ? "text-stone-50" : "text-stone-500"
           }`}
         >
@@ -48,7 +48,7 @@ export function MenuRow({ item, onSelect, popular = false }: MenuRowProps) {
             {item.description}
           </p>
         )}
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-0.5 flex items-center gap-2">
           <span className={`font-display text-base ${item.inStock ? "text-ember-soft" : "text-stone-600 line-through"}`}>
             {price}
           </span>
@@ -61,7 +61,7 @@ export function MenuRow({ item, onSelect, popular = false }: MenuRowProps) {
       </div>
 
       {item.inStock ? (
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ember text-base">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ember text-base">
           <Plus className="h-4 w-4" strokeWidth={2.5} />
         </span>
       ) : (
