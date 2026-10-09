@@ -21,6 +21,9 @@ goto :node_mal
 :node_ok
 echo [OK] Node.js %NODEVER%
 
+rem ---------- 1b. Inicio automatico con Windows (se deja listo una sola vez) ----------
+if exist "scripts\autoinicio.mjs" node "scripts\autoinicio.mjs"
+
 rem ---------- 2. PIN de administrador (solo la primera vez) ----------
 if exist ".env.local" goto :env_ok
 if exist "maderosys.db" goto :env_ok
@@ -98,16 +101,21 @@ powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing -Uri ht
 if not errorlevel 1 goto :abrir
 echo.
 echo Arrancando el servidor...
+rem MADERO_AUTO=1 = arranque automatico al encender la PC: la ventana del servidor queda minimizada.
+set "VENTANA_MIN="
+if "%MADERO_AUTO%"=="1" set "VENTANA_MIN=/min "
 if "%MODO_BASE%"=="compartida" goto :iniciar_compartida
-start "MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "set DATABASE_URL=&& npm start"
+start %VENTANA_MIN%"MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "set DATABASE_URL=&& npm start"
 goto :esperar_servidor
 :iniciar_compartida
-start "MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "npm start"
+start %VENTANA_MIN%"MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "npm start"
 :esperar_servidor
 powershell -NoProfile -Command "for ($i=0; $i -lt 90; $i++) { try { Invoke-WebRequest -UseBasicParsing -Uri http://localhost:3000/admin/login -TimeoutSec 2 | Out-Null; exit 0 } catch { Start-Sleep -Seconds 1 } }; exit 1"
 if errorlevel 1 goto :fallo_server
 
 :abrir
+rem Arranque automatico: no se abre el navegador ni se espera una tecla.
+if "%MADERO_AUTO%"=="1" exit /b 0
 start "" "http://localhost:3000/admin"
 echo.
 echo ============================================================
