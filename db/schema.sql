@@ -163,6 +163,13 @@ alter table gestion_web_orders add column if not exists order_id uuid references
 alter table gestion_web_orders add column if not exists payment_method text;
 alter table gestion_web_orders add column if not exists delivery_lat double precision;
 alter table gestion_web_orders add column if not exists delivery_lng double precision;
+-- Por dónde llegó el pedido ('mostrador' | 'whatsapp' | 'web'); null en pedidos de mesa
+-- y en los anteriores a esta columna (se toman como mostrador / delivery).
+alter table gestion_orders add column if not exists channel text;
+-- Lo que el cliente dijo al pedir por la web: cómo paga y, en efectivo, con cuánto.
+alter table gestion_orders add column if not exists pay_method_hint text;
+alter table gestion_orders add column if not exists cash_given numeric(12, 2);
+alter table gestion_web_orders add column if not exists cash_given numeric(12, 2);
 alter table gestion_orders add column if not exists delivery_lat double precision;
 alter table gestion_orders add column if not exists delivery_lng double precision;
 create index if not exists gestion_web_orders_order_id_idx on gestion_web_orders(order_id);

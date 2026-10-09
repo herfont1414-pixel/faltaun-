@@ -5,7 +5,7 @@ import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { quoteDelivery } from "@/lib/admin/delivery-quote";
 import { isValidLatLng } from "@/lib/geo";
 import { getBusinessConfig } from "@/lib/admin/business-config";
-import type { Fulfillment, WebOrder, WebOrderStatus, WebPaymentMethod } from "@/lib/admin/types";
+import type { Fulfillment, WebOrder, WebOrderProgress, WebOrderStatus, WebPaymentMethod } from "@/lib/admin/types";
 
 export const PAYMENT_LABEL: Record<WebPaymentMethod, string> = {
   efectivo: "Efectivo",
@@ -14,6 +14,21 @@ export const PAYMENT_LABEL: Record<WebPaymentMethod, string> = {
 
 function money(value: string | number) {
   return typeof value === "string" ? parseFloat(value) : value;
+}
+
+// En qué paso va el pedido, para mostrárselo al cliente en "Mis pedidos".
+// Sale del pedido real vinculado: el cobro cierra el pedido y el repartidor
+// marca "en camino" / "entregado". Un pedido aceptado antes de existir el
+// vínculo (sin pedido real) figura como "preparando".
+function orderProgress(row: any): WebOrderProgress {
+  if (row.status === "pendiente") return "esperando";
+  if (row.status === "rechazado") return "rechazado";
+  if (row.order_status === "cerrada" || row.order_delivery_status === "entregado") return "entregado";
+  if (row.fulfillment === "delivery") {
+    if (row.order_delivery_status === "en_camino") return "en_camino";
+    return row.order_kitchen_status === "listo" || row.order_kitchen_status === "despachado" ? "listo" : "preparando";
+  }
+  return row.order_kitchen_status === "listo" || row.order_kitchen_status === "despachado" ? "listo" : "preparando";
 }
 
 function mapRow(row: any): WebOrder {
@@ -33,6 +48,8 @@ function mapRow(row: any): WebOrder {
     createdAt: row.created_at,
     deliveryLat: row.delivery_lat === null || row.delivery_lat === undefined ? null : money(row.delivery_lat),
     deliveryLng: row.delivery_lng === null || row.delivery_lng === undefined ? null : money(row.delivery_lng),
+    cashGiven: row.cash_given === null || row.cash_given === undefined ? null : money(row.cash_given),
+    progress: orderProgress(row),
     paymentMethod: row.payment_method === "efectivo" || row.payment_method === "transferencia" ? row.payment_method : null,
     orderId: row.order_id ?? null,
     orderStatus: row.order_status ?? null,
@@ -52,6 +69,8 @@ export async function createWebOrder(input: {
   deliveryLng?: number | null;
   // Cómo va a pagar. Opcional solo por compatibilidad con navegadores con la versión vieja del menú.
   paymentMethod?: WebPaymentMethod | null;
+  // Solo efectivo: con cuánto va a pagar, para que el repartidor lleve el vuelto.
+  cashGiven?: number | null;
 }): Promise<WebOrder> {
   const pool = getPool();
 
@@ -132,6 +151,21 @@ export async function createWebOrder(input: {
   }
   const total = items.reduce((sum, it) => sum + it.price * it.qty, 0) + shippingCost;
 
+  // "Con cuánto pagás" es solo un aviso para llevar el vuelto: en efectivo y,
+  // si viene, tiene que cubrir el total.
+  let cashGiven: number | null = null;
+  if (paymentMethod === "efectivo" && input.cashGiven !== null && input.cashGiven !== undefined) {
+    if (!Number.isFinite(input.cashGiven) || input.cashGiven <= 0 || input.cashGiven > 100_000_000) {
+      throw new Error("El monto con el que pagás no es válido");
+    }
+    if (input.cashGiven < total) {
+      throw new Error(
+        `El monto con el que pagás ($${input.cashGiven.toLocaleString("es-AR")}) no alcanza para el total ($${total.toLocaleString("es-AR")})`
+      );
+    }
+    cashGiven = input.cashGiven;
+  }
+
   await pool.query(
     `insert into gestion_delivery_customers (phone, name, address, updated_at, created_at)
      values ($1, $2, $3, now(), now())
@@ -144,8 +178,8 @@ export async function createWebOrder(input: {
   const { rows } = await pool.query(
     `insert into gestion_web_orders
        (customer_name, customer_phone, customer_address, fulfillment, delivery_zone, shipping_cost, notes, items, total,
-        delivery_lat, delivery_lng, payment_method)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        delivery_lat, delivery_lng, payment_method, cash_given)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      returning *`,
     [
       input.customerName,
@@ -160,25 +194,29 @@ export async function createWebOrder(input: {
       deliveryLat,
       deliveryLng,
       paymentMethod,
+      cashGiven,
     ]
   );
   return mapRow(rows[0]);
 }
 
+const WITH_ORDER = `select w.*, o.status as order_status, o.delivery_status as order_delivery_status,
+    o.kitchen_status as order_kitchen_status
+  from gestion_web_orders w
+  left join gestion_orders o on o.id = w.order_id`;
+
 export async function listWebOrdersByPhone(phone: string, limit = 15): Promise<WebOrder[]> {
   const pool = getPool();
-  const { rows } = await pool.query(
-    "select * from gestion_web_orders where customer_phone = $1 order by created_at desc limit $2",
-    [phone, limit]
-  );
+  const { rows } = await pool.query(`${WITH_ORDER} where w.customer_phone = $1 order by w.created_at desc limit $2`, [
+    phone,
+    limit,
+  ]);
   return rows.map(mapRow);
 }
 
 export async function listWebOrders(status?: WebOrderStatus): Promise<WebOrder[]> {
   const pool = getPool();
-  const base = `select w.*, o.status as order_status
-    from gestion_web_orders w
-    left join gestion_orders o on o.id = w.order_id`;
+  const base = WITH_ORDER;
   const { rows } = status
     ? await pool.query(`${base} where w.status = $1 order by w.created_at desc`, [status])
     : await pool.query(`${base} order by w.created_at desc limit 30`);
@@ -211,26 +249,33 @@ async function createPosOrderForWeb(
     shipping_cost: string | number | null;
     notes: string | null;
     payment_method?: string | null;
+    cash_given?: string | number | null;
+    total?: string | number | null;
     items: unknown;
     kitchen_status?: string | null;
   },
   kitchenStatus: string | null
 ): Promise<string> {
   const isDelivery = web.fulfillment === "delivery";
+  const cashGiven = web.cash_given == null ? null : money(web.cash_given);
+  const total = web.total == null ? null : money(web.total);
+  const cashNote =
+    cashGiven !== null && total !== null
+      ? ` · con $${cashGiven.toLocaleString("es-AR")}, vuelto $${Math.max(0, cashGiven - total).toLocaleString("es-AR")}`
+      : "";
   const payNote =
     web.payment_method === "transferencia"
       ? "Paga: transferencia (verificar comprobante)"
       : web.payment_method === "efectivo"
-        ? isDelivery
-          ? "Paga: efectivo al recibir"
-          : "Paga: efectivo al retirar"
+        ? `${isDelivery ? "Paga: efectivo al recibir" : "Paga: efectivo al retirar"}${cashNote}`
         : null;
   const notes = ["Pedido web", payNote, web.notes?.trim()].filter(Boolean).join(" · ");
   const { rows } = await client.query<{ id: string }>(
     `insert into gestion_orders
        (origin, is_delivery, customer_name, customer_phone, customer_address, delivery_zone, shipping_cost,
-        delivery_status, notes, kitchen_status, kitchen_sent_at, delivery_lat, delivery_lng)
-     values ('mostrador', ${isDelivery ? "true" : "false"}, $1, $2, $3, $4, $5, $6, $7, $8, now(), $9, $10)
+        delivery_status, notes, kitchen_status, kitchen_sent_at, delivery_lat, delivery_lng,
+        channel, pay_method_hint, cash_given)
+     values ('mostrador', ${isDelivery ? "true" : "false"}, $1, $2, $3, $4, $5, $6, $7, $8, now(), $9, $10, 'web', $11, $12)
      returning id`,
     [
       web.customer_name,
@@ -243,6 +288,8 @@ async function createPosOrderForWeb(
       kitchenStatus,
       isDelivery ? (web.delivery_lat ?? null) : null,
       isDelivery ? (web.delivery_lng ?? null) : null,
+      web.payment_method === "efectivo" || web.payment_method === "transferencia" ? web.payment_method : null,
+      cashGiven,
     ]
   );
   const orderId = rows[0].id;

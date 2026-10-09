@@ -11,6 +11,8 @@ interface PaymentPickerProps {
   onCancel: () => void;
   onConfirm: (payments: OrderPayment[], customerId: number | null, loyaltyPhone: string | null) => void;
   onPartial: () => void;
+  // Lo que el cliente dijo al pedir por la web: precarga el medio y, en efectivo, con cuánto paga.
+  hint?: { method: "efectivo" | "transferencia"; cashGiven: number | null } | null;
 }
 
 const METHODS: { value: PaymentMethod; label: string }[] = [
@@ -39,9 +41,18 @@ function amountToString(cents: number) {
   return cents > 0 ? String(fromCents(cents)) : "";
 }
 
-export function PaymentPicker({ total, onCancel, onConfirm, onPartial }: PaymentPickerProps) {
+export function PaymentPicker({ total, onCancel, onConfirm, onPartial, hint }: PaymentPickerProps) {
   const [lines, setLines] = useState<Line[]>([
-    { key: "0", method: "efectivo", amount: amountToString(toCents(total)), received: "" },
+    {
+      key: "0",
+      method: hint?.method ?? "efectivo",
+      amount: amountToString(toCents(total)),
+      // "Con cuánto paga" solo se precarga si alcanza para el total actual.
+      received:
+        hint?.method === "efectivo" && hint.cashGiven !== null && toCents(hint.cashGiven) >= toCents(total)
+          ? String(hint.cashGiven)
+          : "",
+    },
   ]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Customer[]>([]);
@@ -125,6 +136,25 @@ export function PaymentPicker({ total, onCancel, onConfirm, onPartial }: Payment
   return (
     <div style={{ padding: "12px 18px", borderTop: "1px solid var(--border)", maxHeight: "65vh", overflowY: "auto" }}>
       <div className="ticket-title">Medios de pago</div>
+      {hint && (
+        <div
+          data-testid="pay-hint"
+          style={{
+            margin: "6px 0 10px",
+            padding: "8px 10px",
+            borderRadius: 10,
+            background: "#fff7ed",
+            border: "1px solid #fed7aa",
+            fontSize: 12.5,
+          }}
+        >
+          {hint.method === "transferencia"
+            ? "El cliente dijo que paga por transferencia: verificá el comprobante antes de cobrar."
+            : hint.cashGiven !== null
+              ? `El cliente dijo que paga en efectivo con ${money(hint.cashGiven)}.`
+              : "El cliente dijo que paga en efectivo."}
+        </div>
+      )}
 
       {!partial && (
         <>

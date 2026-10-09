@@ -166,9 +166,9 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
                   >
                     {order.paymentMethod === "transferencia"
                       ? "Transferencia · pedile el comprobante"
-                      : order.fulfillment === "delivery"
-                        ? "Efectivo al recibir"
-                        : "Efectivo al retirar"}
+                      : `${order.fulfillment === "delivery" ? "Efectivo al recibir" : "Efectivo al retirar"}${
+                          order.cashGiven ? ` · con ${money(order.cashGiven)}` : ""
+                        }`}
                   </span>
                 )}
                 {order.fulfillment === "delivery" && order.customerAddress && (

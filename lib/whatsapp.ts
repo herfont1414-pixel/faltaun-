@@ -30,6 +30,7 @@ export interface OrderSummaryInput {
   total: number;
   notes?: string | null;
   paymentMethod?: "efectivo" | "transferencia" | null;
+  cashGiven?: number | null;
   transferAlias?: string | null;
   businessNumber?: string;
 }
@@ -59,6 +60,7 @@ export function buildOrderWhatsAppLink(input: OrderSummaryInput) {
         ? "Pago: Efectivo (le pago al repartidor cuando llegue)"
         : "Pago: Efectivo (pago en el local al retirar)"
     );
+    if (input.cashGiven) lines.push(`Pago con: $${input.cashGiven.toLocaleString("es-AR")}`);
   }
   if (input.notes) lines.push("", `Notas: ${input.notes}`);
   lines.push("", "¡Gracias!");

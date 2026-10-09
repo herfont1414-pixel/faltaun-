@@ -1,5 +1,7 @@
 export type TableStatus = "libre" | "ocupada" | "atencion" | "cobrando";
 export type OrderOrigin = "mesa" | "mostrador";
+// Canal de un pedido que no es de mesa: barra, WhatsApp (sin pasar por la página) o menú online.
+export type OrderChannel = "mostrador" | "whatsapp" | "web";
 export type OrderStatus = "abierta" | "cerrada";
 export type Zone = "salon" | "terraza";
 export type PaymentMethod = "efectivo" | "transferencia" | "cuenta_corriente";
@@ -39,6 +41,10 @@ export interface Order {
   waiter: string | null;
   deliveryLat: number | null;
   deliveryLng: number | null;
+  // Por dónde llegó el pedido; null en mesas.
+  channel: OrderChannel | null;
+  // Lo que el cliente dijo al pedir por la web (para precargar el cobro).
+  paymentHint: { method: "efectivo" | "transferencia"; cashGiven: number | null } | null;
 }
 
 export interface OrderPayment {
@@ -92,6 +98,9 @@ export interface WebOrderItem {
 // Medios que ofrece el menú online (el link de pago no se usa).
 export type WebPaymentMethod = "efectivo" | "transferencia";
 
+// Paso del pedido web, tal como lo ve el cliente.
+export type WebOrderProgress = "esperando" | "rechazado" | "preparando" | "listo" | "en_camino" | "entregado";
+
 export interface WebOrder {
   id: string;
   customerName: string;
@@ -114,6 +123,9 @@ export interface WebOrder {
   deliveryLng: number | null;
   // Cómo dijo el cliente que va a pagar; null en pedidos anteriores a esta opción.
   paymentMethod: WebPaymentMethod | null;
+  // Con cuánto dijo que paga (solo efectivo).
+  cashGiven: number | null;
+  progress: WebOrderProgress;
 }
 
 export interface AdminProduct {
