@@ -1,40 +1,72 @@
-import { Plus } from "lucide-react";
+import { Plus, Star } from "lucide-react";
+import { iconFor } from "@/components/menu/category-filter";
 import type { MenuItem } from "@/lib/types";
 
 interface MenuRowProps {
   item: MenuItem;
   onSelect: (item: MenuItem) => void;
+  // Está entre "Lo más pedido".
+  popular?: boolean;
 }
 
-export function MenuRow({ item, onSelect }: MenuRowProps) {
+// Fila compacta de producto, sin foto: icono de la categoría, nombre, descripción breve,
+// precio y botón +. Los agotados se ven apagados, con el precio tachado y la etiqueta
+// "Sin stock" en lugar del botón; siguen abriendo el modal (que no deja agregarlos y
+// ofrece consultar por WhatsApp).
+export function MenuRow({ item, onSelect, popular = false }: MenuRowProps) {
+  const Icon = iconFor(item.category);
+  const price = `$${item.price.toLocaleString("es-AR")}`;
+
   return (
     <button
       type="button"
       onClick={() => onSelect(item)}
-      className={`flex w-full items-center gap-3 py-3.5 text-left transition active:bg-white/5 ${
-        item.inStock ? "" : "opacity-50"
+      className={`flex w-full items-center gap-2.5 rounded-[14px] border px-3.5 py-[7px] text-left transition active:scale-[0.99] ${
+        item.inStock
+          ? "border-white/10 bg-base-card active:bg-white/5"
+          : "border-white/5 bg-base-soft/60"
       }`}
     >
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
+          item.inStock ? "bg-ember/10 text-ember" : "bg-white/5 text-stone-600"
+        }`}
+      >
+        <Icon className="h-5 w-5" strokeWidth={1.5} />
+      </span>
+
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-[15px] font-medium text-stone-50">{item.name}</p>
-          {!item.inStock && (
-            <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-stone-300">
-              Sin stock
+        <p
+          className={`line-clamp-2 text-[14.5px] font-semibold leading-snug ${
+            item.inStock ? "text-stone-50" : "text-stone-500"
+          }`}
+        >
+          {item.name}
+        </p>
+        {item.description && (
+          <p className={`mt-0.5 line-clamp-2 text-xs ${item.inStock ? "text-stone-400" : "text-stone-600"}`}>
+            {item.description}
+          </p>
+        )}
+        <div className="mt-0.5 flex items-center gap-2">
+          <span className={`font-display text-base ${item.inStock ? "text-ember-soft" : "text-stone-600 line-through"}`}>
+            {price}
+          </span>
+          {popular && item.inStock && (
+            <span className="inline-flex items-center gap-1 rounded-md border border-ember/40 px-1.5 py-0.5 text-[10px] font-semibold text-ember-soft">
+              <Star className="h-2.5 w-2.5" fill="currentColor" /> Más pedido
             </span>
           )}
         </div>
-        {item.description && (
-          <p className="mt-0.5 line-clamp-1 text-xs text-stone-500">{item.description}</p>
-        )}
-        <span className="mt-1 block font-display text-sm text-ember-soft">
-          ${item.price.toLocaleString("es-AR")}
-        </span>
       </div>
 
-      {item.inStock && (
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ember/15 text-ember-soft transition group-active:scale-90">
+      {item.inStock ? (
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ember text-base">
           <Plus className="h-4 w-4" strokeWidth={2.5} />
+        </span>
+      ) : (
+        <span className="shrink-0 rounded-full border border-red-400/30 bg-red-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-red-300">
+          Sin stock
         </span>
       )}
     </button>

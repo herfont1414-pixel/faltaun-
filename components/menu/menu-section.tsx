@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
-import { CategoryFilter } from "@/components/menu/category-filter";
+import { CategoryFilter, iconFor } from "@/components/menu/category-filter";
 import { MenuRow } from "@/components/menu/menu-row";
 import { MenuModal } from "@/components/menu/menu-modal";
 import { Highlights } from "@/components/menu/highlights";
@@ -12,26 +12,6 @@ import type { MenuItem } from "@/lib/types";
 interface MenuSectionProps {
   items: MenuItem[];
   highlights?: MenuHighlights | null;
-}
-
-const EMOJI_KEYWORDS: { keywords: string[]; emoji: string }[] = [
-  { keywords: ["entrada", "picada"], emoji: "🥟" },
-  { keywords: ["burger", "hamburguesa"], emoji: "🍔" },
-  { keywords: ["pizza"], emoji: "🍕" },
-  { keywords: ["sandwich", "sándwich", "sanguche"], emoji: "🥪" },
-  { keywords: ["ensalada", "salad"], emoji: "🥗" },
-  { keywords: ["postre", "dulce", "helado"], emoji: "🍰" },
-  { keywords: ["bebida", "gaseosa", "jugo"], emoji: "🥤" },
-  { keywords: ["vino", "trago", "cocktail", "coctel", "barra"], emoji: "🍷" },
-  { keywords: ["café", "cafe", "infusion", "infusión"], emoji: "☕" },
-  { keywords: ["pescado", "mar", "sushi"], emoji: "🐟" },
-  { keywords: ["empanada"], emoji: "🥟" },
-];
-
-function emojiFor(category: string) {
-  const normalized = category.toLowerCase();
-  const match = EMOJI_KEYWORDS.find((entry) => entry.keywords.some((kw) => normalized.includes(kw)));
-  return match?.emoji ?? "🍽️";
 }
 
 export function MenuSection({ items, highlights }: MenuSectionProps) {
@@ -48,6 +28,8 @@ export function MenuSection({ items, highlights }: MenuSectionProps) {
     const byId = new Map(items.map((i) => [i.id, i]));
     return (highlights?.popularIds ?? []).map((id) => byId.get(id)).filter((i): i is MenuItem => !!i && i.inStock);
   }, [items, highlights]);
+  // La etiqueta "Más pedido" va solo en los 3 primeros del ranking.
+  const popularIds = useMemo(() => new Set(popular.slice(0, 3).map((i) => i.id)), [popular]);
   const special = useMemo(() => {
     const item = highlights?.special ? items.find((i) => i.id === highlights.special!.id) : null;
     return item && item.inStock && highlights?.special ? { item, text: highlights.special.text } : null;
@@ -58,7 +40,10 @@ export function MenuSection({ items, highlights }: MenuSectionProps) {
     return categories
       .map((category) => ({
         category,
-        items: items.filter((item) => item.category === category && (!q || item.name.toLowerCase().includes(q))),
+        // Disponibles primero; los agotados al final de cada categoría (mismo orden entre sí).
+        items: items
+          .filter((item) => item.category === category && (!q || item.name.toLowerCase().includes(q)))
+          .sort((a, b) => Number(b.inStock) - Number(a.inStock)),
       }))
       .filter((group) => group.items.length > 0);
   }, [items, categories, q]);
@@ -128,13 +113,16 @@ export function MenuSection({ items, highlights }: MenuSectionProps) {
           >
             <div className="sticky top-[69px] z-20 border-b border-white/5 bg-base px-5 py-3">
               <h3 className="font-display text-xl text-stone-50">
-                <span className="mr-2">{emojiFor(group.category)}</span>
+                {(() => {
+                  const HeaderIcon = iconFor(group.category);
+                  return <HeaderIcon className="mr-2.5 inline-block h-6 w-6 align-[-4px] text-ember" strokeWidth={1.6} />;
+                })()}
                 {group.category}
               </h3>
             </div>
-            <div className="flex flex-col divide-y divide-white/5 px-5">
+            <div className="flex flex-col gap-2 px-5 pb-4 pt-3">
               {group.items.map((item) => (
-                <MenuRow key={item.id} item={item} onSelect={setSelectedItem} />
+                <MenuRow key={item.id} item={item} onSelect={setSelectedItem} popular={popularIds.has(item.id)} />
               ))}
             </div>
           </div>
