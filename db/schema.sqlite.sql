@@ -122,7 +122,8 @@ create table if not exists gestion_web_orders (
   customer_address text,
   fulfillment text not null default 'retiro' check (fulfillment in ('retiro', 'delivery')),
   delivery_zone text,
-  shipping_cost numeric(10, 2) not null default 0
+  shipping_cost numeric(10, 2) not null default 0,
+  order_id text references gestion_orders(id) on delete set null
 );
 
 create index if not exists gestion_web_orders_status_idx on gestion_web_orders(status);

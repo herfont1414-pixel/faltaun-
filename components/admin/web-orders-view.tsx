@@ -19,7 +19,7 @@ function waLink(phone: string, message: string) {
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
-export function WebOrdersView() {
+export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: string) => void }) {
   const [pending, setPending] = useState<WebOrder[]>([]);
   const [recent, setRecent] = useState<WebOrder[]>([]);
   const [newOrder, setNewOrder] = useState<WebOrder | null>(null);
@@ -204,12 +204,13 @@ export function WebOrdersView() {
               <th>Cliente</th>
               <th>Estado</th>
               <th style={{ textAlign: "right" }}>Total</th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {recent.length === 0 ? (
               <tr>
-                <td colSpan={3} className="m-empty">
+                <td colSpan={4} className="m-empty">
                   Sin pedidos todavía.
                 </td>
               </tr>
@@ -219,10 +220,20 @@ export function WebOrdersView() {
                   <td>{o.customerName}</td>
                   <td>
                     <span className={`pill ${o.status === "confirmado" ? "cerrada" : "encurso"}`}>
-                      {o.status === "confirmado" ? `Confirmado · ${o.etaMinutes} min` : "Rechazado"}
+                      {o.status === "confirmado" ? `Aceptado · ${o.etaMinutes} min` : "Rechazado"}
                     </span>
                   </td>
                   <td className="m-total">{money(o.total)}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {o.status === "confirmado" &&
+                      (o.orderStatus === "cerrada" ? (
+                        <span style={{ fontSize: 12.5, color: "var(--text-dim)" }}>Cobrado</span>
+                      ) : (
+                        <button type="button" className="btn btn-primary" onClick={() => onOpenOrder(o.id)}>
+                          Abrir pedido
+                        </button>
+                      ))}
+                  </td>
                 </tr>
               ))
             )}

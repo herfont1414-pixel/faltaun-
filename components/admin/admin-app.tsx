@@ -25,7 +25,7 @@ import { money } from "@/lib/admin/format";
 import { printOrderDocument } from "@/lib/print-client";
 import { changeCents, fromCents, toCents } from "@/lib/admin/payments";
 import type { AdminStateResponse, Section } from "@/lib/admin/client-types";
-import type { Catalog, OrderPayment, TableRow, Zone } from "@/lib/admin/types";
+import type { Catalog, Order, OrderPayment, TableRow, Zone } from "@/lib/admin/types";
 
 const MESA_STATUS_LABEL: Record<TableRow["status"], string> = {
   libre: "Libre",
@@ -294,6 +294,22 @@ export function AdminApp() {
     setSelectedTableNumber(null);
   }
 
+  // Abre en el panel (Delivery o Mostrador) el pedido real de un pedido web
+  // aceptado, para marcarlo en camino/entregado, cobrarlo y cerrarlo.
+  async function openWebOrder(webOrderId: string) {
+    const state = await safeCall(() => postJson(`/api/admin/web-orders/${webOrderId}/order`));
+    if (!state) return;
+    applyState(state);
+    const order = (state.openOrders as Order[]).find((o) => o.id === state.result.orderId);
+    if (!order) {
+      showToast("Este pedido ya fue cobrado");
+      return;
+    }
+    setSection(order.isDelivery ? "delivery" : "mostrador");
+    setSelectedOrderId(order.id);
+    setSelectedTableNumber(null);
+  }
+
   async function changeDeliveryStatus(status: "preparando" | "en_camino" | "entregado") {
     if (!selectedOrderId) return;
     const state = await safeCall(() => patchJson(`/api/admin/delivery-order/${selectedOrderId}`, { status }));
@@ -429,7 +445,13 @@ export function AdminApp() {
           <OrderPanel
             order={currentOrder}
             tableNumber={selectedTableNumber}
-            titleOverride={currentOrder?.isDelivery ? `Delivery · ${currentOrder.customerName}` : null}
+            titleOverride={
+              currentOrder?.isDelivery
+                ? `Delivery · ${currentOrder.customerName}`
+                : currentOrder?.customerName && !currentOrder.tableNumber
+                  ? `Retiro · ${currentOrder.customerName}`
+                  : null
+            }
             catalog={section === "express" ? expressCatalog : data.catalog}
             activeCategory={section === "express" ? "Todos" : activeCategory}
             onChangeCategory={setActiveCategory}
@@ -448,7 +470,7 @@ export function AdminApp() {
       ) : section === "productos" ? (
         <ProductsView />
       ) : section === "pedidos-web" ? (
-        <WebOrdersView />
+        <WebOrdersView onOpenOrder={openWebOrder} />
       ) : section === "caja" ? (
         <CajaView />
       ) : section === "reportes" ? (
