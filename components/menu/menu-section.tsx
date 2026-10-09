@@ -5,10 +5,13 @@ import { Search } from "lucide-react";
 import { CategoryFilter } from "@/components/menu/category-filter";
 import { MenuRow } from "@/components/menu/menu-row";
 import { MenuModal } from "@/components/menu/menu-modal";
+import { Highlights } from "@/components/menu/highlights";
+import type { MenuHighlights } from "@/lib/menu";
 import type { MenuItem } from "@/lib/types";
 
 interface MenuSectionProps {
   items: MenuItem[];
+  highlights?: MenuHighlights | null;
 }
 
 const EMOJI_KEYWORDS: { keywords: string[]; emoji: string }[] = [
@@ -31,12 +34,22 @@ function emojiFor(category: string) {
   return match?.emoji ?? "🍽️";
 }
 
-export function MenuSection({ items }: MenuSectionProps) {
+export function MenuSection({ items, highlights }: MenuSectionProps) {
   const categories = useMemo(() => Array.from(new Set(items.map((item) => item.category))), [items]);
   const [activeCategory, setActiveCategory] = useState<string>(categories[0] ?? "Todos");
   const [query, setQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Destacados: mismos productos y precios del catálogo; los agotados no se muestran.
+  const popular = useMemo(() => {
+    const byId = new Map(items.map((i) => [i.id, i]));
+    return (highlights?.popularIds ?? []).map((id) => byId.get(id)).filter((i): i is MenuItem => !!i && i.inStock);
+  }, [items, highlights]);
+  const special = useMemo(() => {
+    const item = highlights?.special ? items.find((i) => i.id === highlights.special!.id) : null;
+    return item && item.inStock && highlights?.special ? { item, text: highlights.special.text } : null;
+  }, [items, highlights]);
 
   const q = query.trim().toLowerCase();
   const groups = useMemo(() => {
@@ -86,6 +99,8 @@ export function MenuSection({ items }: MenuSectionProps) {
           />
         </div>
       </div>
+
+      {!q && <Highlights popular={popular} special={special} onSelect={setSelectedItem} />}
 
       <div className="mt-4">
         <CategoryFilter categories={categories} active={activeCategory} onChange={goToCategory} />
