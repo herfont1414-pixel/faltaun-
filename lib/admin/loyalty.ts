@@ -3,6 +3,7 @@ import type { DbClient } from "@/lib/admin/db";
 import { recordAudit } from "@/lib/admin/auth";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { hitsAt, stampsToNext } from "@/lib/admin/loyalty-rewards";
+import { whatsappDigits } from "@/lib/phone";
 
 // Regla vieja (un premio genérico cada 10 sellos). Ya no define premios: se conserva
 // solo como referencia histórica (el informe de solo lectura la usa para comparar).
@@ -155,8 +156,32 @@ function toAccount(
   };
 }
 
-export async function getLoyalty(phone: string): Promise<LoyaltyAccount> {
+// Cuenta de fidelidad que le corresponde a un teléfono escrito de cualquier forma
+// ("3755589363", "+54 9 3755 58-9363", "0375515589363"…). Solo LEE y nunca modifica,
+// combina ni renombra cuentas:
+//  1) si ya existe una cuenta con exactamente ese texto, es esa;
+//  2) si no, una cuenta existente cuyo número, ya normalizado, es el mismo (si hubiera
+//     varias duplicadas, la de más sellos; no se combinan);
+//  3) si no hay ninguna, se devuelve el texto tal cual para crear una cuenta nueva.
+// Una cuenta nueva conserva el texto con el que se cargó (así el resto del sistema, que
+// agrupa por ese texto, sigue igual) y los pedidos siguientes con otro formato ya la encuentran.
+// Números de menos de 8 dígitos no se normalizan (no alcanzan para identificar).
+export async function resolveLoyaltyPhone(db: DbClient, raw: string): Promise<string> {
+  const phone = raw.trim();
+  const { rows: exact } = await db.query("select phone from gestion_loyalty_accounts where phone = $1", [phone]);
+  if (exact[0]) return phone;
+  const canonical = whatsappDigits(phone);
+  if (canonical.replace(/\D/g, "").length < 8) return phone;
+  const { rows } = await db.query<{ phone: string; stamps: number }>("select phone, stamps from gestion_loyalty_accounts");
+  const matches = rows.filter((r) => whatsappDigits(r.phone) === canonical);
+  if (matches.length === 0) return phone;
+  matches.sort((a, b) => Number(b.stamps) - Number(a.stamps) || a.phone.localeCompare(b.phone));
+  return matches[0].phone;
+}
+
+export async function getLoyalty(rawPhone: string): Promise<LoyaltyAccount> {
   const pool = getPool();
+  const phone = await resolveLoyaltyPhone(pool, rawPhone);
   const { rows } = await pool.query(
     "select phone, name, stamps, redeemed, order_count, total_spent from gestion_loyalty_accounts where phone = $1",
     [phone]
@@ -174,20 +199,65 @@ export async function getLoyalty(phone: string): Promise<LoyaltyAccount> {
   return toAccount(row, Number(pending[0]?.n ?? 0), next?.remaining ?? 0);
 }
 
-// Suma un sello y acumula compras/gasto cada vez que el local confirma un
-// pedido hecho desde el menú online para ese teléfono, o cuando se cobra en
-// el panel con un teléfono de fidelidad cargado. orderId es obligatorio
-// porque es lo que garantiza "un pedido = una sola operación de fidelidad":
-// el insert en gestion_loyalty_transactions tiene un unique(order_id, type),
-// así que si addStamp se llama dos veces para el mismo pedido (doble click,
-// reintento de red), la segunda vez el insert no inserta nada y se corta
-// ahí mismo, sin tocar gestion_loyalty_accounts de nuevo.
+// Suma un sello y acumula compras/gasto cuando el local confirma un pedido hecho desde
+// el menú online, o cuando se cobra en el panel con un teléfono de fidelidad cargado.
+// orderId es obligatorio: es lo que garantiza "un pedido = un solo sello": el insert en
+// gestion_loyalty_transactions tiene un unique(order_id, type), así que si se llama dos
+// veces para el mismo pedido (doble click, reintento, otro camino del sistema), la segunda
+// no inserta nada y se corta, sin tocar la cuenta ni los premios.
 //
-// Todo ocurre en una sola transacción (transacción + cuenta + premios), así una
-// caída a mitad no deja datos a medias. Si el sello cruza un hito (papas 5, 20,
-// 35…; hamburguesa 15, 30, 45…) se genera ese premio, una sola vez por cliente e
-// hito (unique en gestion_loyalty_grants). Solo se premia el hito que se cruza con
-// este sello: no hay premios retroactivos por sellos anteriores.
+// UNA SOLA TRANSACCIÓN: sello + cuenta + premio del hito cruzado (papas 5, 20, 35…;
+// hamburguesa 15, 30, 45…, una vez por cliente e hito: unique en gestion_loyalty_grants).
+// Si cualquier paso falla, no queda nada registrado: no hay sellos sin su premio ni
+// premios sin su sello, y repetir la llamada con el mismo pedido es seguro y completa
+// todo. No hay premios retroactivos: solo se premia el hito que cruza este sello.
+//
+// Esta función NO abre ni cierra la transacción: la usa addStamp (propia) y el aceptar
+// pedido web (dentro de su transacción), así aceptar + sello + premio son atómicos.
+export async function awardStampInTx(
+  client: DbClient,
+  rawPhone: string,
+  orderId: string,
+  options: { name?: string | null; orderTotal?: number; origin?: string } = {}
+): Promise<{ awarded: boolean; phone: string; stamps: number }> {
+  const phone = await resolveLoyaltyPhone(client, rawPhone);
+  const { rows: inserted } = await client.query<{ id: number }>(
+    `insert into gestion_loyalty_transactions (phone, order_id, type, stamps, amount)
+     values ($1, $2, 'stamp', 1, $3)
+     on conflict (order_id, type) do nothing
+     returning id`,
+    [phone, orderId, options.orderTotal ?? 0]
+  );
+  if (!inserted[0]) {
+    // Ya se sumó el sello de este pedido antes; no se duplica.
+    return { awarded: false, phone, stamps: 0 };
+  }
+  const { rows: acc } = await client.query<{ stamps: number }>(
+    `insert into gestion_loyalty_accounts (phone, stamps, name, order_count, total_spent, origin, updated_at)
+     values ($1, 1, $2, 1, $3, $4, now())
+     on conflict (phone) do update set
+       stamps = gestion_loyalty_accounts.stamps + 1,
+       name = coalesce(excluded.name, gestion_loyalty_accounts.name),
+       order_count = gestion_loyalty_accounts.order_count + 1,
+       total_spent = gestion_loyalty_accounts.total_spent + excluded.total_spent,
+       origin = coalesce(gestion_loyalty_accounts.origin, excluded.origin),
+       updated_at = excluded.updated_at
+     returning stamps`,
+    [phone, options.name ?? null, options.orderTotal ?? 0, options.origin ?? null]
+  );
+  const newStamps = Number(acc[0].stamps);
+  for (const reward of await listRewards(client)) {
+    if (!reward.active || !hitsAt(reward, newStamps)) continue;
+    await client.query(
+      `insert into gestion_loyalty_grants (phone, reward_id, milestone)
+       values ($1, $2, $3)
+       on conflict (phone, reward_id, milestone) do nothing`,
+      [phone, reward.id, newStamps]
+    );
+  }
+  return { awarded: true, phone, stamps: newStamps };
+}
+
 export async function addStamp(
   phone: string,
   orderId: string,
@@ -197,52 +267,8 @@ export async function addStamp(
   const client = await pool.connect();
   try {
     await client.query("begin");
-    const { rows: inserted } = await client.query<{ id: number }>(
-      `insert into gestion_loyalty_transactions (phone, order_id, type, stamps, amount)
-       values ($1, $2, 'stamp', 1, $3)
-       on conflict (order_id, type) do nothing
-       returning id`,
-      [phone, orderId, options.orderTotal ?? 0]
-    );
-    if (!inserted[0]) {
-      // Ya se sumó el sello de este pedido antes; no se duplica.
-      await client.query("rollback");
-    } else {
-      const { rows: acc } = await client.query<{ stamps: number }>(
-        `insert into gestion_loyalty_accounts (phone, stamps, name, order_count, total_spent, origin, updated_at)
-         values ($1, 1, $2, 1, $3, $4, now())
-         on conflict (phone) do update set
-           stamps = gestion_loyalty_accounts.stamps + 1,
-           name = coalesce(excluded.name, gestion_loyalty_accounts.name),
-           order_count = gestion_loyalty_accounts.order_count + 1,
-           total_spent = gestion_loyalty_accounts.total_spent + excluded.total_spent,
-           origin = coalesce(gestion_loyalty_accounts.origin, excluded.origin),
-           updated_at = excluded.updated_at
-         returning stamps`,
-        [phone, options.name ?? null, options.orderTotal ?? 0, options.origin ?? null]
-      );
-      const newStamps = Number(acc[0].stamps);
-
-      // Los premios van en un savepoint: si fallan (por ejemplo, tabla no disponible),
-      // el sello igual se cuenta y el pedido no se ve afectado.
-      await client.query("savepoint loyalty_grants");
-      try {
-        for (const reward of await listRewards(client)) {
-          if (!reward.active || !hitsAt(reward, newStamps)) continue;
-          await client.query(
-            `insert into gestion_loyalty_grants (phone, reward_id, milestone)
-             values ($1, $2, $3)
-             on conflict (phone, reward_id, milestone) do nothing`,
-            [phone, reward.id, newStamps]
-          );
-        }
-        await client.query("release savepoint loyalty_grants");
-      } catch (error) {
-        await client.query("rollback to savepoint loyalty_grants");
-        console.error("No se pudo generar el premio de fidelidad", error);
-      }
-      await client.query("commit");
-    }
+    await awardStampInTx(client, phone, orderId, options);
+    await client.query("commit");
   } catch (error) {
     await client.query("rollback").catch(() => {});
     throw error;
@@ -250,6 +276,45 @@ export async function addStamp(
     client.release();
   }
   return getLoyalty(phone);
+}
+
+// Recuperación del sello de un cobro del panel cuyo cobro SÍ se registró pero el sello no
+// (por ejemplo, un corte justo después del cobro). Es seguro e idempotente: solo actúa si el
+// pedido está cerrado hace poco y todavía NO tiene sello (la misma clave que usa addStamp);
+// un pedido que ya sumó su sello devuelve null y no se toca nada.
+// Ventana de recuperación: ni antes de 5 s (así un doble clic o un envío duplicado, que llegan
+// a la vez, siguen recibiendo "ya fue cerrado" y no se disfrazan de reintento) ni después de
+// 30 min (no sirve para sumar sellos a pedidos viejos).
+const RECOVERY_MIN_AGE_MS = 5 * 1000;
+const RECOVERY_WINDOW_MS = 30 * 60 * 1000;
+
+export async function recoverClosedOrderStamp(
+  orderId: string,
+  rawPhone: string
+): Promise<{ total: number; origin: string } | null> {
+  const pool = getPool();
+  const { rows: orders } = await pool.query(
+    "select status, closed_at, total, is_delivery, origin from gestion_orders where id = $1",
+    [orderId]
+  );
+  const order = orders[0];
+  if (!order || order.status !== "cerrada" || !order.closed_at) return null;
+  const age = Date.now() - new Date(order.closed_at).getTime();
+  if (age < RECOVERY_MIN_AGE_MS || age > RECOVERY_WINDOW_MS) return null;
+
+  // Un pedido web ya sumó (o suma) su sello con el id del pedido web.
+  const { rows: web } = await pool.query("select id from gestion_web_orders where order_id = $1", [orderId]);
+  const key = web[0]?.id ?? orderId;
+  const { rows: existing } = await pool.query(
+    "select 1 as found from gestion_loyalty_transactions where order_id = $1 and type = 'stamp'",
+    [String(key)]
+  );
+  if (existing[0]) return null;
+
+  const total = money(order.total);
+  const origin = order.is_delivery ? "delivery" : String(order.origin);
+  await addStamp(rawPhone, String(key), { orderTotal: total, origin });
+  return { total, origin };
 }
 
 // ---------- Premios del cliente ----------
@@ -299,7 +364,8 @@ function toGrant(g: any): LoyaltyGrant {
   };
 }
 
-export async function listGrantsForPhone(phone: string): Promise<LoyaltyGrant[]> {
+export async function listGrantsForPhone(rawPhone: string): Promise<LoyaltyGrant[]> {
+  const phone = await resolveLoyaltyPhone(getPool(), rawPhone);
   const { rows } = await getPool().query(
     `${GRANT_SELECT} where g.phone = $1 order by g.created_at desc, g.milestone desc`,
     [phone]
