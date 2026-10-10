@@ -15,6 +15,7 @@ export type Section =
   | "express"
   | "reservas"
   | "clientes"
+  | "fidelidad"
   | "impresion"
   | "configuracion"
   | "usuarios"

@@ -8,8 +8,14 @@ export interface DbClient {
   query<T = any>(sql: string, params?: unknown[]): Promise<QueryResult<T>>;
 }
 
+// Consulta cruda de solo lectura: SQL sin parámetros, devuelve las filas.
+export type ReadOnlyQuery = (sql: string) => Promise<any[]>;
+
 export interface Db extends DbClient {
   connect(): Promise<DbClient & { release(): void }>;
+  // Solo SQLite: abre una conexión aparte en modo solo lectura (el motor rechaza
+  // cualquier escritura). En PostgreSQL se usa una transacción "read only".
+  readOnly?<T>(fn: (query: ReadOnlyQuery) => Promise<T>): Promise<T>;
 }
 
 export type DbMode = "postgres" | "sqlite" | "none";
