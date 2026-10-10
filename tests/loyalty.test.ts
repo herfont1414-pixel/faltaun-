@@ -1,6 +1,6 @@
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import { seedFreshDb, tearDownTestDb } from "./helpers";
-import { addStamp, getLoyalty, LOYALTY_THRESHOLD } from "@/lib/admin/loyalty";
+import { addStamp, getLoyalty } from "@/lib/admin/loyalty";
 import { getPool } from "@/lib/admin/db";
 
 let dbPath: string;
@@ -49,14 +49,14 @@ describe("fidelidad: sello, doble pedido, premio", () => {
     expect(account.orderCount).toBe(3);
   });
 
-  it(`al llegar a ${LOYALTY_THRESHOLD} sellos hay un premio disponible`, async () => {
+  it("al llegar a 5 sellos hay un premio disponible (papas) y faltan 10 para el próximo (hamburguesa)", async () => {
     const phone = "5493000000004";
-    for (let i = 0; i < LOYALTY_THRESHOLD; i++) {
+    for (let i = 0; i < 5; i++) {
       await addStamp(phone, `order-d-${i}`, { orderTotal: 100 });
     }
     const account = await getLoyalty(phone);
-    expect(account.stamps).toBe(LOYALTY_THRESHOLD);
+    expect(account.stamps).toBe(5);
     expect(account.rewardsAvailable).toBe(1);
-    expect(account.stampsToNextReward).toBe(LOYALTY_THRESHOLD);
+    expect(account.stampsToNextReward).toBe(10); // próximo hito: 15
   });
 });

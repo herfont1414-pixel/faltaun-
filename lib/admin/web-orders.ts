@@ -1,6 +1,6 @@
 import { getPool } from "@/lib/admin/db";
 import type { DbClient } from "@/lib/admin/db";
-import { addStamp } from "@/lib/admin/loyalty";
+import { awardStampInTx } from "@/lib/admin/loyalty";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { quoteDelivery } from "@/lib/admin/delivery-quote";
 import { isValidLatLng } from "@/lib/geo";
@@ -427,6 +427,18 @@ export async function respondWebOrder(
       );
       orderId = await createPosOrderForWeb(client, web, "pendiente");
 
+      // Sello de fidelidad (y premio del hito, si corresponde) en la MISMA transacción que
+      // la aceptación: o quedan aceptar + pedido + sello + premio, o no queda nada y el
+      // pedido sigue pendiente para reintentar. La clave es el id del pedido web, así el
+      // cobro posterior en el panel (que usa la misma clave) no suma un segundo sello.
+      if (web.customer_phone) {
+        await awardStampInTx(client, web.customer_phone, id, {
+          name: web.customer_name,
+          orderTotal: money(web.total),
+          origin: "web",
+        });
+      }
+
       await client.query("commit");
     } catch (error) {
       await client.query("rollback").catch(() => {});
@@ -435,17 +447,6 @@ export async function respondWebOrder(
       client.release();
     }
 
-    const { rows } = await pool.query(
-      "select customer_phone, customer_name, total from gestion_web_orders where id = $1",
-      [id]
-    );
-    if (rows[0]?.customer_phone) {
-      await addStamp(rows[0].customer_phone, id, {
-        name: rows[0].customer_name,
-        orderTotal: money(rows[0].total),
-        origin: "web",
-      });
-    }
     return { orderId };
   }
   await pool.query(

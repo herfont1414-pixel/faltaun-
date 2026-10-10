@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { getDbMode, getPool } from "@/lib/admin/db";
 import type { DbClient } from "@/lib/admin/db";
 import { hashPin } from "@/lib/admin/auth";
+import { ensureDefaultRewards } from "@/lib/admin/loyalty";
 
 function readJson(file: string) {
   return JSON.parse(readFileSync(path.join(process.cwd(), "data", file), "utf-8"));
@@ -175,6 +176,7 @@ async function ensureDefaultAdminUser(client: DbClient) {
 }
 
 let schemaApplied = false;
+let rewardsSeeded = false;
 
 export async function ensureSeeded() {
   const pool = getPool();
@@ -278,6 +280,11 @@ export async function ensureSeeded() {
     await syncCatalog(client);
     await syncIngredients(client);
     await ensureDefaultAdminUser(client);
+    if (!rewardsSeeded) {
+      // Premios de fidelidad por defecto: se crean una sola vez y no se pisan después.
+      await ensureDefaultRewards(client);
+      rewardsSeeded = true;
+    }
 
     const { rows: zoneRows } = await client.query("select count(*) as count from gestion_zones");
     if (Number(zoneRows[0].count) > 0) return;
