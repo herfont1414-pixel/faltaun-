@@ -566,11 +566,12 @@ export async function listAllProducts(): Promise<AdminProduct[]> {
     active: boolean;
     in_stock: boolean;
     stock_qty: number | null;
+    show_online: boolean;
     category_name: string;
     sort_order: number;
     print_area_id: number | null;
   }>(`
-    select p.id, p.name, p.price, p.active, p.in_stock, p.stock_qty, p.print_area_id,
+    select p.id, p.name, p.price, p.active, p.in_stock, p.stock_qty, p.show_online, p.print_area_id,
            c.name as category_name, c.sort_order
     from gestion_products p
     join gestion_categories c on c.id = p.category_id
@@ -581,6 +582,7 @@ export async function listAllProducts(): Promise<AdminProduct[]> {
     name: r.name,
     price: money(r.price),
     active: r.active,
+    showOnline: r.show_online,
     inStock: r.in_stock,
     stockQty: r.stock_qty,
     category: r.category_name,
@@ -593,6 +595,7 @@ export async function updateProduct(
   changes: {
     price?: number;
     active?: boolean;
+    showOnline?: boolean;
     inStock?: boolean;
     stockQty?: number | null;
     printAreaId?: number | null;
@@ -604,6 +607,9 @@ export async function updateProduct(
   }
   if (changes.active !== undefined) {
     await pool.query("update gestion_products set active = $2 where id = $1", [id, changes.active]);
+  }
+  if (changes.showOnline !== undefined) {
+    await pool.query("update gestion_products set show_online = $2 where id = $1", [id, changes.showOnline]);
   }
   if (changes.printAreaId !== undefined) {
     await pool.query("update gestion_products set print_area_id = $2 where id = $1", [

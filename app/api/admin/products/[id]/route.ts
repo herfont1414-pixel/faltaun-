@@ -26,6 +26,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const changes = {
     price: typeof body.price === "number" ? body.price : undefined,
     active: typeof body.active === "boolean" ? body.active : undefined,
+    showOnline: typeof body.showOnline === "boolean" ? body.showOnline : undefined,
     inStock: typeof body.inStock === "boolean" ? body.inStock : undefined,
     stockQty: "stockQty" in body ? (body.stockQty === null ? null : Number(body.stockQty)) : undefined,
     printAreaId:

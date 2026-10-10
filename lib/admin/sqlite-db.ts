@@ -5,6 +5,7 @@ import type { Db, DbClient } from "@/lib/admin/db";
 const BOOLEAN_COLUMNS = new Set([
   "active",
   "in_stock",
+  "show_online",
   "cuenta_corriente",
   "sent_to_kitchen",
   "deleted",

@@ -4,6 +4,7 @@ import { addStamp } from "@/lib/admin/loyalty";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { quoteDelivery } from "@/lib/admin/delivery-quote";
 import { isValidLatLng } from "@/lib/geo";
+import { hasStock } from "@/lib/menu-availability";
 import { getBusinessConfig } from "@/lib/admin/business-config";
 import type { Fulfillment, WebOrder, WebOrderProgress, WebOrderStatus, WebPaymentMethod } from "@/lib/admin/types";
 
@@ -90,7 +91,8 @@ export async function createWebOrder(input: {
     price: string;
     in_stock: boolean;
     stock_qty: number | null;
-  }>("select name, price, in_stock, stock_qty from gestion_products where active = true");
+    show_online: boolean;
+  }>("select name, price, in_stock, stock_qty, show_online from gestion_products where active = true");
   const byName = new Map(productRows.map((p) => [p.name, p]));
 
   const items = input.items
@@ -104,7 +106,11 @@ export async function createWebOrder(input: {
   // se descuenta cuando el local lo confirma, ver respondWebOrder().
   for (const it of items) {
     const product = byName.get(it.name)!;
-    if (!product.in_stock) throw new Error(`${it.name} ya no está disponible`);
+    // Mismas reglas que el menú público: oculto a mano o agotado no se puede pedir,
+    // aunque el cliente lo mande directo al servidor.
+    if (!product.show_online || !hasStock({ inStock: product.in_stock, stockQty: product.stock_qty })) {
+      throw new Error(`${it.name} ya no está disponible`);
+    }
     if (product.stock_qty !== null && product.stock_qty < it.qty) {
       throw new Error(`No hay suficiente stock de ${it.name}`);
     }

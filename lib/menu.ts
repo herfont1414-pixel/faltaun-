@@ -1,11 +1,12 @@
 import { getPool, isDbConfigured } from "@/lib/admin/db";
 import { ensureSeeded } from "@/lib/admin/seed";
 import { sampleMenu } from "@/lib/data/sample-menu";
+import { isOnlineAvailable } from "@/lib/menu-availability";
 import type { MenuItem } from "@/lib/types";
 
 export async function getMenuItems(): Promise<MenuItem[]> {
   if (!isDbConfigured()) {
-    return sampleMenu;
+    return sampleMenu.filter((i) => i.inStock);
   }
 
   try {
@@ -17,28 +18,38 @@ export async function getMenuItems(): Promise<MenuItem[]> {
       price: string;
       category_name: string;
       in_stock: boolean;
+      stock_qty: number | null;
+      show_online: boolean;
     }>(`
-      select p.id, p.name, p.price, p.in_stock, c.name as category_name
+      select p.id, p.name, p.price, p.in_stock, p.stock_qty, p.show_online, c.name as category_name
       from gestion_products p
       join gestion_categories c on c.id = p.category_id
       where p.active = true
       order by c.sort_order, p.name
     `);
 
-    if (rows.length === 0) return sampleMenu;
+    // Sin productos cargados todavía: menú de ejemplo. Si hay productos pero ninguno
+    // está disponible (todos ocultos o agotados), el menú queda vacío a propósito.
+    if (rows.length === 0) return sampleMenu.filter((i) => i.inStock);
 
-    return rows.map((r) => ({
-      id: String(r.id),
-      name: r.name,
-      description: "",
-      price: parseFloat(r.price),
-      image_url: null,
-      category: r.category_name,
-      featured: false,
-      inStock: r.in_stock,
-    }));
+    // Solo se ofrece lo habilitado para el menú online y con existencias; lo demás
+    // sigue en el sistema (admin, informes, historial) pero no se muestra.
+    return rows
+      .filter((r) =>
+        isOnlineAvailable({ active: true, showOnline: r.show_online, inStock: r.in_stock, stockQty: r.stock_qty })
+      )
+      .map((r) => ({
+        id: String(r.id),
+        name: r.name,
+        description: "",
+        price: parseFloat(r.price),
+        image_url: null,
+        category: r.category_name,
+        featured: false,
+        inStock: true,
+      }));
   } catch {
-    return sampleMenu;
+    return sampleMenu.filter((i) => i.inStock);
   }
 }
 

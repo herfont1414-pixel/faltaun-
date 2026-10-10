@@ -133,6 +133,8 @@ export interface AdminProduct {
   name: string;
   price: number;
   active: boolean;
+  // Se muestra en el menú online (independiente de active y del stock).
+  showOnline: boolean;
   inStock: boolean;
   stockQty: number | null;
   category: string;
