@@ -17,6 +17,9 @@ create table if not exists gestion_products (
 
 alter table gestion_products add column if not exists in_stock boolean not null default true;
 alter table gestion_products add column if not exists stock_qty int;
+-- Visibilidad en el menú online, independiente de "active" (que también gobierna Mostrador/Mesas)
+-- y del stock. Por defecto true: nada cambia hasta que se oculte un producto a mano.
+alter table gestion_products add column if not exists show_online boolean not null default true;
 -- print_area_id se agrega más abajo, después de crear gestion_print_areas
 -- (la FK necesita que esa tabla ya exista).
 

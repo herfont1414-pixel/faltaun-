@@ -38,6 +38,7 @@ export function ProductsView() {
     changes: {
       price?: number;
       active?: boolean;
+      showOnline?: boolean;
       inStock?: boolean;
       stockQty?: number | null;
       printAreaId?: number | null;
@@ -71,6 +72,7 @@ export function ProductsView() {
                 <th>Área de impresión</th>
                 <th style={{ textAlign: "right" }}>Stock</th>
                 <th style={{ textAlign: "right" }}>Receta</th>
+                <th style={{ textAlign: "right" }}>Menú online</th>
                 <th style={{ textAlign: "right" }}>Activo</th>
               </tr>
             </thead>
@@ -166,6 +168,20 @@ export function ProductsView() {
                     >
                       Receta
                     </button>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <label
+                      title="Si lo desactivás, el producto no aparece en el menú online (sigue en el sistema)"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={p.showOnline}
+                        disabled={savingId === p.id}
+                        onChange={(e) => patch(p.id, { showOnline: e.target.checked })}
+                      />
+                      Mostrar en el menú online
+                    </label>
                   </td>
                   <td style={{ textAlign: "right" }}>
                     <button

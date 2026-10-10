@@ -1,15 +1,16 @@
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
-import { seedFreshDb, tearDownTestDb } from "./helpers";
+import { seedFreshDb, tearDownTestDb, anyInStockProduct } from "./helpers";
 import { getMenuSpecial, setMenuSpecial } from "@/lib/admin/menu-special";
 import { getMenuItems, getMenuHighlights } from "@/lib/menu";
-import { getState, updateProduct } from "@/lib/admin/store";
+import { updateProduct } from "@/lib/admin/store";
 
 let dbPath: string;
 let productId: number;
 
 beforeAll(async () => {
   dbPath = await seedFreshDb("menu-special");
-  productId = Object.values((await getState()).catalog).flat()[0].id;
+  // Un producto garantizado disponible: el menú público ya no muestra los agotados.
+  productId = (await anyInStockProduct()).id;
 });
 
 afterAll(() => {
