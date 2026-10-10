@@ -14,7 +14,7 @@ import { ReportsView } from "@/components/admin/reports-view";
 import { ReservationsView } from "@/components/admin/reservations-view";
 import { ExpensesView } from "@/components/admin/expenses-view";
 import { ClientesView } from "@/components/admin/clientes-view";
-import { FidelidadInformeView } from "@/components/admin/fidelidad-informe-view";
+import { FidelidadView } from "@/components/admin/fidelidad-view";
 import { ImpresionView } from "@/components/admin/impresion-view";
 import { ConfiguracionView } from "@/components/admin/configuracion-view";
 import { UsuariosView } from "@/components/admin/usuarios-view";
@@ -512,7 +512,7 @@ export function AdminApp() {
       ) : section === "clientes" ? (
         <ClientesView />
       ) : section === "fidelidad" ? (
-        <FidelidadInformeView />
+        <FidelidadView />
       ) : section === "impresion" ? (
         <ImpresionView />
       ) : section === "configuracion" ? (

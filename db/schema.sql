@@ -549,3 +549,42 @@ create table if not exists gestion_purchase_items (
 
 create index if not exists gestion_purchases_supplier_id_idx on gestion_purchases(supplier_id);
 create index if not exists gestion_purchase_items_purchase_id_idx on gestion_purchase_items(purchase_id);
+
+-- Etapa 2 de fidelidad: premios por hito y canjes. Migración aditiva: no toca
+-- gestion_loyalty_accounts ni gestion_loyalty_transactions.
+-- Catálogo de premios. El hito se repite cada "step" sellos (papas 5, 20, 35…;
+-- hamburguesa 15, 30, 45…). product_id vincula el premio a un producto por ID.
+create table if not exists gestion_loyalty_rewards (
+  id serial primary key,
+  code text unique not null,
+  name text not null,
+  description text,
+  first_milestone int not null check (first_milestone > 0),
+  step int not null check (step > 0),
+  product_id int references gestion_products(id) on delete set null,
+  active boolean not null default true,
+  sort_order int not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+-- Un premio ganado. unique (phone, reward_id, milestone): cada premio se genera
+-- una sola vez por cliente e hito. El canje solo pasa de 'disponible' a
+-- 'canjeado' (ver redeemGrant en loyalty.ts) y deja quién, cuándo y qué entregó.
+create table if not exists gestion_loyalty_grants (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null,
+  reward_id int not null references gestion_loyalty_rewards(id),
+  milestone int not null check (milestone > 0),
+  status text not null default 'disponible' check (status in ('disponible', 'canjeado')),
+  created_at timestamptz not null default now(),
+  redeemed_at timestamptz,
+  redeemed_by int references gestion_users(id) on delete set null,
+  delivered_product_id int references gestion_products(id) on delete set null,
+  delivered_product_name text,
+  note text,
+  unique (phone, reward_id, milestone),
+  check ((status = 'canjeado') = (redeemed_at is not null))
+);
+
+create index if not exists gestion_loyalty_grants_phone_idx on gestion_loyalty_grants(phone);
+create index if not exists gestion_loyalty_grants_status_idx on gestion_loyalty_grants(status);

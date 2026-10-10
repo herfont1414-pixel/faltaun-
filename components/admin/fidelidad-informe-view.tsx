@@ -181,7 +181,7 @@ export function FidelidadInformeView() {
 
       <Section
         title="1 · Posibles premios nuevos (reglas nuevas)"
-        hint="Papas fritas en los hitos 5, 20, 35… y hamburguesa simple en 15, 30, 45… Es solo una proyección: no se genera ningún premio."
+        hint="Papas fritas en los hitos 5, 20, 35… y hamburguesa simple en 15, 30, 45… Es solo una proyección según los sellos actuales (incluye hitos ya pasados): no se genera ningún premio y no coincide necesariamente con los premios reales ya generados."
       >
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
           <Stat label="Clientes con papas" value={retro.clientsWithPapas} />

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Star } from "lucide-react";
+import { cycleFilled, cyclePosition, stampsToNext } from "@/lib/admin/loyalty-rewards";
 
 interface LoyaltyAccount {
   phone: string;
@@ -15,6 +16,33 @@ interface LoyaltyAccount {
   stampsToNextReward: number;
 }
 
+interface PublicReward {
+  code: string;
+  name: string;
+  description: string | null;
+  firstMilestone: number;
+  step: number;
+}
+
+interface PublicGrant {
+  rewardCode: string;
+  rewardName: string;
+  rewardDescription: string | null;
+  milestone: number;
+  status: "disponible" | "canjeado";
+  createdAt: string;
+  redeemedAt: string | null;
+}
+
+const EMOJI: Record<string, string> = { papas: "🍟", burger: "🍔" };
+const emojiFor = (code: string) => EMOJI[code] ?? "🎁";
+
+function dateOnly(iso: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-AR");
+}
+
 function money(value: number) {
   return `$${value.toLocaleString("es-AR")}`;
 }
@@ -25,7 +53,8 @@ export default function FidelidadPage() {
   const [phone, setPhone] = useState("");
   const [savedPhone, setSavedPhone] = useState<string | null>(null);
   const [account, setAccount] = useState<LoyaltyAccount | null>(null);
-  const [threshold, setThreshold] = useState(10);
+  const [rewards, setRewards] = useState<PublicReward[]>([]);
+  const [grants, setGrants] = useState<PublicGrant[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
@@ -49,7 +78,8 @@ export default function FidelidadPage() {
     const res = await fetch(`/api/customer/${encodeURIComponent(value.trim())}/loyalty`);
     const data = await res.json();
     setAccount(data.account ?? null);
-    setThreshold(data.threshold ?? 10);
+    setRewards(data.rewards ?? []);
+    setGrants(data.grants ?? []);
     setLoading(false);
     setSearched(true);
     try {
@@ -60,8 +90,15 @@ export default function FidelidadPage() {
   }
 
   const stamps = account?.stamps ?? 0;
-  const filled = stamps % threshold;
-  const dots = Array.from({ length: threshold }, (_, i) => i < filled);
+  // La tarjeta se repite cada "step" sellos (15). Los premios marcan su casillero con un ícono.
+  const cycle = rewards.length ? Math.max(...rewards.map((r) => r.step)) : 15;
+  const filled = cycleFilled(stamps, cycle);
+  const markerAt = new Map<number, string>();
+  for (const r of rewards) markerAt.set(cyclePosition(r.firstMilestone, cycle), emojiFor(r.code));
+  const dots = Array.from({ length: cycle }, (_, i) => ({ on: i < filled, marker: markerAt.get(i + 1) ?? null }));
+  const available = grants.filter((g) => g.status === "disponible");
+  const redeemedGrants = grants.filter((g) => g.status === "canjeado");
+  const next = account && rewards.length ? stampsToNext(rewards, stamps) : null;
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-base px-5 py-10">
@@ -74,9 +111,21 @@ export default function FidelidadPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ember-soft">Fidelidad</p>
         <h1 className="mt-1 font-display text-3xl text-stone-50">Tu tarjeta VIP</h1>
         <p className="mt-2 text-sm text-stone-400">
-          Sumá un sello cada vez que confirmamos un pedido hecho desde este menú. Cada {threshold} sellos, un
-          premio para canjear en el local.
+          Sumá un sello cada vez que confirmamos un pedido hecho desde este menú y ganá premios para canjear en el
+          local.
         </p>
+        {rewards.length > 0 && (
+          <ul className="mt-3 space-y-1 text-sm text-stone-300">
+            {[...rewards]
+              .sort((a, b) => a.firstMilestone - b.firstMilestone)
+              .map((r) => (
+                <li key={r.code}>
+                  {emojiFor(r.code)} <strong className="text-stone-100">{r.firstMilestone} sellos:</strong> {r.name}
+                </li>
+              ))}
+            <li className="text-xs text-stone-500">Y se repite: seguís sumando sin perder tus sellos ni tus premios.</li>
+          </ul>
+        )}
 
         {!savedPhone && !searched && (
           <div className="mt-6 space-y-2">
@@ -119,20 +168,27 @@ export default function FidelidadPage() {
               </p>
 
               <div className="relative mt-6 grid grid-cols-5 gap-2.5">
-                {dots.map((on, i) => (
+                {dots.map(({ on, marker }, i) => (
                   <div
                     key={i}
                     className={`flex aspect-square items-center justify-center rounded-full border backdrop-blur-sm ${
-                      on ? "border-ember bg-ember/25" : "border-white/10 bg-white/5"
+                      on ? "border-ember bg-ember/25" : marker ? "border-ember/40 bg-white/5" : "border-white/10 bg-white/5"
                     }`}
                   >
-                    <Star
-                      className={`h-4 w-4 ${on ? "text-ember-soft" : "text-stone-600"}`}
-                      fill={on ? "currentColor" : "none"}
-                    />
+                    {marker ? (
+                      <span className={`text-base ${on ? "" : "opacity-60"}`}>{marker}</span>
+                    ) : (
+                      <Star
+                        className={`h-4 w-4 ${on ? "text-ember-soft" : "text-stone-600"}`}
+                        fill={on ? "currentColor" : "none"}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
+              <p className="relative mt-3 text-xs text-stone-400">
+                {stamps} sello{stamps === 1 ? "" : "s"} acumulados
+              </p>
 
               {account.orderCount > 0 && (
                 <p className="relative mt-5 text-xs text-stone-400">
@@ -142,19 +198,41 @@ export default function FidelidadPage() {
               )}
             </div>
 
-            <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-sm">
-              {account.rewardsAvailable > 0 ? (
-                <p className="font-semibold text-ember-soft">
-                  🎉 Tenés {account.rewardsAvailable} premio{account.rewardsAvailable > 1 ? "s" : ""} listo
-                  {account.rewardsAvailable > 1 ? "s" : ""} para canjear — mostrá esta pantalla en el local.
+            {available.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm font-semibold text-ember-soft">
+                  {available.length === 1 ? "¡Ya tenés un premio disponible!" : `¡Tenés ${available.length} premios disponibles!`}
                 </p>
-              ) : (
-                <p className="text-stone-400">
-                  Te faltan <strong className="text-stone-200">{account.stampsToNextReward}</strong> sello
-                  {account.stampsToNextReward === 1 ? "" : "s"} para tu próximo premio.
-                </p>
-              )}
-            </div>
+                {available.map((g) => (
+                  <div key={`${g.rewardCode}-${g.milestone}`} className="rounded-2xl border border-ember/40 bg-ember/10 p-4 text-sm">
+                    <p className="font-semibold text-stone-50">
+                      {emojiFor(g.rewardCode)} {g.rewardName}
+                    </p>
+                    {g.rewardDescription && <p className="mt-1 text-stone-300">{g.rewardDescription}</p>}
+                    <p className="mt-2 text-xs text-stone-400">Mostrá tu tarjeta en Madero Restó para canjearlo.</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {next && (
+              <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-sm text-stone-400">
+                Te faltan <strong className="text-stone-200">{next.remaining}</strong> sello
+                {next.remaining === 1 ? "" : "s"} para tu próximo premio: {emojiFor(next.rule.code)} {next.rule.name} (a los{" "}
+                {next.milestone} sellos).
+              </div>
+            )}
+
+            {redeemedGrants.length > 0 && (
+              <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-xs text-stone-500">
+                <p className="mb-1 font-semibold text-stone-400">Premios ya canjeados</p>
+                {redeemedGrants.map((g) => (
+                  <p key={`${g.rewardCode}-${g.milestone}`}>
+                    {emojiFor(g.rewardCode)} {g.rewardName} · {dateOnly(g.redeemedAt)}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

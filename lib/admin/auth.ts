@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/admin/db";
+import type { DbClient } from "@/lib/admin/db";
 
 export const SESSION_COOKIE = "admin_session";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -99,8 +100,10 @@ export async function recordAudit(params: {
   entityId?: string | number | null;
   oldValue?: unknown;
   newValue?: unknown;
+  // Para registrar la auditoría dentro de la misma transacción de la operación.
+  client?: DbClient;
 }) {
-  const pool = getPool();
+  const pool = params.client ?? getPool();
   await pool.query(
     `insert into gestion_audit_log (user_id, action, entity, entity_id, old_value, new_value)
      values ($1, $2, $3, $4, $5, $6)`,

@@ -1,16 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Gift, Star, X } from "lucide-react";
 
 const PHONE_KEY = "madero_customer_phone";
-const LOYALTY_THRESHOLD = 10;
+
+interface Rule {
+  code: string;
+  name: string;
+  firstMilestone: number;
+}
+const EMOJI: Record<string, string> = { papas: "🍟", burger: "🍔" };
 
 export function LoyaltyBanner() {
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState("");
+  const [rules, setRules] = useState<Rule[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!open || rules.length > 0) return;
+    fetch("/api/loyalty/rules")
+      .then((res) => res.json())
+      .then((data: { rewards?: Rule[] }) => setRules(data.rewards ?? []))
+      .catch(() => {});
+  }, [open, rules.length]);
 
   function goToCard() {
     const value = phone.trim();
@@ -71,10 +86,19 @@ export function LoyaltyBanner() {
 
             <p className="mt-4 text-sm leading-relaxed text-stone-400">
               Sumás <strong className="text-stone-200">1 sello</strong> cada vez que confirmamos un pedido
-              hecho desde este menú. Al llegar a los{" "}
-              <strong className="text-stone-200">{LOYALTY_THRESHOLD} sellos</strong>, tenés un premio listo
-              para canjear en el local.
+              hecho desde este menú y ganás premios para canjear en el local:
             </p>
+            {rules.length > 0 && (
+              <ul className="mt-2 space-y-1 text-sm text-stone-300">
+                {[...rules]
+                  .sort((a, b) => a.firstMilestone - b.firstMilestone)
+                  .map((r) => (
+                    <li key={r.code}>
+                      {EMOJI[r.code] ?? "🎁"} <strong className="text-stone-100">{r.firstMilestone} sellos:</strong> {r.name}
+                    </li>
+                  ))}
+              </ul>
+            )}
 
             <div className="mt-5 space-y-2">
               <input
