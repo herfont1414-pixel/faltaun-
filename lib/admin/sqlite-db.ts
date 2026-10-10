@@ -91,6 +91,17 @@ export function createSqliteDb(): Db {
 
   return {
     ...client,
+    // Conexión propia en modo solo lectura (y query_only): SQLite rechaza cualquier
+    // escritura aunque el código lo intentara. No toca la conexión de escritura.
+    async readOnly<T>(fn: (query: (sql: string) => Promise<any[]>) => Promise<T>): Promise<T> {
+      const ro = new Database(dbPath, { readonly: true, fileMustExist: true });
+      try {
+        ro.pragma("query_only = ON");
+        return await fn(async (sql) => (ro.prepare(sql).all() as unknown[]).map(coerceRow));
+      } finally {
+        ro.close();
+      }
+    },
     async connect() {
       const previous = lock;
       let releaseLock!: () => void;
