@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/admin/sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { OrderPanel } from "@/components/admin/order-panel";
@@ -24,6 +24,7 @@ import { ComprasView } from "@/components/admin/compras-view";
 import { TableOpenModal } from "@/components/admin/table-open-modal";
 import { money } from "@/lib/admin/format";
 import { printOrderDocument } from "@/lib/print-client";
+import { playBeep } from "@/lib/admin/beep";
 import { changeCents, fromCents, toCents } from "@/lib/admin/payments";
 import type { NewOrderInput } from "@/components/admin/mostrador-view";
 import { orderTitle } from "@/lib/admin/order-labels";
@@ -89,6 +90,20 @@ export function AdminApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingTable, setPendingTable] = useState<TableRow | null>(null);
   const [openingTable, setOpeningTable] = useState(false);
+  // Pedidos web pendientes (para el aviso y el contador del menú lateral, en cualquier pantalla).
+  const [pendingWeb, setPendingWeb] = useState(0);
+  const [webAlert, setWebAlert] = useState<string | null>(null);
+  const seenWebIds = useRef<Set<string> | null>(null);
+  const sectionRef = useRef<Section>("inicio");
+  // Cada cambio hecho desde esta pantalla sube la versión: así una actualización automática
+  // que salió antes de ese cambio no lo pisa con datos viejos.
+  const stateVersion = useRef(0);
+  const busy = useRef(0);
+
+  useEffect(() => {
+    sectionRef.current = section;
+    if (section === "pedidos-web") setWebAlert(null);
+  }, [section]);
 
   useEffect(() => {
     fetch("/api/admin/state")
@@ -121,17 +136,75 @@ export function AdminApp() {
   }, []);
 
   function applyState(state: AdminStateResponse) {
+    stateVersion.current += 1;
     setData(state);
   }
 
   async function safeCall<T>(fn: () => Promise<T>) {
+    busy.current += 1;
     try {
       return await fn();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Error inesperado");
       return null;
+    } finally {
+      busy.current -= 1;
     }
   }
+
+  // Actualización automática: cada 5 s (solo con la pestaña visible) trae mesas, pedidos y
+  // los pedidos web pendientes, así lo que entra desde el celular o desde otra PC aparece sin
+  // refrescar la página. No interrumpe una acción en curso ni pisa un cambio recién hecho.
+  useEffect(() => {
+    let cancelled = false;
+    let running = false;
+    async function tick() {
+      if (running || document.visibilityState !== "visible") return;
+      running = true;
+      try {
+        const version = stateVersion.current;
+        const [stateRes, webRes] = await Promise.all([
+          busy.current === 0 ? fetch("/api/admin/state", { cache: "no-store" }) : Promise.resolve(null),
+          fetch("/api/admin/web-orders?status=pendiente", { cache: "no-store" }),
+        ]);
+        if (cancelled) return;
+        if (stateRes?.status === 401 || webRes.status === 401) {
+          goToLogin();
+          return;
+        }
+        if (stateRes?.ok) {
+          const state = (await stateRes.json()) as AdminStateResponse;
+          if (!cancelled && state?.catalog && busy.current === 0 && version === stateVersion.current) setData(state);
+        }
+        if (webRes.ok) {
+          const { orders = [] } = (await webRes.json()) as { orders?: { id: string; customerName: string }[] };
+          if (cancelled) return;
+          setPendingWeb(orders.length);
+          const seen = seenWebIds.current;
+          const fresh = seen ? orders.find((o) => !seen.has(o.id)) : undefined;
+          // La pantalla "Pedidos web" ya avisa con su propio sonido.
+          if (fresh && sectionRef.current !== "pedidos-web") {
+            playBeep();
+            setWebAlert(`Nuevo pedido web de ${fresh.customerName}`);
+          }
+          seenWebIds.current = new Set(orders.map((o) => o.id));
+        }
+      } catch {
+        // Sin conexión por un momento: se reintenta en el próximo ciclo.
+      } finally {
+        running = false;
+      }
+    }
+    tick();
+    const interval = setInterval(tick, 5000);
+    const onVisible = () => document.visibilityState === "visible" && tick();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
 
   function openTable(table: TableRow) {
     if (table.orderId) {
@@ -403,6 +476,7 @@ export function AdminApp() {
         onNavigate={setSection}
         mobileOpen={sidebarOpen}
         onCloseMobile={() => setSidebarOpen(false)}
+        badges={{ "pedidos-web": pendingWeb }}
       />
 
       <div className="admin-main">
@@ -527,6 +601,20 @@ export function AdminApp() {
         <ComprasView />
       ) : null}
       </div>
+
+      {webAlert && (
+        <div
+          style={{ position: "fixed", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 75, display: "flex", gap: 10, alignItems: "center", background: "#2c2c2a", color: "#fff", padding: "12px 16px", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
+        >
+          <span>🔔 {webAlert}</span>
+          <button type="button" className="btn btn-primary" style={{ flex: "none", padding: "6px 12px" }} onClick={() => { setWebAlert(null); setSection("pedidos-web"); }}>
+            Ver
+          </button>
+          <button type="button" aria-label="Cerrar aviso" onClick={() => setWebAlert(null)} style={{ background: "transparent", border: 0, color: "#bbb", cursor: "pointer", fontSize: 16 }}>
+            ✕
+          </button>
+        </div>
+      )}
 
       {toastMsg && (
         <div className="toast-wrap">

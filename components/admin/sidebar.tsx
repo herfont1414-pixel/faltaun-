@@ -76,9 +76,11 @@ interface SidebarProps {
   onNavigate: (section: Section) => void;
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  // Contador opcional al lado de una sección (ej.: pedidos web pendientes).
+  badges?: Partial<Record<Section, number>>;
 }
 
-export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile }: SidebarProps) {
+export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile, badges }: SidebarProps) {
   function handleClick(item: NavItem) {
     onCloseMobile();
     if (item.section) {
@@ -134,6 +136,11 @@ export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile }
                     >
                       <item.Icon size={16} className="shrink-0" />
                       <span className="truncate">{item.label}</span>
+                      {item.section && (badges?.[item.section] ?? 0) > 0 && (
+                        <span className="ml-auto rounded-full bg-orange-500 px-1.5 text-[11px] font-semibold leading-5 text-white">
+                          {badges![item.section]}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
