@@ -78,6 +78,7 @@ export function OrderPanel({
   const [notesDraft, setNotesDraft] = useState(order?.notes ?? "");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [notesOpen, setNotesOpen] = useState(false);
 
   useEffect(() => {
     setSearch("");
@@ -85,6 +86,7 @@ export function OrderPanel({
     setShowPayment(false);
     setNotesDraft(order?.notes ?? "");
     setEditingItemId(null);
+    setNotesOpen(false);
   }, [order?.id]);
 
   if (!order) {
@@ -99,7 +101,9 @@ export function OrderPanel({
   // Buscador: mientras se escribe, muestra los productos de TODAS las categorías que
   // coinciden (sin importar mayúsculas ni tildes); los que empiezan igual van primero.
   const searching = search.trim() !== "";
-  const products = searching ? searchProducts(catalog, search) : catalog[activeCategory] ?? [];
+  const found = searching ? searchProducts(catalog, search) : catalog[activeCategory] ?? [];
+  // Los que no tienen stock van al final, así lo que se puede cargar queda arriba.
+  const products = [...found].sort((a, b) => Number(!a.inStock) - Number(!b.inStock));
   const itemCount = order.items.reduce((sum, it) => sum + it.qty, 0);
 
   function saveNotes() {
@@ -174,11 +178,8 @@ export function OrderPanel({
               disabled={!product.inStock}
               onClick={() => onAddProduct(product.id)}
             >
-              <div className="p-name">
-                {product.name}
-                {!product.inStock && <span className="p-badge">Sin stock</span>}
-              </div>
-              <div className="p-price">{money(product.price)}</div>
+              <div className="p-name">{product.name}</div>
+              <div className="p-price">{product.inStock ? money(product.price) : "Sin stock"}</div>
             </button>
           ))}
         </div>
@@ -303,14 +304,26 @@ export function OrderPanel({
           </div>
 
           <div className="notes-field">
-            <div className="notes-label">Notas del pedido</div>
-            <textarea
-              value={notesDraft}
-              onChange={(e) => setNotesDraft(e.target.value)}
-              onBlur={saveNotes}
-              placeholder="Ej: sin cebolla, alergia a maní..."
-              rows={2}
-            />
+            {notesOpen ? (
+              <>
+                <div className="notes-label">Notas del pedido</div>
+                <textarea
+                  autoFocus
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  onBlur={() => {
+                    saveNotes();
+                    setNotesOpen(false);
+                  }}
+                  placeholder="Ej: sin cebolla, alergia a maní..."
+                  rows={2}
+                />
+              </>
+            ) : (
+              <button type="button" className={`notes-toggle ${notesDraft ? "has-note" : ""}`} onClick={() => setNotesOpen(true)}>
+                {notesDraft ? <>📝 {notesDraft}</> : "+ Agregar nota al pedido"}
+              </button>
+            )}
           </div>
 
           {showPayment ? (
@@ -330,28 +343,24 @@ export function OrderPanel({
             />
           ) : (
             <div className="op-footer">
-              <div className="total-row">
-                <span className="tl-label">Total</span>
-                <span className="tl-value">{money(order.total)}</span>
-              </div>
               <div className="footer-actions">
                 <button type="button" className="btn" onClick={onSendKitchen}>
                   Enviar a cocina
                 </button>
                 <button type="button" className="btn btn-icon" onClick={onPrintTicket}>
-                  <Printer className="mx-auto h-4 w-4" />
+                  <Printer className="h-4 w-4" />
                   Imprimir
-                </button>
-              </div>
-              <div className="footer-actions footer-row2">
-                <button type="button" className="btn btn-primary" onClick={() => setShowPayment(true)}>
-                  Cobrar
                 </button>
                 {tableNumber && (
                   <button type="button" className="btn" onClick={onRequestBill}>
                     Pedir cuenta
                   </button>
                 )}
+              </div>
+              <div className="footer-actions footer-row2">
+                <button type="button" className="btn btn-primary btn-cobrar" onClick={() => setShowPayment(true)}>
+                  Cobrar {money(order.total)}
+                </button>
               </div>
             </div>
           )}
