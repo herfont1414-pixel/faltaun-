@@ -61,6 +61,14 @@ export function DashboardView({ tables, onGoTo }: DashboardViewProps) {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
 
   useEffect(() => {
+    // Se recarga sola cada 15 s (con la pestaña visible), así los números siguen al día
+    // aunque los pedidos entren desde el celular o desde otra PC.
+    load();
+    const interval = setInterval(() => document.visibilityState === "visible" && load(), 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  function load() {
     const now = new Date();
     const from = startOfDay(now).toISOString();
     const to = endOfDay(now).toISOString();
@@ -81,8 +89,9 @@ export function DashboardView({ tables, onGoTo }: DashboardViewProps) {
 
     fetch("/api/admin/dashboard")
       .then((res) => (res.ok ? res.json() : { summary: null }))
-      .then((data: { summary: DashboardSummary | null }) => setSummary(data.summary));
-  }, []);
+      .then((data: { summary: DashboardSummary | null }) => setSummary(data.summary))
+      .catch(() => {});
+  }
 
   const occupied = tables.filter((t) => t.status !== "libre").length;
   const free = tables.length - occupied;
