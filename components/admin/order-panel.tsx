@@ -1,8 +1,8 @@
 "use client";
 
 import { osmLink } from "@/lib/geo";
-import { useEffect, useState } from "react";
-import { X, Printer, Pencil } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, Printer, Pencil, ChevronDown } from "lucide-react";
 import { money } from "@/lib/admin/format";
 import { PaymentPicker } from "@/components/admin/payment-picker";
 import type { Catalog, Order, OrderPayment } from "@/lib/admin/types";
@@ -49,6 +49,10 @@ interface OrderPanelProps {
   onPrintTicket: () => void;
 }
 
+// Preferencia de cada PC: mostrar u ocultar la carta por categorías (en PC arranca oculta,
+// porque los productos se cargan sobre todo con el buscador).
+const CATALOG_KEY = "madero_pos_catalog_open";
+
 const DELIVERY_STATUS_LABEL: Record<string, string> = {
   preparando: "Preparando",
   en_camino: "En camino",
@@ -78,6 +82,28 @@ export function OrderPanel({
   const [notesDraft, setNotesDraft] = useState(order?.notes ?? "");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    try {
+      setCatalogOpen(localStorage.getItem(CATALOG_KEY) === "1");
+    } catch {
+      // sin localStorage: queda oculta
+    }
+  }, []);
+
+  function toggleCatalog() {
+    setCatalogOpen((open) => {
+      try {
+        localStorage.setItem(CATALOG_KEY, open ? "0" : "1");
+      } catch {
+        // no se guarda la preferencia, pero igual se abre/cierra
+      }
+      return !open;
+    });
+  }
 
   useEffect(() => {
     setSearch("");
@@ -85,6 +111,7 @@ export function OrderPanel({
     setShowPayment(false);
     setNotesDraft(order?.notes ?? "");
     setEditingItemId(null);
+    setNotesOpen(false);
   }, [order?.id]);
 
   if (!order) {
@@ -99,8 +126,19 @@ export function OrderPanel({
   // Buscador: mientras se escribe, muestra los productos de TODAS las categorías que
   // coinciden (sin importar mayúsculas ni tildes); los que empiezan igual van primero.
   const searching = search.trim() !== "";
-  const products = searching ? searchProducts(catalog, search) : catalog[activeCategory] ?? [];
+  const found = searching ? searchProducts(catalog, search) : catalog[activeCategory] ?? [];
+  // Los que no tienen stock van al final, así lo que se puede cargar queda arriba.
+  const products = [...found].sort((a, b) => Number(!a.inStock) - Number(!b.inStock));
   const itemCount = order.items.reduce((sum, it) => sum + it.qty, 0);
+
+  // Al cargar un producto desde el buscador, el buscador se limpia y queda listo para el siguiente.
+  function addProduct(productId: number) {
+    onAddProduct(productId);
+    if (searching) {
+      setSearch("");
+      searchRef.current?.focus();
+    }
+  }
 
   function saveNotes() {
     if (notesDraft !== (order!.notes ?? "")) onChangeNotes(notesDraft);
@@ -128,10 +166,20 @@ export function OrderPanel({
 
         <div className="prod-search">
           <input
+            ref={searchRef}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar producto (ej: bacon)"
+            onKeyDown={(e) => {
+              // Enter carga el primer resultado disponible; Escape limpia la búsqueda.
+              if (e.key === "Enter") {
+                const first = products.find((p) => p.inStock);
+                if (searching && first) addProduct(first.id);
+              } else if (e.key === "Escape") {
+                setSearch("");
+              }
+            }}
+            placeholder="Buscar producto (Enter agrega)"
             aria-label="Buscar producto"
             className="caja-input"
           />
@@ -142,45 +190,46 @@ export function OrderPanel({
           )}
         </div>
 
-        {categories.length > 1 && (
-          <div className="cat-tabs">
-            {categories.map((cat) => (
+        <button type="button" className="catalog-toggle" onClick={toggleCatalog} aria-expanded={catalogOpen}>
+          <span>{catalogOpen ? "Ocultar carta por categorías" : "Ver carta por categorías"}</span>
+          <ChevronDown className={`h-4 w-4 transition ${catalogOpen ? "rotate-180" : ""}`} />
+        </button>
+
+        <div className={`catalog ${catalogOpen ? "open" : ""} ${searching ? "searching" : ""}`}>
+          {!searching && categories.length > 1 && (
+            <div className="cat-tabs">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  className={`cat-tab ${cat === activeCategory ? "active" : ""}`}
+                  onClick={() => onChangeCategory(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="product-list">
+            {searching && products.length === 0 && (
+              <div style={{ gridColumn: "1 / -1", fontSize: 13, color: "var(--text-dim)", padding: "6px 2px" }}>
+                No hay productos que coincidan con &ldquo;{search.trim()}&rdquo;.
+              </div>
+            )}
+            {products.map((product) => (
               <button
-                key={cat}
+                key={product.id}
                 type="button"
-                className={`cat-tab ${!searching && cat === activeCategory ? "active" : ""}`}
-                onClick={() => {
-                  setSearch("");
-                  onChangeCategory(cat);
-                }}
+                className={`product-btn ${product.inStock ? "" : "sin-stock"}`}
+                disabled={!product.inStock}
+                onClick={() => addProduct(product.id)}
               >
-                {cat}
+                <div className="p-name">{product.name}</div>
+                <div className="p-price">{product.inStock ? money(product.price) : "Sin stock"}</div>
               </button>
             ))}
           </div>
-        )}
-
-        <div className="product-list">
-          {searching && products.length === 0 && (
-            <div style={{ gridColumn: "1 / -1", fontSize: 13, color: "var(--text-dim)", padding: "6px 2px" }}>
-              No hay productos que coincidan con &ldquo;{search.trim()}&rdquo;.
-            </div>
-          )}
-          {products.map((product) => (
-            <button
-              key={product.id}
-              type="button"
-              className={`product-btn ${product.inStock ? "" : "sin-stock"}`}
-              disabled={!product.inStock}
-              onClick={() => onAddProduct(product.id)}
-            >
-              <div className="p-name">
-                {product.name}
-                {!product.inStock && <span className="p-badge">Sin stock</span>}
-              </div>
-              <div className="p-price">{money(product.price)}</div>
-            </button>
-          ))}
         </div>
 
         <button type="button" className="mobile-cart-bar" onClick={() => setSheetOpen(true)}>
@@ -303,14 +352,26 @@ export function OrderPanel({
           </div>
 
           <div className="notes-field">
-            <div className="notes-label">Notas del pedido</div>
-            <textarea
-              value={notesDraft}
-              onChange={(e) => setNotesDraft(e.target.value)}
-              onBlur={saveNotes}
-              placeholder="Ej: sin cebolla, alergia a maní..."
-              rows={2}
-            />
+            {notesOpen ? (
+              <>
+                <div className="notes-label">Notas del pedido</div>
+                <textarea
+                  autoFocus
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  onBlur={() => {
+                    saveNotes();
+                    setNotesOpen(false);
+                  }}
+                  placeholder="Ej: sin cebolla, alergia a maní..."
+                  rows={2}
+                />
+              </>
+            ) : (
+              <button type="button" className={`notes-toggle ${notesDraft ? "has-note" : ""}`} onClick={() => setNotesOpen(true)}>
+                {notesDraft ? <>📝 {notesDraft}</> : "+ Agregar nota al pedido"}
+              </button>
+            )}
           </div>
 
           {showPayment ? (
@@ -330,28 +391,24 @@ export function OrderPanel({
             />
           ) : (
             <div className="op-footer">
-              <div className="total-row">
-                <span className="tl-label">Total</span>
-                <span className="tl-value">{money(order.total)}</span>
-              </div>
               <div className="footer-actions">
                 <button type="button" className="btn" onClick={onSendKitchen}>
                   Enviar a cocina
                 </button>
                 <button type="button" className="btn btn-icon" onClick={onPrintTicket}>
-                  <Printer className="mx-auto h-4 w-4" />
+                  <Printer className="h-4 w-4" />
                   Imprimir
-                </button>
-              </div>
-              <div className="footer-actions footer-row2">
-                <button type="button" className="btn btn-primary" onClick={() => setShowPayment(true)}>
-                  Cobrar
                 </button>
                 {tableNumber && (
                   <button type="button" className="btn" onClick={onRequestBill}>
                     Pedir cuenta
                   </button>
                 )}
+              </div>
+              <div className="footer-actions footer-row2">
+                <button type="button" className="btn btn-primary btn-cobrar" onClick={() => setShowPayment(true)}>
+                  Cobrar {money(order.total)}
+                </button>
               </div>
             </div>
           )}
