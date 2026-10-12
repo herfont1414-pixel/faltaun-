@@ -32,7 +32,9 @@ export function MenuSection({ items, highlights }: MenuSectionProps) {
   const popularIds = useMemo(() => new Set(popular.slice(0, 3).map((i) => i.id)), [popular]);
   const special = useMemo(() => {
     const item = highlights?.special ? items.find((i) => i.id === highlights.special!.id) : null;
-    return item && item.inStock && highlights?.special ? { item, text: highlights.special.text } : null;
+    return item && item.inStock && highlights?.special
+      ? { item, text: highlights.special.text, imageUrl: highlights.special.imageUrl ?? null }
+      : null;
   }, [items, highlights]);
 
   const q = query.trim().toLowerCase();

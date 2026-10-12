@@ -4,13 +4,14 @@ import type { MenuItem } from "@/lib/types";
 
 interface HighlightsProps {
   popular: MenuItem[];
-  special: { item: MenuItem; text: string } | null;
+  special: { item: MenuItem; text: string; imageUrl: string | null } | null;
   onSelect: (item: MenuItem) => void;
 }
 
 const price = (n: number) => `$${n.toLocaleString("es-AR")}`;
 
-// "Lo más pedido" y "Especial del día": atajos a productos que ya existen, sin fotos.
+// "Lo más pedido" y "Especial del día": atajos a productos que ya existen. El especial puede
+// llevar una foto (se carga desde Configuración); se muestra completa, sin recortar.
 // Al tocarlos se abre el mismo modal del menú, que ya tiene el botón de agregar al carrito.
 export function Highlights({ popular, special, onSelect }: HighlightsProps) {
   if (!special && popular.length === 0) return null;
@@ -72,6 +73,15 @@ export function Highlights({ popular, special, onSelect }: HighlightsProps) {
               </span>
               <span className="rounded-md bg-ember px-2 py-0.5 text-[10px] font-bold tracking-wider text-base">HOY</span>
             </div>
+            {special.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={special.imageUrl}
+                alt={special.item.name}
+                loading="lazy"
+                className="mt-3 max-h-[420px] w-full rounded-xl bg-black/40 object-contain"
+              />
+            )}
             <div className="mt-3 flex items-center gap-3">
               <SpecialIcon className="h-11 w-11 shrink-0 text-ember" strokeWidth={1.3} />
               <div className="min-w-0 flex-1">
