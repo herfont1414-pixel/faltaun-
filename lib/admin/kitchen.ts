@@ -32,8 +32,9 @@ export async function getKitchenTickets(): Promise<KitchenTicket[]> {
       product_name: string;
       qty: number;
       sent_to_kitchen: boolean;
+      note: string | null;
     }>(
-      `select order_id, product_name, qty, sent_to_kitchen
+      `select order_id, product_name, qty, sent_to_kitchen, note
        from gestion_order_items
        where order_id in (${placeholders})`,
       ids
@@ -41,7 +42,7 @@ export async function getKitchenTickets(): Promise<KitchenTicket[]> {
     for (const o of orderRows) {
       const items = itemRows
         .filter((it) => it.order_id === o.id && it.sent_to_kitchen)
-        .map((it) => ({ name: it.product_name, qty: it.qty }));
+        .map((it) => ({ name: it.product_name, qty: it.qty, note: it.note ?? null }));
       orderTickets.push({
         id: o.id,
         source: "orden",
@@ -75,7 +76,11 @@ export async function getKitchenTickets(): Promise<KitchenTicket[]> {
       origin: "web",
       tableNumber: null,
       customerName: w.customer_name,
-      items: parsedItems.map((it: { name: string; qty: number }) => ({ name: it.name, qty: it.qty })),
+      items: parsedItems.map((it: { name: string; qty: number; note?: string | null }) => ({
+        name: it.name,
+        qty: it.qty,
+        note: it.note ?? null,
+      })),
       kitchenStatus: w.kitchen_status,
       sentAt: w.kitchen_sent_at,
     };

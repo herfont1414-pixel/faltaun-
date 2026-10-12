@@ -61,7 +61,7 @@ export async function createWebOrder(input: {
   customerName: string;
   customerPhone: string;
   notes: string | null;
-  items: { name: string; qty: number }[];
+  items: { name: string; qty: number; note?: string | null }[];
   fulfillment: Fulfillment;
   customerAddress: string | null;
   deliveryZone: string | null;
@@ -97,9 +97,17 @@ export async function createWebOrder(input: {
 
   const items = input.items
     .filter((it) => byName.has(it.name) && it.qty > 0)
-    .map((it) => ({ name: it.name, qty: it.qty, price: money(byName.get(it.name)!.price) }));
+    .map((it) => {
+      const note = cleanItemNote(it.note);
+      return { name: it.name, qty: it.qty, price: money(byName.get(it.name)!.price), ...(note ? { note } : {}) };
+    });
 
   if (items.length === 0) throw new Error("El pedido no tiene productos válidos");
+
+  // El mismo producto puede venir en varias líneas (con distintas aclaraciones): el stock
+  // se controla con la cantidad total de ese producto.
+  const qtyByName = new Map<string, number>();
+  for (const it of items) qtyByName.set(it.name, (qtyByName.get(it.name) ?? 0) + it.qty);
 
   // Nunca confiar en el stock que "cree" el cliente: se valida acá contra
   // el stock real. No se descuenta todavía (el pedido puede ser rechazado);
@@ -111,7 +119,7 @@ export async function createWebOrder(input: {
     if (!product.show_online || !hasStock({ inStock: product.in_stock, stockQty: product.stock_qty })) {
       throw new Error(`${it.name} ya no está disponible`);
     }
-    if (product.stock_qty !== null && product.stock_qty < it.qty) {
+    if (product.stock_qty !== null && product.stock_qty < qtyByName.get(it.name)!) {
       throw new Error(`No hay suficiente stock de ${it.name}`);
     }
   }
@@ -229,7 +237,15 @@ export async function listWebOrders(status?: WebOrderStatus): Promise<WebOrder[]
   return rows.map(mapRow);
 }
 
-type WebOrderItemRow = { name: string; qty: number; price: number };
+type WebOrderItemRow = { name: string; qty: number; price: number; note?: string | null };
+
+// Aclaración por producto: texto corto, en una línea, sin caracteres de control.
+export const ITEM_NOTE_MAX = 120;
+export function cleanItemNote(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const note = raw.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, ITEM_NOTE_MAX);
+  return note || null;
+}
 
 function parseItems(raw: unknown): WebOrderItemRow[] {
   return (typeof raw === "string" ? JSON.parse(raw) : raw) as WebOrderItemRow[];
@@ -306,9 +322,9 @@ async function createPosOrderForWeb(
       [it.name]
     );
     await client.query(
-      `insert into gestion_order_items (order_id, product_name, price, qty, sent_to_kitchen, product_id)
-       values ($1, $2, $3, $4, true, $5)`,
-      [orderId, it.name, it.price, it.qty, prodRows[0]?.id ?? null]
+      `insert into gestion_order_items (order_id, product_name, price, qty, sent_to_kitchen, product_id, note)
+       values ($1, $2, $3, $4, true, $5, $6)`,
+      [orderId, it.name, it.price, it.qty, prodRows[0]?.id ?? null, cleanItemNote(it.note)]
     );
   }
   await client.query("update gestion_web_orders set order_id = $2 where id = $1", [web.id, orderId]);
@@ -407,7 +423,10 @@ export async function respondWebOrder(
       // Al aceptar solo se VERIFICA que haya stock; el descuento se hace al
       // cobrar (finalizeOrder), igual que en mesas y mostrador. Así el stock
       // se descuenta una sola vez y, si el pedido no se cobra, no se pierde.
-      for (const it of parseItems(web.items)) {
+      const acceptQty = new Map<string, number>();
+      for (const it of parseItems(web.items)) acceptQty.set(it.name, (acceptQty.get(it.name) ?? 0) + it.qty);
+      for (const [itName, itQty] of acceptQty) {
+        const it = { name: itName, qty: itQty };
         const { rows: prodRows } = await client.query<{ stock_qty: number | null }>(
           "select stock_qty from gestion_products where name = $1",
           [it.name]
