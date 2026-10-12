@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { BAR_SECONDS, BASS_BEATS, BEAT, GUITAR_EIGHTHS, PROGRESSION, planBar, seededRandom } from "../lib/sound-engine";
+import { BAR_SECONDS, BEAT, HOOK_BARS, PROGRESSION, planBar, seededRandom } from "../lib/sound-engine";
 
 describe("música ambiente del menú online", () => {
-  it("planea cada compás con guitarra, bajo y percusión, todo dentro del compás", () => {
+  it("planea cada compás con guitarra, órgano, bajo y batería, todo dentro del compás", () => {
     for (let bar = 0; bar < PROGRESSION.length * 2; bar++) {
       const events = planBar(bar, seededRandom(bar + 1));
       const kinds = new Set(events.map((e) => e.kind));
-      for (const kind of ["guitar", "bass", "shaker", "rim", "kick"] as const) {
+      for (const kind of ["skank", "organ", "bass", "hat", "kick", "rim"] as const) {
         expect(kinds.has(kind)).toBe(true);
       }
       for (const e of events) {
@@ -22,40 +22,41 @@ describe("música ambiente del menú online", () => {
     }
   });
 
-  it("la guitarra sigue la clave de la bossa (3+3+4+3+3 en dos compases)", () => {
-    const eighth = BEAT / 2;
+  it("tiene ritmo reggae: guitarra en el 2 y el 4, órgano a contratiempo y one drop en el 3", () => {
     for (let bar = 0; bar < PROGRESSION.length; bar++) {
-      const hits = new Set(
-        planBar(bar, seededRandom(1))
-          .filter((e) => e.kind === "guitar")
-          .map((e) => Math.floor(e.at / eighth + 1e-6))
-      );
-      expect([...hits].sort((x, y) => x - y)).toEqual(GUITAR_EIGHTHS[bar % 2]);
+      const events = planBar(bar, seededRandom(1));
+      expect(events.filter((e) => e.kind === "kick").map((e) => e.at)).toEqual([BEAT * 2]);
+      expect(events.some((e) => e.kind === "rim" && e.at === BEAT * 2)).toBe(true);
+      const skankBeats = new Set(events.filter((e) => e.kind === "skank").map((e) => Math.round(e.at / BEAT)));
+      expect([...skankBeats].sort()).toEqual([1, 3]);
+      // Órgano solo en los "y" (corcheas impares).
+      const organEighths = new Set(events.filter((e) => e.kind === "organ").map((e) => Math.floor((e.at / BEAT) * 2)));
+      expect([...organEighths].sort()).toEqual([1, 3, 5, 7]);
     }
-    // Sobre los dos compases: corcheas 0, 3, 6, 10 y 13.
-    expect([...GUITAR_EIGHTHS[0], ...GUITAR_EIGHTHS[1].map((n) => n + 8)]).toEqual([0, 3, 6, 10, 13]);
   });
 
-  it("el bajo toca fundamental en el 1 y sigue el ritmo de la bossa", () => {
+  it("el bajo arranca en el 1 con la fundamental del acorde", () => {
     for (let bar = 0; bar < PROGRESSION.length; bar++) {
       const bass = planBar(bar, seededRandom(1)).filter((e) => e.kind === "bass");
-      expect(bass.map((e) => e.at)).toEqual(BASS_BEATS.map((b) => b * BEAT));
+      expect(bass[0].at).toBe(0);
       expect(bass[0].midi! % 12).toBe(PROGRESSION[bar].root % 12);
     }
   });
 
-  it("es determinístico con la misma semilla y repite la progresión", () => {
-    expect(planBar(3, seededRandom(42))).toEqual(planBar(3, seededRandom(42)));
-    const a = planBar(2, seededRandom(5)).filter((e) => e.kind === "guitar");
-    const b = planBar(2 + PROGRESSION.length, seededRandom(5)).filter((e) => e.kind === "guitar");
-    expect(a).toEqual(b);
+  it("la melodía principal se repite igual en cada vuelta, en los compases del gancho", () => {
+    for (const bar of HOOK_BARS) {
+      const a = planBar(bar, seededRandom(1)).filter((e) => e.kind === "melody");
+      const b = planBar(bar + PROGRESSION.length, seededRandom(99)).filter((e) => e.kind === "melody");
+      expect(a.length).toBeGreaterThan(0);
+      expect(a).toEqual(b);
+    }
+    // Los primeros 4 compases de cada vuelta son solo groove, sin melodía.
+    for (let bar = 0; bar < 4; bar++) {
+      expect(planBar(bar, seededRandom(bar)).some((e) => e.kind === "melody")).toBe(false);
+    }
   });
 
-  it("la melodía es esporádica: algunos compases la llevan y otros no", () => {
-    const withMelody = Array.from({ length: 40 }, (_, i) =>
-      planBar(i, seededRandom(i * 7 + 3)).some((e) => e.kind === "melody")
-    );
-    expect(withMelody.some(Boolean)).toBe(true);
-    expect(withMelody.some((v) => !v)).toBe(true);
+  it("es determinístico con la misma semilla", () => {
+    expect(planBar(3, seededRandom(42))).toEqual(planBar(3, seededRandom(42)));
   });
 });

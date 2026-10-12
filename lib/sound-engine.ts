@@ -1,18 +1,28 @@
 // Música ambiente y sonidos cortos del menú online, generados con Web Audio.
-// No usa archivos de audio: la pista es una composición propia estilo bossa
-// nova lounge (guitarra de nylon con el ritmo de la bossa, bajo, shaker y una
-// flauta de vez en cuando) armada nota por nota, así que no hay derechos de
-// terceros ni peso extra para descargar.
+// No usa archivos de audio: la pista es una composición propia estilo "reggae
+// café" vintage (acordes pop, ritmo one drop, guitarra a contratiempo, órgano
+// "bubble", bajo de dub y una melodía de melódica que se repite) armada nota
+// por nota, así que no hay derechos de terceros ni peso extra para descargar.
 //
 // Este archivo solo "arma" y "toca" las notas. El estado (prendido/apagado,
 // volumen, preferencias) vive en lib/sound.ts.
 
-export const BPM = 126;
+export const BPM = 76;
 export const BEAT = 60 / BPM;
 export const BAR_SECONDS = BEAT * 4;
 const EIGHTH = BEAT / 2;
 
-export type NoteKind = "keys" | "guitar" | "bass" | "melody" | "shaker" | "rim" | "kick";
+export type NoteKind =
+  | "keys"
+  | "skank"
+  | "organ"
+  | "bass"
+  | "melody"
+  | "hat"
+  | "kick"
+  | "rim"
+  | "tom"
+  | "crackle";
 
 export interface NoteEvent {
   kind: NoteKind;
@@ -20,7 +30,7 @@ export interface NoteEvent {
   at: number;
   /** Duración aproximada en segundos. */
   dur: number;
-  /** Nota MIDI (solo para keys/guitar/bass/melody). */
+  /** Nota MIDI (solo para instrumentos con altura). */
   midi?: number;
   /** Fuerza 0..1. */
   vel: number;
@@ -28,32 +38,33 @@ export interface NoteEvent {
 
 interface Chord {
   root: number; // MIDI de la fundamental (octava del bajo)
-  voicing: number[]; // notas del acorde para la guitarra (sin fundamental)
+  minor: boolean;
+  triad: number[]; // acorde para guitarra/órgano, registro medio
 }
 
-const CMAJ9: Chord = { root: 48, voicing: [52, 55, 59, 62] };
-const AM9: Chord = { root: 45, voicing: [55, 59, 60, 64] };
-const DM9: Chord = { root: 50, voicing: [53, 57, 60, 64] };
-const G13: Chord = { root: 43, voicing: [53, 59, 62, 64] };
-const FMAJ7: Chord = { root: 41, voicing: [52, 57, 60, 64] };
-const E7B9: Chord = { root: 40, voicing: [50, 53, 56, 62] };
+// Acordes pop de toda la vida (vi–IV–I–V en Do): La menor, Fa, Do, Sol.
+const AM: Chord = { root: 45, minor: true, triad: [57, 60, 64] };
+const F: Chord = { root: 41, minor: false, triad: [57, 60, 65] };
+const C: Chord = { root: 48, minor: false, triad: [55, 60, 64] };
+const G: Chord = { root: 43, minor: false, triad: [55, 59, 62] };
 
-// 16 compases, cada acorde dura dos (como en la bossa, sin apuro).
-export const PROGRESSION: Chord[] = [
-  CMAJ9, CMAJ9, AM9, AM9, DM9, DM9, G13, G13,
-  CMAJ9, CMAJ9, FMAJ7, FMAJ7, E7B9, E7B9, DM9, G13,
+// 16 compases: 4 de groove, 4 con la melodía, 4 de groove con algún adorno y
+// 4 con la melodía otra vez. Después vuelve a empezar.
+export const PROGRESSION: Chord[] = Array.from({ length: 16 }, (_, i) => [AM, F, C, G][i % 4]);
+
+// Compases (dentro de la vuelta de 16) donde suena la melodía principal.
+export const HOOK_BARS = [4, 5, 6, 7, 12, 13, 14, 15];
+
+// Melodía principal (el "gancho"), uno por acorde: [corchea, nota MIDI, largo en corcheas].
+const HOOK: Array<Array<[number, number, number]>> = [
+  [[1, 76, 2], [3, 74, 1], [4, 72, 3]], // La menor: mi – re – do
+  [[1, 69, 2], [3, 72, 1], [4, 69, 3]], // Fa: la – do – la
+  [[1, 76, 2], [3, 79, 1], [4, 76, 2], [6, 74, 2]], // Do: mi – sol – mi – re
+  [[1, 74, 2], [3, 71, 1], [4, 67, 4]], // Sol: re – si – sol
 ];
 
-// Ritmo de la guitarra: la "clave" de la bossa en corcheas sobre dos compases
-// (3 + 3 + 4 + 3 + 3). Compás par: corcheas 0, 3 y 6; compás impar: 2 y 5.
-export const GUITAR_EIGHTHS: [number[], number[]] = [[0, 3, 6], [2, 5]];
-
-// Bajo de bossa: fundamental en el 1, quinta en el "y" del 2 que se liga al 3,
-// y otra vez quinta/fundamental en el "y" del 4.
-export const BASS_BEATS = [0, 1.5, 2, 3.5];
-
-// Notas de Do mayor pentatónica, para la flauta esporádica.
-const MELODY_NOTES = [72, 74, 76, 79, 81, 79, 76, 74];
+// Notas de La menor pentatónica, para algún adorno suelto entre vueltas.
+const LICK_NOTES = [69, 72, 74, 76, 79];
 
 /** Generador pseudoaleatorio determinístico (para poder testear). */
 export function seededRandom(seed: number) {
@@ -67,74 +78,79 @@ export function seededRandom(seed: number) {
   };
 }
 
-function foldBass(midi: number) {
-  let n = midi;
-  while (n < 38) n += 12;
-  while (n > 52) n -= 12;
-  return n;
-}
+const mod = (n: number, m: number) => ((n % m) + m) % m;
 
-const chordAt = (barIndex: number) => {
-  const n = PROGRESSION.length;
-  return PROGRESSION[((barIndex % n) + n) % n];
-};
+// Un poco de "swing": el "y" de cada tiempo se retrasa (groove relajado).
+const sw = (beat: number) => beat * BEAT + (mod(beat, 1) === 0.5 ? BEAT * 0.12 : 0);
 
-/** Qué notas suenan en un compás de la progresión. Función pura. */
+/** Qué notas suenan en un compás de la vuelta. Función pura. */
 export function planBar(barIndex: number, rand: () => number = Math.random): NoteEvent[] {
-  const chord = chordAt(barIndex);
-  const prev = chordAt(barIndex - 1);
-  const evenBar = ((barIndex % 2) + 2) % 2 === 0;
+  const bar = mod(barIndex, PROGRESSION.length);
+  const chord = PROGRESSION[bar];
   const events: NoteEvent[] = [];
 
-  // Colchón muy suave de piano eléctrico cuando cambia el acorde.
-  if (chord !== prev) {
-    chord.voicing.forEach((midi, i) => {
-      events.push({ kind: "keys", at: i * 0.02, dur: BAR_SECONDS * 1.8, midi: midi + 12, vel: 0.18 });
+  // Piano eléctrico muy bajito de fondo, al empezar cada acorde.
+  chord.triad.forEach((midi, i) => {
+    events.push({ kind: "keys", at: i * 0.02, dur: BAR_SECONDS * 0.9, midi, vel: 0.2 });
+  });
+
+  // Guitarra "skank": el chack seco en los tiempos 2 y 4.
+  for (const beat of [1, 3]) {
+    chord.triad.forEach((midi, i) => {
+      events.push({ kind: "skank", at: beat * BEAT + i * 0.005, dur: 0.11, midi: midi + 12, vel: 0.8 });
     });
   }
 
-  // Guitarra de nylon: acorde rasgueado suave con los dedos (arpegio cortito).
-  const hits = GUITAR_EIGHTHS[evenBar ? 0 : 1];
-  hits.forEach((eighth, h) => {
-    const last = h === hits.length - 1;
-    chord.voicing.forEach((midi, i) => {
-      events.push({
-        kind: "guitar",
-        at: eighth * EIGHTH + i * 0.012,
-        dur: last ? EIGHTH * 3.5 : EIGHTH * 2.6,
-        midi,
-        vel: eighth === 0 ? 0.75 : 0.62,
-      });
+  // Órgano "bubble": acordes cortitos en el "y" de cada tiempo, más suaves.
+  for (let beat = 0; beat < 4; beat++) {
+    chord.triad.forEach((midi) => {
+      events.push({ kind: "organ", at: sw(beat + 0.5), dur: 0.14, midi, vel: beat % 2 ? 0.5 : 0.65 });
     });
-  });
+  }
 
-  // Bajo: fundamental y quinta.
-  const root = foldBass(chord.root);
-  const fifth = foldBass(chord.root + 7);
-  const bassNotes = [root, fifth, fifth, evenBar ? root : fifth];
-  BASS_BEATS.forEach((beat, i) => {
-    events.push({ kind: "bass", at: beat * BEAT, dur: i === 0 ? BEAT * 1.4 : BEAT * 0.45, midi: bassNotes[i], vel: i === 0 ? 0.9 : 0.65 });
-  });
+  // Bajo de dub: redondo y con espacios; termina subiendo hacia el próximo acorde.
+  const r = chord.root;
+  const third = r + (chord.minor ? 3 : 4);
+  const line: Array<[number, number, number, number]> = [
+    // [tiempo, nota, duración en tiempos, fuerza]
+    [0, r, 1.2, 0.95],
+    [1.5, r, 0.4, 0.7],
+    [2, r + 7, 0.45, 0.8],
+    [2.5, third, 0.4, 0.7],
+    [3, r + 7, 0.9, 0.8],
+  ];
+  for (const [beat, midi, len, vel] of line) {
+    events.push({ kind: "bass", at: sw(beat), dur: BEAT * len, midi, vel });
+  }
 
-  // Percusión: shaker en corcheas (acento en los "y"), aro siguiendo la clave y
-  // un bombo muy suave en el 1 y el 3.
+  // Batería one drop: bombo y aro juntos en el 3, hi-hat en corcheas con swing.
   for (let eighth = 0; eighth < 8; eighth++) {
-    events.push({ kind: "shaker", at: eighth * EIGHTH, dur: 0.06, vel: eighth % 2 ? 0.55 : 0.32 });
+    events.push({ kind: "hat", at: sw(eighth / 2), dur: 0.05, vel: eighth % 2 ? 0.6 : 0.35 });
   }
-  hits.forEach((eighth) => events.push({ kind: "rim", at: eighth * EIGHTH, dur: 0.05, vel: 0.45 }));
-  events.push({ kind: "kick", at: 0, dur: 0.3, vel: 0.55 });
-  events.push({ kind: "kick", at: 2 * BEAT, dur: 0.3, vel: 0.45 });
+  events.push({ kind: "kick", at: 2 * BEAT, dur: 0.45, vel: 0.95 });
+  events.push({ kind: "rim", at: 2 * BEAT, dur: 0.07, vel: 0.85 });
+  // Al final de cada frase de 4 compases, un redoble cortito de tambor.
+  if (bar % 4 === 3) {
+    [3, 3.25, 3.5, 3.75].forEach((beat, i) => {
+      events.push({ kind: "tom", at: beat * BEAT, dur: 0.25, midi: 50 - i * 2, vel: 0.5 + i * 0.1 });
+    });
+  }
 
-  // Flauta de vez en cuando, en frases cortitas que arrancan en compases pares.
-  if (evenBar && rand() < 0.5) {
-    const count = 2 + Math.floor(rand() * 3);
-    let eighth = 1 + Math.floor(rand() * 2);
-    for (let i = 0; i < count && eighth < 8; i++) {
-      const midi = MELODY_NOTES[Math.floor(rand() * MELODY_NOTES.length)];
-      const len = rand() < 0.5 ? 2 : 3;
-      events.push({ kind: "melody", at: eighth * EIGHTH, dur: EIGHTH * len * 1.2, midi, vel: 0.45 });
-      eighth += len;
+  // Melodía de melódica: el gancho en los compases que corresponde; en el resto,
+  // de vez en cuando un adorno suelto.
+  if (HOOK_BARS.includes(bar)) {
+    for (const [eighth, midi, len] of HOOK[bar % 4]) {
+      events.push({ kind: "melody", at: sw(eighth / 2), dur: EIGHTH * len * 1.1, midi, vel: 0.6 });
     }
+  } else if (bar >= 8 && rand() < 0.4) {
+    const midi = LICK_NOTES[Math.floor(rand() * LICK_NOTES.length)];
+    events.push({ kind: "melody", at: sw(2.5), dur: EIGHTH * 3, midi, vel: 0.4 });
+  }
+
+  // Crujido de vinilo, apenas audible, para el toque vintage.
+  const pops = 2 + Math.floor(rand() * 4);
+  for (let i = 0; i < pops; i++) {
+    events.push({ kind: "crackle", at: rand() * (BAR_SECONDS - 0.05), dur: 0.01, vel: 0.3 + rand() * 0.5 });
   }
 
   return events.sort((a, b) => a.at - b.at);
@@ -169,47 +185,126 @@ export function makeReverb(ctx: BaseAudioContext, seconds = 2.2) {
   return conv;
 }
 
+/**
+ * Color "vintage" para la música: una saturación suave (como cinta) y un
+ * poquito menos de agudos. Devuelve la entrada y la salida de la cadena.
+ */
+export function makeVintageChain(ctx: BaseAudioContext) {
+  const input = ctx.createGain();
+  // La curva amplifica ~1,75x las señales chicas: se compensa para no subir el volumen.
+  input.gain.value = 0.57;
+  const shaper = ctx.createWaveShaper();
+  const curve = new Float32Array(1024);
+  for (let i = 0; i < curve.length; i++) {
+    const x = (i / (curve.length - 1)) * 2 - 1;
+    curve[i] = Math.tanh(1.6 * x) / Math.tanh(1.6);
+  }
+  shaper.curve = curve;
+  shaper.oversample = "2x";
+  const tone = ctx.createBiquadFilter();
+  tone.type = "lowpass";
+  tone.frequency.value = 6500;
+  tone.Q.value = 0.5;
+  input.connect(shaper).connect(tone);
+  return { input, output: tone };
+}
+
 function envelope(g: GainNode, t: number, peak: number, attack: number, dur: number) {
   g.gain.setValueAtTime(0.0001, t);
   g.gain.linearRampToValueAtTime(peak, t + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(dur, attack + 0.02));
 }
 
+function tone(
+  ctx: BaseAudioContext,
+  out: AudioNode,
+  t: number,
+  dur: number,
+  partials: ReadonlyArray<readonly [OscillatorType, number, number]>,
+  baseHz: number
+) {
+  for (const [type, mult, level] of partials) {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = baseHz * mult;
+    g.gain.value = level;
+    osc.connect(g).connect(out);
+    osc.start(t);
+    osc.stop(t + dur + 0.1);
+  }
+}
+
 function playKeys(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
-  const f = freq(e.midi!);
   const out = ctx.createGain();
   const lp = ctx.createBiquadFilter();
   lp.type = "lowpass";
-  lp.frequency.value = 1900;
+  lp.frequency.value = 1800;
   out.connect(lp).connect(dest);
   envelope(out, t, 0.09 * e.vel, 0.012, e.dur);
-  // Piano eléctrico tipo Rhodes: fundamental + octava suave + "campanita" que se apaga rápido.
-  for (const [mult, level, detune] of [[1, 1, 0], [2, 0.28, 3], [4.01, 0.08, -2]] as const) {
+  // Piano eléctrico tipo Rhodes.
+  tone(ctx, out, t, e.dur, [["sine", 1, 1], ["sine", 2, 0.28], ["sine", 4.01, 0.06]], freq(e.midi!));
+}
+
+function playSkank(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
+  // Guitarra eléctrica limpia, apagada con la mano: diente de sierra filtrado y muy corto.
+  const out = ctx.createGain();
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = 1500;
+  bp.Q.value = 0.8;
+  out.connect(bp).connect(dest);
+  envelope(out, t, 0.07 * e.vel, 0.003, e.dur);
+  tone(ctx, out, t, e.dur, [["sawtooth", 1, 1], ["square", 1.003, 0.3]], freq(e.midi!));
+}
+
+function playOrgan(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
+  // Órgano de registros (8', 4' y 2 2/3'), con ataque rápido.
+  const out = ctx.createGain();
+  out.connect(dest);
+  envelope(out, t, 0.035 * e.vel, 0.006, e.dur);
+  tone(ctx, out, t, e.dur, [["sine", 1, 1], ["sine", 2, 0.6], ["sine", 3, 0.35]], freq(e.midi!));
+}
+
+function playBass(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
+  // Bajo de dub: grave y redondo, con un poquito de armónico para que se oiga
+  // también en el parlante del celular.
+  const out = ctx.createGain();
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 360;
+  out.connect(lp).connect(dest);
+  envelope(out, t, 0.3 * e.vel, 0.012, e.dur);
+  tone(ctx, out, t, e.dur, [["sine", 1, 1], ["triangle", 2, 0.35]], freq(e.midi!));
+}
+
+function playMelodica(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
+  const out = ctx.createGain();
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 2400;
+  out.connect(lp).connect(dest);
+  envelope(out, t, 0.05 * e.vel, 0.035, e.dur);
+  const f = freq(e.midi!);
+  const lfo = ctx.createOscillator();
+  const lfoGain = ctx.createGain();
+  lfo.frequency.value = 5;
+  lfoGain.gain.setValueAtTime(0, t);
+  lfoGain.gain.linearRampToValueAtTime(6, t + 0.2);
+  lfo.connect(lfoGain);
+  for (const [type, level] of [["triangle", 1], ["square", 0.22]] as const) {
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = f * mult;
-    osc.detune.value = detune;
+    osc.type = type;
+    osc.frequency.value = f;
     g.gain.value = level;
+    lfoGain.connect(osc.detune);
     osc.connect(g).connect(out);
     osc.start(t);
     osc.stop(t + e.dur + 0.1);
   }
-}
-
-function playBass(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
-  const out = ctx.createGain();
-  const lp = ctx.createBiquadFilter();
-  lp.type = "lowpass";
-  lp.frequency.value = 380;
-  out.connect(lp).connect(dest);
-  envelope(out, t, 0.26 * e.vel, 0.012, e.dur);
-  const osc = ctx.createOscillator();
-  osc.type = "triangle";
-  osc.frequency.value = freq(e.midi!);
-  osc.connect(out);
-  osc.start(t);
-  osc.stop(t + e.dur + 0.1);
+  lfo.start(t);
+  lfo.stop(t + e.dur + 0.1);
 }
 
 function playNoise(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent, hz: number, q: number, level: number) {
@@ -220,119 +315,52 @@ function playNoise(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEve
   bp.frequency.value = hz;
   bp.Q.value = q;
   const g = ctx.createGain();
-  envelope(g, t, level * e.vel, 0.004, e.dur);
+  envelope(g, t, level * e.vel, 0.003, e.dur);
   src.connect(bp).connect(g).connect(dest);
   src.start(t, Math.random() * 0.2);
   src.stop(t + e.dur + 0.05);
 }
 
-// Guitarra de nylon por síntesis de cuerda pulsada (Karplus–Strong). Se
-// calcula una vez por nota y se reutiliza.
-const pluckCache = new WeakMap<BaseAudioContext, Map<number, { buffer: AudioBuffer; rate: number }>>();
-function pluck(ctx: BaseAudioContext, midi: number) {
-  let byNote = pluckCache.get(ctx);
-  if (!byNote) {
-    byNote = new Map();
-    pluckCache.set(ctx, byNote);
-  }
-  const hit = byNote.get(midi);
-  if (hit) return hit;
-  const sr = ctx.sampleRate;
-  const f = freq(midi);
-  const period = Math.max(2, Math.round(sr / f - 0.5));
-  const buffer = ctx.createBuffer(1, Math.floor(sr * 1.6), sr);
-  const data = buffer.getChannelData(0);
-  const rand = seededRandom(midi * 31 + 5);
-  // Excitación suave (ruido filtrado): da el ataque redondo de la cuerda de nylon.
-  let prev = 0;
-  for (let i = 0; i < period; i++) {
-    const n = rand() * 2 - 1;
-    prev = prev * 0.6 + n * 0.4;
-    data[i] = prev;
-  }
-  const decay = 0.9965;
-  for (let i = period; i < data.length; i++) {
-    data[i] = decay * 0.5 * (data[i - period] + data[i - period - 1 >= 0 ? i - period - 1 : 0]);
-  }
-  let peak = 0;
-  for (let i = 0; i < data.length; i++) peak = Math.max(peak, Math.abs(data[i]));
-  if (peak > 0) for (let i = 0; i < data.length; i++) data[i] /= peak;
-  // El promedio de dos muestras agrega media muestra de retardo: se corrige la afinación.
-  const entry = { buffer, rate: ((period + 0.5) * f) / sr };
-  byNote.set(midi, entry);
-  return entry;
-}
-
-function playGuitar(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
-  const { buffer, rate } = pluck(ctx, e.midi!);
-  const src = ctx.createBufferSource();
-  src.buffer = buffer;
-  src.playbackRate.value = rate;
-  const lp = ctx.createBiquadFilter();
-  lp.type = "lowpass";
-  lp.frequency.value = 2600;
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0.075 * e.vel, t);
-  // Se apaga con la mano (como el "muteado" de la bossa) al terminar la nota.
-  g.gain.setTargetAtTime(0.0001, t + e.dur, 0.06);
-  src.connect(lp).connect(g).connect(dest);
-  src.start(t);
-  src.stop(t + e.dur + 0.4);
-}
-
-function playFlute(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
-  const out = ctx.createGain();
-  out.connect(dest);
-  envelope(out, t, 0.055 * e.vel, 0.06, e.dur);
-  const f = freq(e.midi!);
-  // Vibrato que entra de a poco.
-  const lfo = ctx.createOscillator();
-  const lfoGain = ctx.createGain();
-  lfo.frequency.value = 5.2;
-  lfoGain.gain.setValueAtTime(0, t);
-  lfoGain.gain.linearRampToValueAtTime(7, t + 0.25);
-  lfo.connect(lfoGain);
-  for (const [type, mult, level] of [["sine", 1, 1], ["triangle", 2, 0.08]] as const) {
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.type = type;
-    osc.frequency.value = f * mult;
-    g.gain.value = level;
-    lfoGain.connect(osc.detune);
-    osc.connect(g).connect(out);
-    osc.start(t);
-    osc.stop(t + e.dur + 0.1);
-  }
-  lfo.start(t);
-  lfo.stop(t + e.dur + 0.1);
-  // Un soplido apenas audible al principio de la nota.
-  playNoise(ctx, dest, t, { ...e, dur: 0.12, vel: e.vel }, f * 2, 2, 0.02);
-}
-
 function playKick(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
   const out = ctx.createGain();
   out.connect(dest);
-  envelope(out, t, 0.22 * e.vel, 0.003, e.dur);
+  envelope(out, t, 0.34 * e.vel, 0.003, e.dur);
   const osc = ctx.createOscillator();
   osc.type = "sine";
-  osc.frequency.setValueAtTime(95, t);
-  osc.frequency.exponentialRampToValueAtTime(50, t + 0.15);
+  osc.frequency.setValueAtTime(105, t);
+  osc.frequency.exponentialRampToValueAtTime(46, t + 0.2);
   osc.connect(out);
   osc.start(t);
   osc.stop(t + e.dur + 0.05);
 }
 
 function playRim(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
-  // Aro ("cross-stick") suave: clic de madera.
+  // Aro ("cross-stick"): clic de madera + un poquito de ruido.
   const out = ctx.createGain();
   out.connect(dest);
-  envelope(out, t, 0.05 * e.vel, 0.002, e.dur);
+  envelope(out, t, 0.09 * e.vel, 0.002, e.dur);
   const osc = ctx.createOscillator();
   osc.type = "triangle";
-  osc.frequency.value = 1900;
+  osc.frequency.value = 1750;
   osc.connect(out);
   osc.start(t);
   osc.stop(t + e.dur + 0.02);
+  playNoise(ctx, dest, t, e, 2500, 2.5, 0.05);
+}
+
+function playTom(ctx: BaseAudioContext, dest: AudioNode, t: number, e: NoteEvent) {
+  const out = ctx.createGain();
+  out.connect(dest);
+  envelope(out, t, 0.16 * e.vel, 0.003, e.dur);
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  const f = freq(e.midi!);
+  osc.frequency.setValueAtTime(f * 1.5, t);
+  osc.frequency.exponentialRampToValueAtTime(f, t + 0.08);
+  osc.connect(out);
+  osc.start(t);
+  osc.stop(t + e.dur + 0.05);
+  playNoise(ctx, dest, t, { ...e, dur: 0.06 }, 1200, 1, 0.04);
 }
 
 /** Programa un compás completo para que empiece en el instante `t0` del contexto. */
@@ -340,12 +368,15 @@ export function scheduleBar(ctx: BaseAudioContext, dest: AudioNode, t0: number, 
   for (const e of planBar(barIndex, rand)) {
     const t = t0 + e.at;
     if (e.kind === "keys") playKeys(ctx, dest, t, e);
-    else if (e.kind === "guitar") playGuitar(ctx, dest, t, e);
+    else if (e.kind === "skank") playSkank(ctx, dest, t, e);
+    else if (e.kind === "organ") playOrgan(ctx, dest, t, e);
     else if (e.kind === "bass") playBass(ctx, dest, t, e);
-    else if (e.kind === "melody") playFlute(ctx, dest, t, e);
+    else if (e.kind === "melody") playMelodica(ctx, dest, t, e);
     else if (e.kind === "kick") playKick(ctx, dest, t, e);
     else if (e.kind === "rim") playRim(ctx, dest, t, e);
-    else playNoise(ctx, dest, t, e, 6500, 1.4, 0.035);
+    else if (e.kind === "tom") playTom(ctx, dest, t, e);
+    else if (e.kind === "hat") playNoise(ctx, dest, t, e, 8000, 1.2, 0.045);
+    else playNoise(ctx, dest, t, e, 3000, 0.7, 0.03);
   }
 }
 

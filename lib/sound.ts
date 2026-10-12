@@ -1,6 +1,6 @@
 "use client";
 
-import { BAR_SECONDS, makeReverb, playAddSound, playSentSound, scheduleBar } from "@/lib/sound-engine";
+import { BAR_SECONDS, makeReverb, makeVintageChain, playAddSound, playSentSound, scheduleBar } from "@/lib/sound-engine";
 
 // Estado del sonido del menú online. Todo es opcional:
 //  - la música arranca APAGADA (los navegadores no dejan sonar solos y además
@@ -18,6 +18,7 @@ let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let reverbSend: GainNode | null = null;
 let musicBus: GainNode | null = null;
+let musicIn: AudioNode | null = null; // entrada de la cadena "vintage" de la música
 let timer: ReturnType<typeof setInterval> | null = null;
 let nextBarAt = 0;
 let barIndex = 0;
@@ -64,6 +65,10 @@ function getContext() {
   reverbSend = ctx.createGain();
   reverbSend.gain.value = 0.35;
   reverbSend.connect(reverb).connect(master);
+  const vintage = makeVintageChain(ctx);
+  vintage.output.connect(master);
+  vintage.output.connect(reverbSend);
+  musicIn = vintage.input;
   return ctx;
 }
 
@@ -85,13 +90,12 @@ function pump() {
 
 export function startMusic() {
   unlockAudio();
-  if (!ctx || !master || !reverbSend || musicOn) return;
+  if (!ctx || !musicIn || musicOn) return;
   musicOn = true;
   const bus = ctx.createGain();
   bus.gain.setValueAtTime(0.0001, ctx.currentTime);
   bus.gain.linearRampToValueAtTime(MUSIC_LEVEL, ctx.currentTime + 1.5);
-  bus.connect(master);
-  bus.connect(reverbSend);
+  bus.connect(musicIn);
   musicBus = bus;
   nextBarAt = ctx.currentTime + 0.1;
   barIndex = 0;
