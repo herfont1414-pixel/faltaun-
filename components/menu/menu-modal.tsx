@@ -8,6 +8,7 @@ import { buildMenuItemInquiry } from "@/lib/whatsapp";
 import { ITEM_NOTE_MAX, useCart } from "@/components/menu/cart-context";
 import { iconFor } from "@/components/menu/category-filter";
 import { useBusinessConfig } from "@/lib/use-business-config";
+import { playSfx } from "@/lib/sound";
 import type { MenuItem } from "@/lib/types";
 
 interface MenuModalProps {
@@ -119,6 +120,7 @@ export function MenuModal({ item, onClose }: MenuModalProps) {
                 type="button"
                 onClick={() => {
                   addItem(item.name, item.price, qty, note);
+                  playSfx("add");
                   setAdded(true);
                   setTimeout(onClose, 500);
                 }}
