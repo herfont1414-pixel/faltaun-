@@ -5,13 +5,11 @@ import Link from "next/link";
 import { ArrowLeft, Star } from "lucide-react";
 import { cycleFilled, cyclePosition, stampsToNext } from "@/lib/admin/loyalty-rewards";
 
+// La tarjeta pública NO trae nombre, teléfono ni gastos del cliente (cualquiera puede
+// escribir un número): el nombre sale de lo que el cliente guardó en su propio celular.
 interface LoyaltyAccount {
-  phone: string;
-  name: string | null;
   stamps: number;
   redeemed: number;
-  orderCount: number;
-  totalSpent: number;
   rewardsAvailable: number;
   stampsToNextReward: number;
 }
@@ -43,11 +41,8 @@ function dateOnly(iso: string | null) {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-AR");
 }
 
-function money(value: number) {
-  return `$${value.toLocaleString("es-AR")}`;
-}
-
 const PHONE_KEY = "madero_customer_phone";
+const NAME_KEY = "madero_customer_name";
 
 export default function FidelidadPage() {
   const [phone, setPhone] = useState("");
@@ -57,10 +52,15 @@ export default function FidelidadPage() {
   const [grants, setGrants] = useState<PublicGrant[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  // Teléfono de la tarjeta que se está mostrando (el que escribió el cliente).
+  const [shownPhone, setShownPhone] = useState("");
+  const [savedName, setSavedName] = useState<string | null>(null);
+  const [lookupError, setLookupError] = useState("");
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(PHONE_KEY);
+      setSavedName(localStorage.getItem(NAME_KEY));
       if (stored) {
         setSavedPhone(stored);
         setPhone(stored);
@@ -77,7 +77,9 @@ export default function FidelidadPage() {
     setLoading(true);
     const res = await fetch(`/api/customer/${encodeURIComponent(value.trim())}/loyalty`);
     const data = await res.json();
+    setLookupError(data.error ?? "");
     setAccount(data.account ?? null);
+    setShownPhone(value.trim());
     setRewards(data.rewards ?? []);
     setGrants(data.grants ?? []);
     setLoading(false);
@@ -159,12 +161,14 @@ export default function FidelidadPage() {
                   <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-stone-300">
                     Madero Restó · VIP
                   </p>
-                  <p className="mt-1.5 font-display text-xl text-white">{account.name || "Cliente"}</p>
+                  <p className="mt-1.5 font-display text-xl text-white">
+                    {(shownPhone === savedPhone && savedName) || "Cliente"}
+                  </p>
                 </div>
                 <Star className="h-8 w-8 text-ember-soft" fill="currentColor" />
               </div>
               <p className="relative mt-5 font-mono text-sm tracking-widest text-stone-300">
-                {account.phone.replace(/(\d{3})(?=\d)/g, "$1 ").trim()}
+                {shownPhone.replace(/(\d{3})(?=\d)/g, "$1 ").trim()}
               </p>
 
               <div className="relative mt-6 grid grid-cols-5 gap-2.5">
@@ -190,12 +194,6 @@ export default function FidelidadPage() {
                 {stamps} sello{stamps === 1 ? "" : "s"} acumulados
               </p>
 
-              {account.orderCount > 0 && (
-                <p className="relative mt-5 text-xs text-stone-400">
-                  {account.orderCount} pedido{account.orderCount === 1 ? "" : "s"} · {money(account.totalSpent)}{" "}
-                  acumulado
-                </p>
-              )}
             </div>
 
             {available.length > 0 && (
@@ -236,7 +234,9 @@ export default function FidelidadPage() {
           </div>
         )}
 
-        {searched && !account && !loading && (
+        {lookupError && !loading && <p className="mt-8 text-center text-sm text-ember-soft">{lookupError}</p>}
+
+        {searched && !account && !loading && !lookupError && (
           <p className="mt-8 text-center text-sm text-stone-400">
             No encontramos una tarjeta para ese número todavía — hacé tu primer pedido para empezar a sumar
             sellos.

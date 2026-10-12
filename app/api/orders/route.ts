@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createWebOrder } from "@/lib/admin/web-orders";
 import { isDbConfigured } from "@/lib/admin/db";
 import type { Fulfillment } from "@/lib/admin/types";
+import { ensureSeeded } from "@/lib/admin/seed";
+import { clientIp, LIMITS, rateLimit, tooManyMessage } from "@/lib/admin/rate-limit";
 
 export async function POST(request: NextRequest) {
   if (!isDbConfigured()) {
@@ -26,6 +28,13 @@ export async function POST(request: NextRequest) {
   }
   if (fulfillment === "delivery" && !customerAddress) {
     return NextResponse.json({ error: "Falta la dirección de entrega" }, { status: 400 });
+  }
+
+  // Freno contra pedidos falsos en masa (holgado: muchos celulares comparten IP).
+  await ensureSeeded();
+  const limit = await rateLimit("web_order", clientIp(request), LIMITS.webOrder.max, LIMITS.webOrder.windowMs);
+  if (!limit.ok) {
+    return NextResponse.json({ error: tooManyMessage(limit.retryAfterSec, "pedidos seguidos") }, { status: 429 });
   }
 
   try {

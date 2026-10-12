@@ -79,13 +79,21 @@ export function OrderHistoryModal({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [lookupError, setLookupError] = useState("");
+
   async function load(value: string, silent = false) {
     if (value.trim().length < 6) return;
     if (!silent) setLoading(true);
     try {
       const res = await fetch(`/api/customer/${encodeURIComponent(value.trim())}/orders`);
       const data = await res.json();
-      setOrders(data.orders ?? []);
+      // Límite de consultas: se avisa y se mantiene lo que ya se veía.
+      if (res.status === 429) {
+        if (!silent) setLookupError(data.error ?? "Demasiadas consultas. Probá en unos minutos.");
+      } else {
+        setLookupError("");
+        setOrders(data.orders ?? []);
+      }
     } catch {
       // sin conexión: se mantiene lo que ya se veía y se reintenta en el próximo ciclo.
     }
@@ -139,6 +147,7 @@ export function OrderHistoryModal({ onClose }: { onClose: () => void }) {
 
         {orders !== null && !loading && (
           <>
+            {lookupError && <p className="pb-2 text-center text-sm text-ember-soft">{lookupError}</p>}
             {orders.length === 0 ? (
               <p className="py-6 text-center text-sm text-stone-400">Todavía no hiciste pedidos con este número.</p>
             ) : (

@@ -1,6 +1,6 @@
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
-import { seedFreshDb, tearDownTestDb, anyInStockProduct } from "./helpers";
+import { seedFreshDb, tearDownTestDb, anyInStockProduct, nextDay } from "./helpers";
 import { getPool } from "@/lib/admin/db";
 import { hashPin, createSession, SESSION_COOKIE } from "@/lib/admin/auth";
 import { addStamp, getLoyalty, listGrantsForPhone, resolveLoyaltyPhone } from "@/lib/admin/loyalty";
@@ -106,53 +106,65 @@ describe("1 · atomicidad: sello + cuenta + premio en una sola transacción", ()
     expect(await stampTx("orden-atomica-1")).toBe(1);
   });
 
-  it("aceptar un pedido web también es atómico: si falla el premio, el pedido sigue pendiente (sin pedido real ni sello) y reintentar lo completa", async () => {
+  it("aceptar un pedido web NO suma sello (aunque falle la tabla de premios, aceptar funciona); el sello y el premio llegan al cobrarlo", async () => {
     const phone = "5493000700002";
     await legacyAccount(phone, 4);
     const webId = await webOrder(phone);
     await breakGrants();
-    await expect(respondWebOrder(webId, "confirmado", 20)).rejects.toThrow();
-    const web = (await getPool().query("select status, order_id from gestion_web_orders where id = $1", [webId])).rows[0];
-    expect(web.status).toBe("pendiente");
-    expect(web.order_id).toBeNull();
+    // Aceptar ya no toca la fidelidad: funciona aunque la tabla de premios esté rota.
+    const { orderId } = await respondWebOrder(webId, "confirmado", 20);
+    expect(orderId).toBeTruthy();
     expect(await stampTx(webId)).toBe(0);
-    expect(await stampsOf(phone)).toBe(4); // consulta directa: la tabla de premios está rota a propósito
+    expect(await stampsOf(phone)).toBe(4);
     await fixGrants();
 
-    const done = await respondWebOrder(webId, "confirmado", 20);
-    expect(done.orderId).toBeTruthy();
+    // Al cobrarlo (sin cargar el teléfono a mano) suma el sello con el teléfono del pedido.
+    const cobro = await finalize(orderId!, product.price, null);
+    expect(cobro.status).toBe(200);
+    expect(cobro.body.result.loyalty).toMatchObject({ awarded: true });
     expect((await getLoyalty(phone)).stamps).toBe(5);
     expect(await grantsOf(phone)).toEqual(["papas@5:disponible"]);
+    expect(await stampTx(webId)).toBe(1);
+  });
+
+  it("un pedido web aceptado que nunca se cobra no deja sello", async () => {
+    const phone = "5493000700010";
+    const webId = await webOrder(phone);
+    await respondWebOrder(webId, "confirmado", 20);
+    expect(await stampTx(webId)).toBe(0);
+    expect((await getLoyalty(phone)).stamps).toBe(0);
   });
 });
 
 describe("3 · reintentos y doble procesamiento no duplican sellos ni premios", () => {
-  it("aceptar el mismo pedido web varias veces (secuencial y simultáneo): 1 sello, 1 premio, 1 pedido real", async () => {
+  it("aceptar el mismo pedido web varias veces (secuencial y simultáneo): 1 pedido real y 0 sellos; al cobrarlo, 1 sello y 1 premio", async () => {
     const phone = "5493000700003";
     await legacyAccount(phone, 4);
     const webId = await webOrder(phone);
     const results = await Promise.allSettled([1, 2, 3, 4].map(() => respondWebOrder(webId, "confirmado", 20)));
     expect(results.every((r) => r.status === "fulfilled")).toBe(true);
-    await respondWebOrder(webId, "confirmado", 20);
+    const { orderId } = await respondWebOrder(webId, "confirmado", 20);
+    expect(await stampTx(webId)).toBe(0);
+    const { rows } = await getPool().query("select count(*) as n from gestion_orders where id in (select order_id from gestion_web_orders where id = $1)", [webId]);
+    expect(Number(rows[0].n)).toBe(1);
+
+    expect((await finalize(orderId!, product.price, null)).status).toBe(200);
     expect((await getLoyalty(phone)).stamps).toBe(5);
     expect(await grantsOf(phone)).toEqual(["papas@5:disponible"]);
     expect(await stampTx(webId)).toBe(1);
-    const { rows } = await getPool().query("select count(*) as n from gestion_orders where id in (select order_id from gestion_web_orders where id = $1)", [webId]);
-    expect(Number(rows[0].n)).toBe(1);
   });
 
-  it("pedido web aceptado y luego cobrado en el panel con el teléfono (en otro formato): sigue siendo 1 sello", async () => {
+  it("pedido web cobrado en el panel con el teléfono escrito en otro formato: 1 sello en la misma cuenta", async () => {
     const phone = "5493000700004";
     const webId = await webOrder(phone);
     const { orderId } = await respondWebOrder(webId, "confirmado", 20);
-    expect((await getLoyalty(phone)).stamps).toBe(1);
+    expect((await getLoyalty(phone)).stamps).toBe(0);
 
-    const total = product.price;
-    const cobro = await finalize(orderId!, total, "+54 9 300 0700004");
+    const cobro = await finalize(orderId!, product.price, "+54 9 300 0700004");
     expect(cobro.status).toBe(200);
     expect((await getLoyalty(phone)).stamps).toBe(1);
     expect(await stampTx(webId)).toBe(1);
-    expect(await stampTx(orderId!)).toBe(0); // no abrió una segunda clave
+    expect(await stampTx(orderId!)).toBe(0); // la clave es el id del pedido web
     expect((await accounts()).filter((a) => a.phone.includes("0700004"))).toHaveLength(1);
   });
 
@@ -177,15 +189,35 @@ describe("3 · reintentos y doble procesamiento no duplican sellos ni premios", 
     expect(await paymentsCount(o.id)).toBe(1);
   });
 
-  it("pedidos distintos sí suman sellos distintos y el hito genera su premio una sola vez", async () => {
+  it("tope diario: dos cobros el mismo día con el mismo teléfono cobran los dos, pero solo el primero suma sello", async () => {
     const phone = "5493000700007";
     await legacyAccount(phone, 3);
-    for (let i = 0; i < 2; i++) {
-      const o = await counterOrder();
-      await finalize(o.id, o.total, phone);
-    }
-    expect((await getLoyalty(phone)).stamps).toBe(5);
-    expect(await grantsOf(phone)).toEqual(["papas@5:disponible"]);
+    const a = await counterOrder();
+    const b = await counterOrder();
+    const first = await finalize(a.id, a.total, phone);
+    const second = await finalize(b.id, b.total, phone);
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(first.body.result.loyalty).toMatchObject({ awarded: true });
+    expect(second.body.result.loyalty).toMatchObject({ awarded: false, reason: "daily_cap" });
+    expect(await orderStatus(b.id)).toBe("cerrada");
+    expect(await paymentsCount(b.id)).toBe(1);
+    expect((await getLoyalty(phone)).stamps).toBe(4);
+    expect(await stampTx(b.id)).toBe(0);
+
+    // Un reintento del segundo cobro (pasados unos segundos) NO se toma por recuperación:
+    // no había sello pendiente (fue el tope), así que es "ya fue cerrado" y no reimprime.
+    await ageOrder(b.id, 10_000);
+    const retry = await finalize(b.id, b.total, phone);
+    expect(retry.status).toBe(400);
+    expect(retry.body.error).toMatch(/ya fue cerrado/);
+  });
+
+  it("el cobro registra qué usuario dio el sello", async () => {
+    const o = await counterOrder();
+    await finalize(o.id, o.total, "5493000700011");
+    const { rows } = await getPool().query("select user_id from gestion_loyalty_transactions where order_id = $1", [o.id]);
+    expect(Number(rows[0].user_id)).toBe(adminId);
   });
 
   it("si el cobro se registra pero falla el sello: se avisa, el cobro NO se repite y reintentar completa solo el sello (y el premio)", async () => {
@@ -240,7 +272,7 @@ describe("2 · identificación del cliente: un mismo teléfono escrito distinto 
   const variants = ["3755589363", "+54 9 3755 58-9363", "03755 15-589363", "5493755589363", "543755589363"];
 
   it("la primera carga crea la cuenta con el texto tal cual; las otras formas la encuentran y suman ahí", async () => {
-    for (const [i, v] of variants.entries()) await addStamp(v, `variante-${i}`, { orderTotal: 10, name: "Ana" });
+    for (const [i, v] of variants.entries()) await addStamp(v, `variante-${i}`, { orderTotal: 10, name: "Ana", now: nextDay() });
     const mine = (await accounts()).filter((a) => a.phone.replace(/\D/g, "").endsWith("3755589363".slice(-8)) || a.phone.includes("589363"));
     expect(mine).toEqual([{ phone: "3755589363", stamps: 5, order_count: 5 }]);
     expect(await grantsOf("3755589363")).toEqual(["papas@5:disponible"]);

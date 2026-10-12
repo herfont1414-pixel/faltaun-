@@ -588,3 +588,25 @@ create table if not exists gestion_loyalty_grants (
 
 create index if not exists gestion_loyalty_grants_phone_idx on gestion_loyalty_grants(phone);
 create index if not exists gestion_loyalty_grants_status_idx on gestion_loyalty_grants(status);
+
+-- Seguridad: registro de intentos para limitar el login por PIN y el uso de las
+-- rutas públicas (pedidos, tarjeta, historial). created_ms = milisegundos epoch,
+-- igual en Postgres y SQLite.
+create table if not exists gestion_rate_limits (
+  id bigserial primary key,
+  bucket text not null,
+  subject text not null,
+  created_ms bigint not null
+);
+
+create index if not exists gestion_rate_limits_lookup_idx on gestion_rate_limits(bucket, subject, created_ms);
+
+-- Fidelidad: un solo sello por teléfono por día (stamp_day = fecha del local,
+-- AAAA-MM-DD) y qué usuario del panel dio cada sello. Los sellos viejos quedan con
+-- stamp_day vacío y no participan del tope (no se tocan datos existentes).
+alter table gestion_loyalty_transactions add column if not exists stamp_day text;
+alter table gestion_loyalty_transactions add column if not exists user_id int;
+
+create unique index if not exists gestion_loyalty_one_stamp_per_day
+  on gestion_loyalty_transactions(phone, stamp_day)
+  where type = 'stamp' and stamp_day is not null;

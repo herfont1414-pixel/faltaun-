@@ -75,6 +75,9 @@ function RedeemModal({
         <div style={{ fontSize: 13.5, marginBottom: 12 }}>
           <strong>{grant.rewardName}</strong> · hito de {grant.milestone} sellos · {customer}
         </div>
+        <div style={{ fontSize: 12.5, color: "#7a5b00", background: "#fff7df", borderRadius: 10, padding: "7px 10px", marginBottom: 12 }}>
+          Antes de entregar, preguntale el nombre al cliente y fijate que coincida.
+        </div>
         {grant.rewardDescription && (
           <div style={{ fontSize: 13, background: "#f6f4ef", borderRadius: 10, padding: "8px 10px", marginBottom: 12 }}>{grant.rewardDescription}</div>
         )}
@@ -274,7 +277,8 @@ export function FidelidadPremiosView() {
       <h1 style={{ marginBottom: 6 }}>Fidelidad · Premios y canjes</h1>
       <p style={{ margin: "0 0 14px", fontSize: 13, color: "var(--text-faint)" }}>
         Registrá el canje solo cuando el premio se entregó. Canjear no descuenta sellos ni afecta otros premios. Los premios se generan al llegar a cada hito con
-        pedidos nuevos; no se crean premios por sellos anteriores.
+        pedidos nuevos; no se crean premios por sellos anteriores. Seguridad: se suma un solo sello por teléfono por día, y un premio
+        se canjea solo si el cliente compró hoy con ese mismo teléfono (cobrá primero su pedido con su número). Confirmá el nombre antes de entregar.
       </p>
       {doneMessage && (
         <div style={{ background: "#e8f6ec", border: "1px solid #7bc58f", color: "#1d5a31", borderRadius: 10, padding: "8px 12px", marginBottom: 14, fontSize: 13 }}>{doneMessage}</div>

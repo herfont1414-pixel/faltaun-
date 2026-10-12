@@ -1,7 +1,10 @@
 import path from "node:path";
 import { getDbMode, getPool } from "@/lib/admin/db";
 import type { ReadOnlyQuery } from "@/lib/admin/db";
+import { businessDayKey } from "@/lib/admin/business-day";
 import {
+  STAFF_PAIR_THRESHOLD,
+  STAFF_WINDOW_DAYS,
   buildLoyaltyReport,
   describeSource,
   type AccountRow,
@@ -30,6 +33,30 @@ const SQL_TX_TYPES = `
   select type, count(*) as n, max(created_at) as last_at
   from gestion_loyalty_transactions
   group by type`;
+
+// Sellos por empleado desde `since` (AAAA-MM-DD, generado acá mismo y validado: no viene del usuario).
+function staffQueries(since: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(since)) throw new Error("Fecha inválida");
+  return {
+    byUser: `
+      select t.user_id, u.name as user_name, count(*) as n, count(distinct t.phone) as phones
+      from gestion_loyalty_transactions t
+      left join gestion_users u on u.id = t.user_id
+      where t.type = 'stamp' and t.stamp_day >= '${since}'
+      group by t.user_id, u.name
+      order by count(*) desc`,
+    pairs: `
+      select t.user_id, u.name as user_name, t.phone, a.name as customer_name, count(*) as n
+      from gestion_loyalty_transactions t
+      left join gestion_users u on u.id = t.user_id
+      left join gestion_loyalty_accounts a on a.phone = t.phone
+      where t.type = 'stamp' and t.stamp_day >= '${since}' and t.user_id is not null
+      group by t.user_id, u.name, t.phone, a.name
+      having count(*) >= ${STAFF_PAIR_THRESHOLD}
+      order by count(*) desc
+      limit 20`,
+  };
+}
 
 const num = (v: unknown) => (typeof v === "string" ? parseFloat(v) : Number(v ?? 0));
 
@@ -78,7 +105,22 @@ export async function readRawLoyaltyData(): Promise<RawLoyaltyData> {
         .filter((d): d is string => !!d)
         .sort()
         .at(-1) ?? null;
-    return { accounts, txs, transactionTypes, lastTransaction };
+    const sinceDay = businessDayKey(new Date(Date.now() - STAFF_WINDOW_DAYS * 24 * 60 * 60 * 1000));
+    const staffSql = staffQueries(sinceDay);
+    const byUser = (await query(staffSql.byUser)).map((r) => ({
+      userId: r.user_id === null || r.user_id === undefined ? null : num(r.user_id),
+      userName: r.user_name ?? null,
+      stamps: num(r.n),
+      phones: num(r.phones),
+    }));
+    const repeatedPairs = (await query(staffSql.pairs)).map((r) => ({
+      userId: num(r.user_id),
+      userName: r.user_name ?? null,
+      phone: String(r.phone),
+      customerName: r.customer_name ?? null,
+      stamps: num(r.n),
+    }));
+    return { accounts, txs, transactionTypes, lastTransaction, staff: { sinceDay, byUser, repeatedPairs } };
   });
 }
 

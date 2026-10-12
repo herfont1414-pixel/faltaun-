@@ -26,7 +26,9 @@ export default function AdminLoginPage() {
     setLoading(false);
 
     if (!res.ok) {
-      setError("PIN incorrecto");
+      // 429 = bloqueado por demasiados intentos: se muestra cuánto falta.
+      const data = res.status === 429 ? await res.json().catch(() => ({})) : {};
+      setError(data.error ?? "PIN incorrecto");
       setPin("");
       return;
     }
@@ -43,11 +45,11 @@ export default function AdminLoginPage() {
     }
     if (key === "") return;
     setError("");
-    setPin((p) => {
-      const next = (p + key).slice(0, PIN_LENGTH);
-      if (next.length === PIN_LENGTH) submit(next);
-      return next;
-    });
+    // El envío va fuera del "setPin(p => …)": React puede ejecutar esa función dos veces
+    // (modo desarrollo) y mandaba el PIN dos veces, contando doble para el bloqueo.
+    const next = (pin + key).slice(0, PIN_LENGTH);
+    setPin(next);
+    if (next.length === PIN_LENGTH) submit(next);
   }
 
   return (

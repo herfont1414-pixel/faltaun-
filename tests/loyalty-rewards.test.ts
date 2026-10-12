@@ -1,6 +1,6 @@
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
-import { seedFreshDb, tearDownTestDb } from "./helpers";
+import { nextDay, seedFreshDb, tearDownTestDb } from "./helpers";
 import { getPool } from "@/lib/admin/db";
 import { hashPin, createSession, SESSION_COOKIE } from "@/lib/admin/auth";
 import {
@@ -29,8 +29,15 @@ let n = 0;
 const papas = { firstMilestone: 5, step: 15 };
 const burger = { firstMilestone: 15, step: 15 };
 
+// Tope de un sello por día: el primer sello de cada teléfono es de HOY (así puede canjear,
+// que exige una compra del día) y los siguientes van en días distintos.
+const stampedToday = new Set<string>();
 async function stamps(phone: string, count: number) {
-  for (let i = 0; i < count; i++) await addStamp(phone, `ord-${phone}-${++n}`, { orderTotal: 100 });
+  for (let i = 0; i < count; i++) {
+    const now = stampedToday.has(phone) ? nextDay() : undefined;
+    stampedToday.add(phone);
+    await addStamp(phone, `ord-${phone}-${++n}`, { orderTotal: 100, now });
+  }
 }
 // Cuenta con sellos ya cargados "de antes" (sin pasar por addStamp): no genera premios.
 async function legacyAccount(phone: string, count: number) {
@@ -145,9 +152,10 @@ describe("generación de premios al acumular sellos", () => {
   it("el mismo pedido dos veces no suma sello ni genera premio de más", async () => {
     const phone = "5493000100003";
     await stamps(phone, 4);
-    await addStamp(phone, "mismo-pedido", {});
-    await addStamp(phone, "mismo-pedido", {});
-    await addStamp(phone, "mismo-pedido", {});
+    const day = nextDay();
+    await addStamp(phone, "mismo-pedido", { now: day });
+    await addStamp(phone, "mismo-pedido", { now: day });
+    await addStamp(phone, "mismo-pedido", { now: day });
     expect((await getLoyalty(phone)).stamps).toBe(5);
     expect(await grantsOf(phone)).toEqual(["papas@5:disponible"]);
   });
@@ -155,7 +163,8 @@ describe("generación de premios al acumular sellos", () => {
   it("pedidos simultáneos con el mismo id suman un solo sello", async () => {
     const phone = "5493000100004";
     await stamps(phone, 4);
-    await Promise.all(Array.from({ length: 6 }, () => addStamp(phone, "pedido-concurrente", {})));
+    const day = nextDay();
+    await Promise.all(Array.from({ length: 6 }, () => addStamp(phone, "pedido-concurrente", { now: day })));
     expect((await getLoyalty(phone)).stamps).toBe(5);
     expect(await grantsOf(phone)).toEqual(["papas@5:disponible"]);
   });
@@ -196,6 +205,36 @@ describe("generación de premios al acumular sellos", () => {
 });
 
 describe("canje", () => {
+  it("seguridad: sin una compra de HOY con ese teléfono no se puede canjear; con la compra, sí", async () => {
+    const phone = "5493000200099";
+    // 5 sellos, todos en días anteriores/otros: tiene el premio pero no compró hoy.
+    const days: Date[] = [];
+    for (let i = 0; i < 5; i++) {
+      const d = nextDay();
+      days.push(d);
+      await addStamp(phone, `sin-hoy-${i}`, { now: d });
+    }
+    const gid = await grantId(phone, "papas", 5);
+    await expect(redeemGrant({ grantId: gid, userId: encargadoId })).rejects.toThrow(/comprar hoy con este mismo teléfono/);
+    expect((await listGrantsForPhone(phone)).find((g) => g.id === gid)!.status).toBe("disponible");
+
+    // El día que compra (sello de ese día), sí puede canjear.
+    const buyDay = nextDay();
+    await addStamp(phone, "compra-del-dia", { now: buyDay });
+    const done = await redeemGrant({ grantId: gid, userId: encargadoId, now: buyDay });
+    expect(done.status).toBe("canjeado");
+  });
+
+  it("seguridad: una compra de HOY de OTRO teléfono no habilita canjear el premio ajeno", async () => {
+    const victim = "5493000200098";
+    for (let i = 0; i < 5; i++) await addStamp(victim, `victima-${i}`, { now: nextDay() });
+    const day = nextDay();
+    await addStamp("5493000200097", "compra-del-impostor", { now: day });
+    await expect(
+      redeemGrant({ grantId: await grantId(victim, "papas", 5), userId: encargadoId, now: day })
+    ).rejects.toThrow(/comprar hoy/);
+  });
+
   it("papas: usa el producto vinculado, no toca los sellos ni los otros premios, y no se puede repetir", async () => {
     const phone = "5493000200001";
     await stamps(phone, 15); // papas@5 + burger@15

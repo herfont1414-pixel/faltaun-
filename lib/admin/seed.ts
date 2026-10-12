@@ -266,6 +266,13 @@ export async function ensureSeeded() {
         await client.query(
           "update gestion_delivery_customers set created_at = updated_at where created_at is null"
         );
+        await ensureSqliteColumn(client, "gestion_loyalty_transactions", "stamp_day", "text");
+        await ensureSqliteColumn(client, "gestion_loyalty_transactions", "user_id", "int");
+        await client.query(
+          `create unique index if not exists gestion_loyalty_one_stamp_per_day
+             on gestion_loyalty_transactions(phone, stamp_day)
+             where type = 'stamp' and stamp_day is not null`
+        );
       }
       await client.query(
         `insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')

@@ -1,6 +1,5 @@
 import { getPool } from "@/lib/admin/db";
 import type { DbClient } from "@/lib/admin/db";
-import { awardStampInTx } from "@/lib/admin/loyalty";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { quoteDelivery } from "@/lib/admin/delivery-quote";
 import { isValidLatLng } from "@/lib/geo";
@@ -446,17 +445,9 @@ export async function respondWebOrder(
       );
       orderId = await createPosOrderForWeb(client, web, "pendiente");
 
-      // Sello de fidelidad (y premio del hito, si corresponde) en la MISMA transacción que
-      // la aceptación: o quedan aceptar + pedido + sello + premio, o no queda nada y el
-      // pedido sigue pendiente para reintentar. La clave es el id del pedido web, así el
-      // cobro posterior en el panel (que usa la misma clave) no suma un segundo sello.
-      if (web.customer_phone) {
-        await awardStampInTx(client, web.customer_phone, id, {
-          name: web.customer_name,
-          orderTotal: money(web.total),
-          origin: "web",
-        });
-      }
+      // El sello de fidelidad NO se suma al aceptar: se suma al cobrar el pedido en el panel
+      // (finalize-order, con el id de este pedido web como clave). Así un pedido aceptado que
+      // nunca se retira ni se paga no le deja un sello al cliente.
 
       await client.query("commit");
     } catch (error) {

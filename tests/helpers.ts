@@ -54,3 +54,11 @@ export async function anyInStockProduct() {
   await updateProduct(first.id, { active: true, inStock: true, stockQty: null });
   return { ...first, inStock: true };
 }
+
+// Tope de fidelidad: un sello por teléfono por día. Los tests que acumulan varios
+// sellos para el mismo teléfono los reparten en días distintos con esto.
+let fakeDay = 0;
+export function nextDay(): Date {
+  fakeDay += 1;
+  return new Date(Date.UTC(2030, 0, 1, 15) + fakeDay * 24 * 60 * 60 * 1000);
+}
