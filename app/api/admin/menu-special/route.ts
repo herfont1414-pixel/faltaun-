@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isDbConfigured } from "@/lib/admin/db";
 import { ensureSeeded } from "@/lib/admin/seed";
 import { recordAudit, requireUser } from "@/lib/admin/auth";
-import { getMenuSpecial, setMenuSpecial } from "@/lib/admin/menu-special";
+import { getMenuSpecial, getMenuSpecialImageInfo, setMenuSpecial } from "@/lib/admin/menu-special";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   if (!(await requireUser(request, ["admin", "encargado"]))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
-  return NextResponse.json({ special: await getMenuSpecial() });
+  return NextResponse.json({ special: await getMenuSpecial(), image: await getMenuSpecialImageInfo() });
 }
 
 export async function PUT(request: NextRequest) {

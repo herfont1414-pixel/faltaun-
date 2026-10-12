@@ -58,8 +58,9 @@ export async function getMenuItems(): Promise<MenuItem[]> {
 export interface MenuHighlights {
   // Ids de los productos más pedidos, del primero al último.
   popularIds: string[];
-  // Especial del día activo (producto + texto breve), o null si no hay.
-  special: { id: string; text: string } | null;
+  // Especial del día activo (producto + texto breve y, si se cargó para ese producto, su
+  // foto), o null si no hay.
+  special: { id: string; text: string; imageUrl?: string } | null;
 }
 
 const POPULAR_MAX = 6;
@@ -92,13 +93,18 @@ export async function getMenuHighlights(items: MenuItem[]): Promise<MenuHighligh
     const popularIds = ranked.length >= POPULAR_MIN ? ranked.slice(0, POPULAR_MAX).map((i) => i.id) : [];
 
     const { rows: meta } = await pool.query<{ key: string; value: string | null }>(
-      "select key, value from gestion_meta where key in ('menu_special_active', 'menu_special_id', 'menu_special_text')"
+      `select key, value from gestion_meta
+       where key in ('menu_special_active', 'menu_special_id', 'menu_special_text', 'menu_special_image_product', 'menu_special_image_v')`
     );
     const cfg = Object.fromEntries(meta.map((m) => [m.key, m.value ?? ""]));
-    const special =
+    const special: MenuHighlights["special"] =
       cfg.menu_special_active === "1" && cfg.menu_special_id && items.some((i) => i.id === cfg.menu_special_id)
         ? { id: cfg.menu_special_id, text: (cfg.menu_special_text ?? "").trim().slice(0, 140) }
         : null;
+    // La foto solo se muestra si se subió para el producto que hoy es el especial.
+    if (special && cfg.menu_special_image_v && cfg.menu_special_image_product === special.id) {
+      special.imageUrl = `/api/menu-special/image?v=${encodeURIComponent(cfg.menu_special_image_v)}`;
+    }
 
     return { popularIds, special };
   } catch {
