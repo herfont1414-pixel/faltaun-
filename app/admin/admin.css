@@ -966,6 +966,12 @@
   padding: 3px 0;
   color: #e5e5e0;
 }
+.kds-item-note {
+  margin: 2px 0 0 22px;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: #ffb27a;
+}
 .kds-item-qty {
   color: var(--orange);
   font-weight: 800;

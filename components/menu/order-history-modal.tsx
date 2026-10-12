@@ -7,6 +7,7 @@ interface HistoryItem {
   name: string;
   price: number;
   qty: number;
+  note?: string | null;
 }
 
 interface HistoryOrder {
@@ -193,6 +194,7 @@ export function OrderHistoryModal({ onClose }: { onClose: () => void }) {
                         <div key={i} className="flex justify-between">
                           <span>
                             {it.qty}x {it.name}
+                            {it.note && <span className="block text-xs italic text-stone-400">{it.note}</span>}
                           </span>
                         </div>
                       ))}

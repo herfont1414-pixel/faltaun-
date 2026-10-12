@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { useCart } from "@/components/menu/cart-context";
+import { ITEM_NOTE_MAX, useCart } from "@/components/menu/cart-context";
 import { buildOrderWhatsAppLink } from "@/lib/whatsapp";
 import { useBusinessConfig } from "@/lib/use-business-config";
 import { OrderHistoryModal } from "@/components/menu/order-history-modal";
@@ -46,7 +46,8 @@ interface CheckoutPanelProps {
 }
 
 export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
-  const { items, changeQty, total, clear, fulfillment, setFulfillment, scheduledTime } = useCart();
+  const { items, changeQty, setNote, total, clear, fulfillment, setFulfillment, scheduledTime } = useCart();
+  const [editingNote, setEditingNote] = useState<string | null>(null);
   const businessConfig = useBusinessConfig();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -188,7 +189,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
         customerName: name,
         customerPhone: phone,
         notes: fullNotes,
-        items: items.map((it) => ({ name: it.name, qty: it.qty })),
+        items: items.map((it) => ({ name: it.name, qty: it.qty, note: it.note || undefined })),
         fulfillment,
         paymentMethod: payMethod,
         cashGiven: cashNumber,
@@ -290,11 +291,12 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
         <>
           <div className="mb-4 space-y-2">
             {items.map((it) => (
-              <div key={it.name} className="flex items-center gap-3 text-sm">
+              <div key={it.key} className="text-sm">
+              <div className="flex items-center gap-3">
                 <div className="qty-ctrl flex items-center gap-1 rounded-lg bg-white/5 p-1">
                   <button
                     type="button"
-                    onClick={() => changeQty(it.name, -1)}
+                    onClick={() => changeQty(it.key, -1)}
                     className="h-6 w-6 rounded bg-white/10 font-bold text-stone-100"
                   >
                     −
@@ -302,7 +304,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
                   <span className="min-w-[16px] text-center font-semibold">{it.qty}</span>
                   <button
                     type="button"
-                    onClick={() => changeQty(it.name, 1)}
+                    onClick={() => changeQty(it.key, 1)}
                     className="h-6 w-6 rounded bg-white/10 font-bold text-stone-100"
                   >
                     +
@@ -312,6 +314,33 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
                 <span className="font-medium text-stone-300">
                   ${(it.price * it.qty).toLocaleString("es-AR")}
                 </span>
+              </div>
+              {/* Aclaración del producto: se ve debajo y se puede agregar o cambiar acá mismo. */}
+              {editingNote === it.key ? (
+                <input
+                  autoFocus
+                  defaultValue={it.note}
+                  maxLength={ITEM_NOTE_MAX}
+                  placeholder="Ej: sin tomate, sin cebolla"
+                  onBlur={(e) => {
+                    setNote(it.key, e.target.value);
+                    setEditingNote(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                    if (e.key === "Escape") setEditingNote(null);
+                  }}
+                  className="ml-[92px] mt-1.5 w-[calc(100%-92px)] rounded-lg border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs text-stone-100 outline-none placeholder:text-stone-500 focus:border-ember/60"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setEditingNote(it.key)}
+                  className={`ml-[92px] mt-1 block text-left text-xs ${it.note ? "italic text-ember-soft" : "text-stone-500 hover:text-stone-300"}`}
+                >
+                  {it.note ? `✎ ${it.note}` : "+ Agregar aclaración (ej: sin tomate)"}
+                </button>
+              )}
               </div>
             ))}
           </div>

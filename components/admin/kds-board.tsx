@@ -104,6 +104,7 @@ export function KdsBoard() {
                       {t.items.map((it, i) => (
                         <div key={i} className="kds-item">
                           <span className="kds-item-qty">{it.qty}x</span> {it.name}
+                          {it.note && <div className="kds-item-note">→ {it.note}</div>}
                         </div>
                       ))}
                     </div>

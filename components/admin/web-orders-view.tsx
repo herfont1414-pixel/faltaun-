@@ -200,6 +200,7 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
                   <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>
                       {it.qty}x {it.name}
+                      {it.note && <span style={{ display: "block", fontSize: 12, fontStyle: "italic", color: "var(--orange)" }}>→ {it.note}</span>}
                     </span>
                     <span>{money(it.price * it.qty)}</span>
                   </div>

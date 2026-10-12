@@ -21,7 +21,7 @@ export function buildMenuItemInquiry(item: MenuItem, number?: string) {
 
 export interface OrderSummaryInput {
   customerName: string;
-  items: { name: string; qty: number; price: number }[];
+  items: { name: string; qty: number; price: number; note?: string | null }[];
   fulfillment: "delivery" | "retiro";
   address?: string | null;
   zone?: string | null;
@@ -40,7 +40,10 @@ export function buildOrderWhatsAppLink(input: OrderSummaryInput) {
   const lines = [
     `Hola! Soy ${input.customerName} y acabo de hacer un pedido en el menú online de Madero Restó:`,
     "",
-    ...input.items.map((it) => `• ${it.qty}x ${it.name} ($${(it.price * it.qty).toLocaleString("es-AR")})`),
+    ...input.items.flatMap((it) => [
+      `• ${it.qty}x ${it.name} ($${(it.price * it.qty).toLocaleString("es-AR")})`,
+      ...(it.note ? [`   ↳ ${it.note}`] : []),
+    ]),
     "",
     input.fulfillment === "delivery" ? "Modalidad: Delivery" : "Modalidad: Retiro en el local",
   ];

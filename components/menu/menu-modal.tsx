@@ -5,7 +5,7 @@ import Image from "next/image";
 import { X, Plus, Minus } from "lucide-react";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { buildMenuItemInquiry } from "@/lib/whatsapp";
-import { useCart } from "@/components/menu/cart-context";
+import { ITEM_NOTE_MAX, useCart } from "@/components/menu/cart-context";
 import { iconFor } from "@/components/menu/category-filter";
 import { useBusinessConfig } from "@/lib/use-business-config";
 import type { MenuItem } from "@/lib/types";
@@ -20,6 +20,7 @@ export function MenuModal({ item, onClose }: MenuModalProps) {
   const businessConfig = useBusinessConfig();
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
+  const [note, setNote] = useState("");
   const Icon = iconFor(item.category);
   const description = item.description?.trim();
 
@@ -73,6 +74,20 @@ export function MenuModal({ item, onClose }: MenuModalProps) {
               </span>
             )}
           </div>
+          {item.inStock && (
+            <label className="mt-5 block">
+              <span className="text-sm font-medium text-stone-300">¿Algo para agregar o quitar?</span>
+              <span className="ml-1 text-xs text-stone-500">(opcional)</span>
+              <input
+                type="text"
+                value={note}
+                maxLength={ITEM_NOTE_MAX}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Ej: sin tomate, sin cebolla, bien cocida"
+                className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-stone-100 outline-none placeholder:text-stone-500 focus:border-ember/60"
+              />
+            </label>
+          )}
         </div>
 
         <div className="shrink-0 border-t border-white/10 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
@@ -103,7 +118,7 @@ export function MenuModal({ item, onClose }: MenuModalProps) {
               <button
                 type="button"
                 onClick={() => {
-                  addItem(item.name, item.price, qty);
+                  addItem(item.name, item.price, qty, note);
                   setAdded(true);
                   setTimeout(onClose, 500);
                 }}

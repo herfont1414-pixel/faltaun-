@@ -93,6 +93,8 @@ export interface WebOrderItem {
   name: string;
   price: number;
   qty: number;
+  // Aclaración del cliente para ese producto ("sin tomate"). Opcional.
+  note?: string | null;
 }
 
 // Medios que ofrece el menú online (el link de pago no se usa).
@@ -196,7 +198,7 @@ export interface KitchenTicket {
   origin: OrderOrigin | "web" | "delivery";
   tableNumber: number | null;
   customerName: string | null;
-  items: { name: string; qty: number }[];
+  items: { name: string; qty: number; note?: string | null }[];
   kitchenStatus: KitchenStatus;
   sentAt: string;
 }
