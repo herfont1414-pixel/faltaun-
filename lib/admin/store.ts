@@ -482,6 +482,32 @@ export async function setDeliveryPerson(orderId: string, deliveryPerson: string 
   return getOrderRow(orderId);
 }
 
+// Editar los datos de una mesa abierta: personas, cliente y mozo.
+export async function updateTableDetails(
+  orderId: string,
+  details: { partySize?: number | null; customerName?: string | null; waiter?: string | null }
+) {
+  const pool = getPool();
+  const { rows } = await pool.query<{ status: string; table_id: number | null }>(
+    "select status, table_id from gestion_orders where id = $1",
+    [orderId]
+  );
+  if (!rows[0]) throw new Error("Ese pedido no existe");
+  if (rows[0].status !== "abierta") throw new Error("La mesa ya se cerró");
+  if (rows[0].table_id == null) throw new Error("Ese pedido no es de una mesa");
+  const partySize = details.partySize == null ? null : Number(details.partySize);
+  if (partySize !== null && (!Number.isInteger(partySize) || partySize < 1 || partySize > 99)) {
+    throw new Error("La cantidad de personas no es válida");
+  }
+  await pool.query("update gestion_orders set party_size = $2, customer_name = $3, waiter = $4 where id = $1", [
+    orderId,
+    partySize,
+    details.customerName?.trim().slice(0, 60) || null,
+    details.waiter?.trim().slice(0, 40) || null,
+  ]);
+  return getOrderRow(orderId);
+}
+
 export async function setOrderNotes(orderId: string, notes: string | null) {
   const pool = getPool();
   await pool.query("update gestion_orders set notes = $2 where id = $1", [orderId, notes]);

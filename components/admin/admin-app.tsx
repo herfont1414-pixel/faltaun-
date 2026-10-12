@@ -22,7 +22,7 @@ import { AuditoriaView } from "@/components/admin/auditoria-view";
 import { IngredientesView } from "@/components/admin/ingredientes-view";
 import { ComprasView } from "@/components/admin/compras-view";
 import { TableOpenModal } from "@/components/admin/table-open-modal";
-import { money } from "@/lib/admin/format";
+import { money, openedSince } from "@/lib/admin/format";
 import { printOrderDocument } from "@/lib/print-client";
 import { playBeep } from "@/lib/admin/beep";
 import { changeCents, fromCents, toCents } from "@/lib/admin/payments";
@@ -90,6 +90,7 @@ export function AdminApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingTable, setPendingTable] = useState<TableRow | null>(null);
   const [openingTable, setOpeningTable] = useState(false);
+  const [editingTable, setEditingTable] = useState(false);
   // Pedidos web pendientes (para el aviso y el contador del menú lateral, en cualquier pantalla).
   const [pendingWeb, setPendingWeb] = useState(0);
   const [webAlert, setWebAlert] = useState<string | null>(null);
@@ -238,6 +239,24 @@ export function AdminApp() {
     setSelectedOrderId(state.result.id);
     setSelectedTableNumber(pendingTable.number);
     setPendingTable(null);
+  }
+
+  async function confirmEditTable(details: { partySize: number; customerName: string; waiter: string }) {
+    if (!selectedOrderId) return;
+    setOpeningTable(true);
+    const state = await safeCall(() =>
+      postJson("/api/admin/table-details", {
+        orderId: selectedOrderId,
+        partySize: details.partySize,
+        customerName: details.customerName,
+        waiter: details.waiter,
+      })
+    );
+    setOpeningTable(false);
+    if (!state) return;
+    applyState(state);
+    setEditingTable(false);
+    showToast("Mesa actualizada");
   }
 
   function closePanel() {
@@ -521,6 +540,19 @@ export function AdminApp() {
                       <span className="mesa-num">{table.number}</span>
                       <span className="mesa-label">{MESA_STATUS_LABEL[table.status]}</span>
                       {order && order.total > 0 && <span className="mesa-badge">{money(order.total)}</span>}
+                      {order && (
+                        <span className="mesa-info">
+                          {order.customerName && <span className="mesa-info-name">{order.customerName}</span>}
+                          {(order.partySize || order.waiter) && (
+                            <span>
+                              {order.partySize ? `👥 ${order.partySize}` : ""}
+                              {order.partySize && order.waiter ? " · " : ""}
+                              {order.waiter ?? ""}
+                            </span>
+                          )}
+                          <span>🕒 {openedSince(order.openedAt)}</span>
+                        </span>
+                      )}
                     </div>
                   );
                 })}
@@ -569,6 +601,7 @@ export function AdminApp() {
             onChangeNotes={changeNotes}
             onChangeItemNote={changeItemNote}
             onPrintTicket={() => currentOrder && printTicket(currentOrder.id)}
+            onEditTable={() => setEditingTable(true)}
           />
         </div>
       ) : section === "productos" ? (
@@ -620,6 +653,17 @@ export function AdminApp() {
         <div className="toast-wrap">
           <div className="toast">{toastMsg}</div>
         </div>
+      )}
+
+      {editingTable && currentOrder && selectedTableNumber && (
+        <TableOpenModal
+          mode="edit"
+          tableNumber={selectedTableNumber}
+          busy={openingTable}
+          initial={{ partySize: currentOrder.partySize, customerName: currentOrder.customerName, waiter: currentOrder.waiter }}
+          onCancel={() => setEditingTable(false)}
+          onConfirm={confirmEditTable}
+        />
       )}
 
       {pendingTable && (

@@ -1217,3 +1217,61 @@
     min-height: 0;
   }
 }
+
+/* Mesas: datos de la mesa abierta en la tarjeta (cliente, personas · mozo, hora). */
+.mesa-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin-top: 4px;
+  max-width: 100%;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #a1a19c;
+  text-align: center;
+}
+.mesa-info > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mesa-info-name {
+  font-weight: 700;
+  color: #fff;
+}
+.mesa-tile.atencion .mesa-info-name,
+.mesa-tile.cobrando .mesa-info-name {
+  color: var(--text);
+}
+.mesa-tile.atencion .mesa-info,
+.mesa-tile.cobrando .mesa-info {
+  color: var(--text-dim);
+}
+.mesas-grid {
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+}
+.mesa-tile {
+  aspect-ratio: auto;
+  min-height: 124px;
+  padding: 10px 4px;
+}
+.op-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.op-edit:hover {
+  background: #f5f5f4;
+}
