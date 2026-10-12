@@ -3,6 +3,7 @@
 import { osmLink } from "@/lib/geo";
 import { useEffect, useRef, useState } from "react";
 import { X, Printer, Pencil, ChevronDown } from "lucide-react";
+import { openedSince } from "@/lib/admin/format";
 import { money } from "@/lib/admin/format";
 import { PaymentPicker } from "@/components/admin/payment-picker";
 import type { Catalog, Order, OrderPayment } from "@/lib/admin/types";
@@ -47,6 +48,8 @@ interface OrderPanelProps {
   onChangeNotes: (notes: string) => void;
   onChangeItemNote: (itemId: string, note: string) => void;
   onPrintTicket: () => void;
+  // Solo mesas: abre "Editar mesa" (personas, cliente, mozo).
+  onEditTable?: () => void;
 }
 
 // Preferencia de cada PC: mostrar u ocultar la carta por categorías (en PC arranca oculta,
@@ -76,6 +79,7 @@ export function OrderPanel({
   onChangeNotes,
   onChangeItemNote,
   onPrintTicket,
+  onEditTable,
 }: OrderPanelProps) {
   const [showPayment, setShowPayment] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -154,14 +158,26 @@ export function OrderPanel({
             </div>
             <div className="op-sub">
               {order.items.length} producto(s)
-              {order.partySize ? ` · ${order.partySize} persona${order.partySize === 1 ? "" : "s"}` : ""}
-              {order.waiter ? ` · ${order.waiter}` : ""}
+              {tableNumber && order.partySize ? ` · ${order.partySize} persona${order.partySize === 1 ? "" : "s"}` : ""}
+              {tableNumber && order.waiter ? ` · Mozo: ${order.waiter}` : ""}
             </div>
-            {order.customerName && tableNumber && <div className="op-sub">{order.customerName}</div>}
+            {tableNumber && (
+              <div className="op-sub">
+                {order.customerName ? `${order.customerName} · ` : ""}Abierta {openedSince(order.openedAt)}
+              </div>
+            )}
           </div>
-          <button type="button" className="op-close" onClick={onClose}>
-            <X className="mx-auto h-4 w-4" />
-          </button>
+          <div style={{ display: "flex", gap: 6 }}>
+            {tableNumber && onEditTable && (
+              <button type="button" className="op-edit" onClick={onEditTable}>
+                <Pencil className="h-3.5 w-3.5" />
+                Editar mesa
+              </button>
+            )}
+            <button type="button" className="op-close" onClick={onClose}>
+              <X className="mx-auto h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="prod-search">

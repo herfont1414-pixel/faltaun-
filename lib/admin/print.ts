@@ -14,6 +14,9 @@ export interface PrintableOrder {
   origin: "mesa" | "mostrador" | "delivery";
   customerName: string | null;
   partySize: number | null;
+  waiter: string | null;
+  // Pedido de mostrador que se lleva (no es mesa ni delivery).
+  takeAway: boolean;
   openedAt: string;
   notes: string | null;
   items: PrintableItem[];
@@ -31,7 +34,7 @@ function fallbackArea(category: string) {
 export async function getPrintableOrder(orderId: string): Promise<PrintableOrder> {
   const pool = getPool();
   const { rows: orderRows } = await pool.query(
-    `select o.id, o.origin, o.opened_at, o.notes, o.is_delivery, o.customer_name, o.party_size,
+    `select o.id, o.origin, o.opened_at, o.notes, o.is_delivery, o.customer_name, o.party_size, o.waiter,
             t.number as table_number
      from gestion_orders o
      left join gestion_tables t on t.id = o.table_id
@@ -66,6 +69,8 @@ export async function getPrintableOrder(orderId: string): Promise<PrintableOrder
     origin: orderRow.is_delivery ? "delivery" : orderRow.origin,
     customerName: orderRow.customer_name ?? null,
     partySize: orderRow.party_size ?? null,
+    waiter: orderRow.waiter ?? null,
+    takeAway: !orderRow.is_delivery && !orderRow.table_number,
     openedAt: orderRow.opened_at,
     notes: orderRow.notes ?? null,
     items,

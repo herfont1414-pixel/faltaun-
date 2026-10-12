@@ -56,20 +56,35 @@ function baseStyles(config: PrintConfig) {
   `;
 }
 
-function groupForPrint<T extends { name: string; qty: number }>(items: T[], paperSaving: boolean): T[] {
+// Modo ahorro de papel: junta las líneas del mismo producto CON la misma aclaración
+// (una burger "sin tomate" nunca se mezcla con una normal).
+function groupForPrint<T extends { name: string; qty: number; note?: string | null }>(items: T[], paperSaving: boolean): T[] {
   if (!paperSaving) return items;
   const order: string[] = [];
   const map = new Map<string, T>();
   for (const item of items) {
-    const existing = map.get(item.name);
+    const key = `${item.name}\u0000${item.note ?? ""}`;
+    const existing = map.get(key);
     if (existing) {
       existing.qty += item.qty;
     } else {
-      map.set(item.name, { ...item });
-      order.push(item.name);
+      map.set(key, { ...item });
+      order.push(key);
     }
   }
-  return order.map((name) => map.get(name)!);
+  return order.map((key) => map.get(key)!);
+}
+
+// Notas que van a la cocina: solo lo que escribió el cliente o el mozo. Los datos de cobro
+// que el sistema agrega al pedido web ("Pedido web", "Paga: transferencia…", "con $…,
+// vuelto $…") no le sirven a la cocina y se sacan de la comanda.
+export function kitchenNotes(notes: string | null | undefined): string | null {
+  if (!notes) return null;
+  const kept = notes
+    .split(" · ")
+    .map((part) => part.trim())
+    .filter((part) => part && !/^pedido web$/i.test(part) && !/^paga:/i.test(part) && !/^con \$[\d.,]+, vuelto/i.test(part));
+  return kept.length ? kept.join(" · ") : null;
 }
 
 function wrap(config: PrintConfig, body: string) {
@@ -92,6 +107,8 @@ export interface ComandaPrintData {
   origin: "mesa" | "mostrador" | "delivery";
   customerName: string | null;
   partySize: number | null;
+  waiter?: string | null;
+  takeAway?: boolean;
   openedAt: string;
   notes: string | null;
   areas: { name: string; items: { name: string; qty: number; note: string | null }[] }[];
@@ -108,8 +125,10 @@ export function toComandaPrintData(order: PrintableOrder): ComandaPrintData {
     origin: order.origin,
     customerName: order.customerName,
     partySize: order.partySize,
+    waiter: order.waiter,
+    takeAway: order.takeAway,
     openedAt: order.openedAt,
-    notes: order.notes,
+    notes: kitchenNotes(order.notes),
     areas: order.areas.map((name) => ({
       name,
       items: order.items
@@ -119,11 +138,34 @@ export function toComandaPrintData(order: PrintableOrder): ComandaPrintData {
   };
 }
 
+// Datos de la comanda que comparten la versión HTML y la ESC/POS.
+export function comandaHeader(data: ComandaPrintData) {
+  const origin =
+    data.origin === "delivery" ? "DELIVERY" : data.tableNumber ? `MESA ${data.tableNumber}` : "MOSTRADOR";
+  const time = new Date(data.openedAt).toLocaleString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const lines = [`Venta: # ${data.orderId.slice(0, 8).toUpperCase()}`, time];
+  if (data.customerName) lines.push(`Cliente: ${data.customerName}`);
+  if (data.partySize) lines.push(`Personas: ${data.partySize}`);
+  if (data.waiter) lines.push(`Mozo: ${data.waiter}`);
+  if (data.takeAway) lines.push("Para llevar");
+  return { origin, lines };
+}
+
+// Comanda de cocina, al estilo de la que ya usaba el local: origen bien grande, los datos
+// del pedido abajo y cada producto en letra grande con la cantidad adelante; la aclaración
+// de cada producto ("sin tomate", "doble") va justo debajo de ese producto. Sin precios ni
+// forma de pago, que a la cocina no le sirven.
 export function renderComandaHtml(data: ComandaPrintData, config: PrintConfig): string {
-  const originLabel =
-    data.origin === "delivery" ? "Delivery" : data.tableNumber ? `Mesa ${data.tableNumber}` : "Mostrador";
-  const time = new Date(data.openedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
-  const shortId = data.orderId.slice(0, 8).toUpperCase();
+  const { origin, lines } = comandaHeader(data);
+  const big = fontPx(config.fontSizeBody, 26, 22);
+  const noteSize = fontPx(config.fontSizeBody, 19, 16);
 
   const areasHtml = data.areas
     .map((area) => {
@@ -131,34 +173,26 @@ export function renderComandaHtml(data: ComandaPrintData, config: PrintConfig): 
       if (items.length === 0) return "";
       return `
         <div class="area-block">
-          <div class="bold body-text">— ${escapeHtml(area.name.toUpperCase())} —</div>
+          <div class="bold" style="font-size:${noteSize}px">${escapeHtml(area.name.toUpperCase())}</div>
           ${items
             .map(
               (item) => `
-            <div class="row comanda-item">
-              <span>${escapeHtml(item.name)}</span>
-              <span>x${item.qty}</span>
+            <div style="font-size:${big}px;font-weight:800;line-height:1.15;margin-top:8px;page-break-inside:avoid">
+              ${item.qty} ${escapeHtml(item.name.toUpperCase())}
             </div>
-            ${item.note ? `<div class="comanda-item-note">- ${escapeHtml(item.note)}</div>` : ""}`
+            ${item.note ? `<div style="font-size:${noteSize}px;font-weight:700;margin:2px 0 0 14px">&gt; ${escapeHtml(item.note)}</div>` : ""}`
             )
             .join("")}
         </div>`;
     })
     .join("");
 
-  const customerLine = [data.customerName, data.partySize ? `${data.partySize} personas` : null]
-    .filter(Boolean)
-    .join(" · ");
-
   const body = `
-    ${config.headerText ? `<div class="center bold header-text">${escapeHtml(config.headerText)}</div>` : ""}
-    <div class="center comanda-origin" style="margin-top: 4px">${escapeHtml(originLabel)}</div>
-    ${customerLine ? `<div class="center body-text">${escapeHtml(customerLine)}</div>` : ""}
-    <div class="center body-text">Venta #${shortId} · ${time}</div>
+    <div class="center" style="font-size:${fontPx(config.fontSizeHeader, 28, 24)}px;font-weight:800;line-height:1.2">${escapeHtml(origin)}</div>
+    <div class="body-text" style="margin-top:6px">${lines.map(escapeHtml).join("<br />")}</div>
     <hr />
     ${areasHtml || `<div class="center body-text">Sin productos enviados</div>`}
-    ${data.notes ? `<hr /><div class="bold body-text">Notas:</div><div class="body-text">${escapeHtml(data.notes)}</div>` : ""}
-    ${config.footerText ? `<hr /><div class="center footer-text">${escapeHtml(config.footerText)}</div>` : ""}
+    ${data.notes ? `<hr /><div class="bold" style="font-size:${noteSize}px">NOTAS:</div><div class="bold" style="font-size:${noteSize}px">${escapeHtml(data.notes)}</div>` : ""}
   `;
 
   return wrap(config, body);

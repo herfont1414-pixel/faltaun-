@@ -7,12 +7,16 @@ interface TableOpenModalProps {
   busy: boolean;
   onCancel: () => void;
   onConfirm: (details: { partySize: number; customerName: string; waiter: string; notes: string }) => void;
+  // "edit": editar una mesa ya abierta (sin comentario: las notas se editan en el pedido).
+  mode?: "open" | "edit";
+  initial?: { partySize: number | null; customerName: string | null; waiter: string | null };
 }
 
-export function TableOpenModal({ tableNumber, busy, onCancel, onConfirm }: TableOpenModalProps) {
-  const [partySize, setPartySize] = useState(1);
-  const [customerName, setCustomerName] = useState("");
-  const [waiter, setWaiter] = useState("");
+export function TableOpenModal({ tableNumber, busy, onCancel, onConfirm, mode = "open", initial }: TableOpenModalProps) {
+  const editing = mode === "edit";
+  const [partySize, setPartySize] = useState(initial?.partySize ?? 1);
+  const [customerName, setCustomerName] = useState(initial?.customerName ?? "");
+  const [waiter, setWaiter] = useState(initial?.waiter ?? "");
   const [notes, setNotes] = useState("");
 
   const inputStyle: React.CSSProperties = {
@@ -47,9 +51,11 @@ export function TableOpenModal({ tableNumber, busy, onCancel, onConfirm }: Table
         style={{ background: "#fff", borderRadius: 16, padding: 22, width: 340 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 2 }}>Abrir Mesa {tableNumber}</div>
+        <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 2 }}>
+          {editing ? `Editar Mesa ${tableNumber}` : `Abrir Mesa ${tableNumber}`}
+        </div>
         <div style={{ fontSize: 12.5, color: "var(--text-faint)", marginBottom: 16 }}>
-          Datos opcionales — podés dejarlos vacíos y cargar todo después.
+          {editing ? "Cambiá los datos de la mesa; el pedido no se toca." : "Datos opcionales — podés dejarlos vacíos y cargar todo después."}
         </div>
 
         <div style={{ marginBottom: 14 }}>
@@ -88,7 +94,7 @@ export function TableOpenModal({ tableNumber, busy, onCancel, onConfirm }: Table
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <label style={labelStyle}>Camarero</label>
+          <label style={labelStyle}>Mozo</label>
           <input
             value={waiter}
             onChange={(e) => setWaiter(e.target.value)}
@@ -97,6 +103,7 @@ export function TableOpenModal({ tableNumber, busy, onCancel, onConfirm }: Table
           />
         </div>
 
+        {!editing && (
         <div style={{ marginBottom: 18 }}>
           <label style={labelStyle}>Comentario</label>
           <textarea
@@ -107,6 +114,7 @@ export function TableOpenModal({ tableNumber, busy, onCancel, onConfirm }: Table
             style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }}
           />
         </div>
+        )}
 
         <div className="footer-actions">
           <button type="button" className="btn" onClick={onCancel} disabled={busy}>
@@ -118,7 +126,7 @@ export function TableOpenModal({ tableNumber, busy, onCancel, onConfirm }: Table
             disabled={busy}
             onClick={() => onConfirm({ partySize, customerName, waiter, notes })}
           >
-            Abrir mesa
+            {editing ? "Guardar" : "Abrir mesa"}
           </button>
         </div>
       </div>

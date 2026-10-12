@@ -6,6 +6,7 @@
 // para cómo se manda esto a la impresora real en Windows.
 import { money } from "@/lib/admin/format";
 import type { PrintConfig } from "@/lib/admin/types";
+import { comandaHeader } from "@/lib/admin/print-templates";
 import type { ComandaPrintData, TicketPrintData } from "@/lib/admin/print-templates";
 
 const ESC = 0x1b;
@@ -90,57 +91,89 @@ class EscPosBuilder {
   }
 }
 
+// Corta un texto en líneas de hasta "width" caracteres, por palabras (una palabra más
+// larga que la línea se parte). "indent" se agrega a las líneas que siguen a la primera.
+function wrapWords(text: string, width: number, indent = ""): string[] {
+  const out: string[] = [];
+  let line = "";
+  for (let word of stripAccents(text).split(/\s+/).filter(Boolean)) {
+    for (;;) {
+      const lead = line ? `${line} ` : out.length ? indent : "";
+      if ((lead + word).length <= width) {
+        line = lead + word;
+        break;
+      }
+      if (line) {
+        out.push(line);
+        line = "";
+        continue;
+      }
+      // La palabra sola no entra: se parte.
+      const room = Math.max(1, width - lead.length);
+      out.push(lead + word.slice(0, room));
+      word = word.slice(room);
+      if (!word) break;
+    }
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+// Comanda de cocina como la que ya usaba el local: origen en letra doble, los datos del
+// pedido en letra común y cada producto en letra DOBLE (ancho y alto) con la cantidad
+// adelante. La aclaración de cada producto va debajo, en letra alta. Sin precios, forma de
+// pago, encabezado ni pie: a la cocina solo le sirve qué preparar.
 export function renderComandaEscPos(data: ComandaPrintData, config: PrintConfig): Buffer {
   const width = charsFor(config.paperWidthMm);
-  const originLabel =
-    data.origin === "delivery" ? "DELIVERY" : data.tableNumber ? `MESA ${data.tableNumber}` : "MOSTRADOR";
-  const time = new Date(data.openedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
-  const shortId = data.orderId.slice(0, 8).toUpperCase();
+  // En letra doble entra la mitad (a la POS-58 le entran 15 caracteres dobles por línea).
+  const bigWidth = config.paperWidthMm === 58 ? 15 : 24;
+  const { origin, lines } = comandaHeader(data);
 
   const b = new EscPosBuilder().init();
-
-  if (config.headerText) {
-    b.align("center").bold(true).line(config.headerText).bold(false);
-  }
-
-  // Título del origen a tamaño normal y negrita (no gigante): se pidió
-  // limpio y legible, no ocupando media comanda.
-  b.align("center").bold(true).line(originLabel).bold(false);
-
-  const customerLine = [data.customerName, data.partySize ? `${data.partySize} personas` : null]
-    .filter(Boolean)
-    .join(" - ");
-  if (customerLine) b.align("center").line(customerLine);
-
-  b.align("left").line(`Venta #${shortId}`);
-  b.line(time);
+  b.align("center").bold(true).size(2, 2);
+  for (const l of wrapWords(origin, bigWidth)) b.line(l);
+  b.size(1, 1).bold(false).align("left");
+  for (const l of lines) for (const w of wrapWords(l, width, "  ")) b.line(w);
   b.hr(width);
 
   let printedAny = false;
   for (const area of data.areas) {
     if (area.items.length === 0) continue;
     printedAny = true;
-    b.bold(true).line(`-- ${area.name.toUpperCase()} --`).bold(false);
-    // Platos y notas en negrita: es lo que tiene que leerse rápido desde
-    // lejos en la cocina, el resto de la comanda es solo contexto.
-    for (const item of area.items) {
-      b.bold(true).line(row(item.name, `x${item.qty}`, width)).bold(false);
-      if (item.note) b.bold(true).line(`  - ${item.note}`).bold(false);
+    b.bold(true).line(area.name.toUpperCase()).bold(false);
+    for (const item of groupItems(area.items, config.paperSavingMode)) {
+      b.bold(true).size(2, 2);
+      for (const l of wrapWords(`${item.qty} ${item.name.toUpperCase()}`, bigWidth, "  ")) b.line(l);
+      b.size(1, 2);
+      if (item.note) for (const l of wrapWords(`> ${item.note}`, width - 2, "  ")) b.line(`  ${l}`);
+      b.size(1, 1).bold(false);
     }
     b.feed(1);
   }
   if (!printedAny) b.align("center").line("Sin productos enviados").align("left");
 
   if (data.notes) {
-    b.hr(width).bold(true).line("NOTAS:").bold(false).line(data.notes);
-  }
-
-  if (config.footerText) {
-    b.hr(width).align("center").line(config.footerText);
+    b.hr(width).bold(true).size(1, 2).line("NOTAS:");
+    for (const l of wrapWords(data.notes, width)) b.line(l);
+    b.size(1, 1).bold(false);
   }
 
   b.cut();
   return b.build();
+}
+
+// Mismo criterio que la versión HTML: en modo ahorro se juntan líneas iguales (mismo
+// producto y misma aclaración), nunca una con aclaración y otra sin.
+function groupItems<T extends { name: string; qty: number; note: string | null }>(items: T[], paperSaving: boolean): T[] {
+  if (!paperSaving) return items;
+  const map = new Map<string, T>();
+  for (const item of items) {
+    const key = `${item.name}\u0000${item.note ?? ""}`;
+    const existing = map.get(key);
+    if (existing) existing.qty += item.qty;
+    else map.set(key, { ...item });
+  }
+  return [...map.values()];
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
