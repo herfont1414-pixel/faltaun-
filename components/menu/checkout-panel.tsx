@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { ITEM_NOTE_MAX, useCart } from "@/components/menu/cart-context";
 import { buildOrderWhatsAppLink } from "@/lib/whatsapp";
 import { useBusinessConfig } from "@/lib/use-business-config";
+import { playSfx, unlockAudio } from "@/lib/sound";
 import { OrderHistoryModal } from "@/components/menu/order-history-modal";
 import { LocationPicker } from "@/components/geo/location-picker";
 import type { LatLng } from "@/lib/geo";
@@ -178,6 +179,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
     // click: si se espera a que vuelva el fetch antes de abrirla, los
     // navegadores la bloquean como popup. Una vez confirmado el pedido, se la
     // redirige al link de WhatsApp (o se la cierra si algo falla).
+    unlockAudio();
     const waWindow = window.open("", "_blank");
 
     const scheduleNote = timeLabel ? `Horario pedido: ${timeLabel}` : null;
@@ -233,6 +235,7 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
     if (waWindow) waWindow.location.href = waLink;
     else window.open(waLink, "_blank");
 
+    playSfx("sent");
     setSentTotal(grandTotal);
     setSent(true);
     clear();

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Receipt, Star } from "lucide-react";
 import { OrderHistoryModal } from "@/components/menu/order-history-modal";
+import { SoundButtons } from "@/components/menu/sound-buttons";
 
 export function Header() {
   const [showHistory, setShowHistory] = useState(false);
@@ -21,18 +22,19 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-white/5 bg-base/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3 max-[379px]:px-3">
           <Image
             src="/logo-dark.png"
             alt="Madero Restó"
             width={480}
             height={231}
             priority
-            className={`h-11 w-auto [clip-path:inset(2%_0_0_0)] transition-opacity duration-200 ${
+            className={`h-11 w-auto max-[379px]:h-8 [clip-path:inset(2%_0_0_0)] transition-opacity duration-200 ${
               scrolled ? "opacity-100" : "opacity-0"
             }`}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 max-[379px]:gap-1">
+            <SoundButtons />
             <Link
               href="/fidelidad"
               aria-label="Mi tarjeta de fidelidad"
@@ -50,7 +52,7 @@ export function Header() {
             </button>
             <a
               href="#reservas"
-              className="rounded-full border border-ember/40 px-4 py-1.5 text-sm text-ember-soft transition hover:bg-ember/10"
+              className="rounded-full border border-ember/40 px-4 py-1.5 max-[379px]:px-3 text-sm text-ember-soft transition hover:bg-ember/10"
             >
               Reservar
             </a>
