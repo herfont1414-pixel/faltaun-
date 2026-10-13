@@ -1275,3 +1275,132 @@
 .op-edit:hover {
   background: #f5f5f4;
 }
+
+/* Productos: navegación por categorías (pestañas), búsqueda y filtros rápidos. */
+.prod-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.prod-search {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 14px;
+}
+.prod-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.prod-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.prod-filter.active {
+  border-color: var(--orange);
+  color: var(--orange-dark);
+  background: #fff3ed;
+}
+.prod-badge {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+.prod-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.prod-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.prod-tab:hover {
+  border-color: #c9c8c2;
+}
+.prod-tab.active {
+  background: #18181b;
+  border-color: #18181b;
+  color: #fff;
+}
+.prod-tab-count {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-dim);
+}
+.prod-tab.active .prod-tab-count {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+.prod-tab-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+}
+.prod-hint {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: -6px 0 12px;
+}
+.prod-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--orange-dark);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+@media (max-width: 640px) {
+  /* En el celular las categorías se deslizan en una fila, sin ocupar media pantalla. */
+  .prod-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .prod-tab {
+    flex-shrink: 0;
+    font-size: 13px;
+    padding: 9px 13px;
+  }
+}
