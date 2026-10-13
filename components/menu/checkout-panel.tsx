@@ -68,7 +68,6 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
-  const [lookupMsg, setLookupMsg] = useState("");
 
   useEffect(() => {
     try {
@@ -103,18 +102,6 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
     };
   }, [distance.enabled, point?.lat, point?.lng]);
 
-  async function lookupPhone(value: string) {
-    setPhone(value);
-    setLookupMsg("");
-    if (value.trim().length < 6) return;
-    const res = await fetch(`/api/customer/${encodeURIComponent(value.trim())}`);
-    const data = await res.json();
-    if (data.customer) {
-      if (!name.trim()) setName(data.customer.name);
-      if (data.customer.address) setAddress(data.customer.address);
-      setLookupMsg("Te reconocimos · datos cargados");
-    }
-  }
 
   const byDistance = distance.enabled;
   const shippingCost =
@@ -383,11 +370,10 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
             />
             <input
               value={phone}
-              onChange={(e) => lookupPhone(e.target.value)}
+              onChange={(e) => setPhone(e.target.value)}
               placeholder="Tu WhatsApp (ej: 5493751123456)"
               className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2.5 text-sm text-stone-100 outline-none placeholder:text-stone-500"
             />
-            {lookupMsg && <p className="px-1 text-xs text-ember-soft">{lookupMsg}</p>}
 
             {fulfillment === "delivery" && (
               <>

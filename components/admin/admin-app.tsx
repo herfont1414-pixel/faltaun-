@@ -59,6 +59,14 @@ async function readJson(res: Response) {
   return data;
 }
 
+// Mensaje del sello en el aviso de "Cobrado" (lo que respondió el servidor, no lo que se pidió).
+function loyaltyNote(loyalty: { awarded: boolean; reason?: string } | null | undefined) {
+  if (!loyalty) return null;
+  if (loyalty.awarded) return "+1 sello de fidelidad";
+  if (loyalty.reason === "daily_cap") return "Sin sello: ese teléfono ya sumó su sello de hoy";
+  return null;
+}
+
 async function postJson(url: string, body?: unknown) {
   const res = await fetch(url, {
     method: "POST",
@@ -358,7 +366,7 @@ export function AdminApp() {
       [
         `Cobrado · ${money(order.total)}`,
         changeToGive > 0 ? `Vuelto ${money(fromCents(changeToGive))}` : null,
-        loyaltyPhone ? "+1 sello de fidelidad" : null,
+        loyaltyNote(state.result?.loyalty),
       ]
         .filter(Boolean)
         .join(" · ")

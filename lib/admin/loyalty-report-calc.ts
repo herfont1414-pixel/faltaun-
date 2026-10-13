@@ -378,7 +378,32 @@ export interface LoyaltyReport {
   retroactive: RetroSection;
   legacy: LegacySection;
   duplicates: DuplicatesSection;
+  staff: StaffSection;
   consistency: ConsistencySection;
+}
+
+export interface StaffStampRow {
+  userId: number | null;
+  userName: string | null;
+  stamps: number;
+  phones: number;
+}
+
+export interface StaffPairRow {
+  userId: number;
+  userName: string | null;
+  phone: string;
+  customerName: string | null;
+  stamps: number;
+}
+
+// Control de sellos por empleado (solo sellos con empleado registrado, desde que existe el dato).
+export interface StaffSection {
+  sinceDay: string;
+  byUser: StaffStampRow[];
+  // Mismo empleado y mismo cliente con muchos sellos en el período: para revisar, no es prueba de nada.
+  repeatedPairs: StaffPairRow[];
+  pairThreshold: number;
 }
 
 export interface RawLoyaltyData {
@@ -386,6 +411,7 @@ export interface RawLoyaltyData {
   txs: TxAggregate[];
   transactionTypes: { type: string; count: number }[];
   lastTransaction: string | null;
+  staff?: { sinceDay: string; byUser: StaffStampRow[]; repeatedPairs: StaffPairRow[] };
 }
 
 export function buildLoyaltyReport(raw: RawLoyaltyData, source: DataSource, now = new Date()): LoyaltyReport {
@@ -405,5 +431,14 @@ export function buildLoyaltyReport(raw: RawLoyaltyData, source: DataSource, now 
     legacy: computeLegacy(raw.accounts),
     duplicates: detectDuplicates(raw.accounts),
     consistency: checkConsistency(raw.accounts, raw.txs),
+    staff: {
+      sinceDay: raw.staff?.sinceDay ?? "",
+      byUser: raw.staff?.byUser ?? [],
+      repeatedPairs: raw.staff?.repeatedPairs ?? [],
+      pairThreshold: STAFF_PAIR_THRESHOLD,
+    },
   };
 }
+
+export const STAFF_PAIR_THRESHOLD = 5;
+export const STAFF_WINDOW_DAYS = 30;

@@ -11,3 +11,10 @@ export function startOfBusinessDay(now: Date = new Date()): Date {
   wallClock.setUTCHours(0, 0, 0, 0);
   return new Date(wallClock.getTime() - BUSINESS_UTC_OFFSET_HOURS * HOUR_MS);
 }
+
+// Fecha del local (AAAA-MM-DD) del día que contiene a `now`. Se usa como clave del
+// tope "un sello de fidelidad por teléfono por día".
+export function businessDayKey(now: Date = new Date()): string {
+  const wallClock = new Date(now.getTime() + BUSINESS_UTC_OFFSET_HOURS * HOUR_MS);
+  return wallClock.toISOString().slice(0, 10);
+}

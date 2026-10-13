@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createReservation } from "@/lib/admin/reservations";
 import { isDbConfigured } from "@/lib/admin/db";
+import { ensureSeeded } from "@/lib/admin/seed";
+import { clientIp, LIMITS, rateLimit, tooManyMessage } from "@/lib/admin/rate-limit";
 
 export async function POST(request: NextRequest) {
   if (!isDbConfigured()) {
@@ -20,6 +22,12 @@ export async function POST(request: NextRequest) {
 
   if (!customerName || !customerPhone || !date || !time || !partySize || partySize <= 0) {
     return NextResponse.json({ error: "Faltan datos de la reserva" }, { status: 400 });
+  }
+
+  await ensureSeeded();
+  const limit = await rateLimit("reservation", clientIp(request), LIMITS.reservation.max, LIMITS.reservation.windowMs);
+  if (!limit.ok) {
+    return NextResponse.json({ error: tooManyMessage(limit.retryAfterSec, "reservas seguidas") }, { status: 429 });
   }
 
   try {

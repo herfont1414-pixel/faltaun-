@@ -441,3 +441,15 @@ create table if not exists gestion_loyalty_grants (
 
 create index if not exists gestion_loyalty_grants_phone_idx on gestion_loyalty_grants(phone);
 create index if not exists gestion_loyalty_grants_status_idx on gestion_loyalty_grants(status);
+
+-- Seguridad: ver schema.sql. Las columnas nuevas de gestion_loyalty_transactions y
+-- su índice único (un sello por teléfono por día) se agregan en seed.ts, después de
+-- crear las columnas en bases que ya existían.
+create table if not exists gestion_rate_limits (
+  id integer primary key autoincrement,
+  bucket text not null,
+  subject text not null,
+  created_ms integer not null
+);
+
+create index if not exists gestion_rate_limits_lookup_idx on gestion_rate_limits(bucket, subject, created_ms);

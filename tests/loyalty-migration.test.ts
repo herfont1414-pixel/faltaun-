@@ -29,10 +29,14 @@ describe("migración aditiva de la Etapa 2 sobre una base existente (SQLite)", (
       "insert into gestion_loyalty_accounts (phone, stamps, redeemed, name, order_count, total_spent) values ('5493000500001', 7, 1, 'Vieja', 7, 700)"
     );
     await pool.query("insert into gestion_loyalty_transactions (phone, order_id, type, stamps, amount) values ('5493000500001', 'o-1', 'stamp', 1, 100)");
+    // Dos sellos viejos del mismo teléfono (de antes del tope diario): la migración no tiene
+    // que fallar ni tocarlos (el índice "un sello por día" ignora los que no tienen día).
+    await pool.query("insert into gestion_loyalty_transactions (phone, order_id, type, stamps, amount) values ('5493000500001', 'o-2', 'stamp', 1, 100)");
+    // Columnas originales (las migraciones posteriores pueden AGREGAR columnas, nunca cambiar datos).
     const snapshot = async () =>
       JSON.stringify([
         (await pool.query("select * from gestion_loyalty_accounts")).rows,
-        (await pool.query("select * from gestion_loyalty_transactions")).rows,
+        (await pool.query("select id, phone, order_id, type, stamps, amount, created_at from gestion_loyalty_transactions order by id")).rows,
       ]);
     const legacy = await snapshot();
 
@@ -41,6 +45,9 @@ describe("migración aditiva de la Etapa 2 sobre una base existente (SQLite)", (
     const tables = (await pool.query("select name from sqlite_master where type = 'table' and name like 'gestion_loyalty_%'")).rows.map((r: any) => r.name);
     expect(tables).toEqual(expect.arrayContaining(["gestion_loyalty_rewards", "gestion_loyalty_grants"]));
     expect(await snapshot()).toBe(legacy); // datos viejos idénticos
+    // Columnas de seguridad agregadas, vacías en los sellos viejos.
+    const added = (await pool.query("select stamp_day, user_id from gestion_loyalty_transactions")).rows;
+    expect(added).toEqual([{ stamp_day: null, user_id: null }, { stamp_day: null, user_id: null }]);
     expect(Number((await pool.query("select count(*) as n from gestion_loyalty_grants")).rows[0].n)).toBe(0); // sin retroactivos
     const rewards = await listRewards();
     expect(rewards.map((r) => [r.code, r.firstMilestone, r.step])).toEqual([["papas", 5, 15], ["burger", 15, 15]]);

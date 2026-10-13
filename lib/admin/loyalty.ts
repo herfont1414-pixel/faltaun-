@@ -3,6 +3,7 @@ import type { DbClient } from "@/lib/admin/db";
 import { recordAudit } from "@/lib/admin/auth";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { hitsAt, stampsToNext } from "@/lib/admin/loyalty-rewards";
+import { businessDayKey } from "@/lib/admin/business-day";
 import { whatsappDigits } from "@/lib/phone";
 
 // Regla vieja (un premio genérico cada 10 sellos). Ya no define premios: se conserva
@@ -214,23 +215,44 @@ export async function getLoyalty(rawPhone: string): Promise<LoyaltyAccount> {
 //
 // Esta función NO abre ni cierra la transacción: la usa addStamp (propia) y el aceptar
 // pedido web (dentro de su transacción), así aceptar + sello + premio son atómicos.
+export interface StampOptions {
+  name?: string | null;
+  orderTotal?: number;
+  origin?: string;
+  /** Usuario del panel que cobró (queda registrado quién dio el sello). */
+  userId?: number | null;
+  /** Momento del sello; solo lo cambian los tests. Define el "día" del tope diario. */
+  now?: Date;
+}
+
+export type StampResult =
+  | { awarded: true; phone: string; stamps: number }
+  // already = ese pedido ya tenía su sello; daily_cap = ese teléfono ya sumó su sello de hoy.
+  | { awarded: false; reason: "already" | "daily_cap"; phone: string; stamps: 0 };
+
+// TOPE: un sello por teléfono por día del local. Lo garantiza la base con un índice
+// único (phone, stamp_day): aunque lleguen dos cobros a la vez, solo uno inserta.
 export async function awardStampInTx(
   client: DbClient,
   rawPhone: string,
   orderId: string,
-  options: { name?: string | null; orderTotal?: number; origin?: string } = {}
-): Promise<{ awarded: boolean; phone: string; stamps: number }> {
+  options: StampOptions = {}
+): Promise<StampResult> {
   const phone = await resolveLoyaltyPhone(client, rawPhone);
   const { rows: inserted } = await client.query<{ id: number }>(
-    `insert into gestion_loyalty_transactions (phone, order_id, type, stamps, amount)
-     values ($1, $2, 'stamp', 1, $3)
-     on conflict (order_id, type) do nothing
+    `insert into gestion_loyalty_transactions (phone, order_id, type, stamps, amount, stamp_day, user_id)
+     values ($1, $2, 'stamp', 1, $3, $4, $5)
+     on conflict do nothing
      returning id`,
-    [phone, orderId, options.orderTotal ?? 0]
+    [phone, orderId, options.orderTotal ?? 0, businessDayKey(options.now), options.userId ?? null]
   );
   if (!inserted[0]) {
-    // Ya se sumó el sello de este pedido antes; no se duplica.
-    return { awarded: false, phone, stamps: 0 };
+    // No se insertó: o este pedido ya tenía su sello, o el teléfono ya sumó el de hoy.
+    const { rows: same } = await client.query(
+      "select 1 as found from gestion_loyalty_transactions where order_id = $1 and type = 'stamp'",
+      [orderId]
+    );
+    return { awarded: false, reason: same[0] ? "already" : "daily_cap", phone, stamps: 0 };
   }
   const { rows: acc } = await client.query<{ stamps: number }>(
     `insert into gestion_loyalty_accounts (phone, stamps, name, order_count, total_spent, origin, updated_at)
@@ -261,13 +283,14 @@ export async function awardStampInTx(
 export async function addStamp(
   phone: string,
   orderId: string,
-  options: { name?: string | null; orderTotal?: number; origin?: string } = {}
-): Promise<LoyaltyAccount> {
+  options: StampOptions = {}
+): Promise<LoyaltyAccount & { stamp: StampResult }> {
   const pool = getPool();
   const client = await pool.connect();
+  let stamp: StampResult;
   try {
     await client.query("begin");
-    await awardStampInTx(client, phone, orderId, options);
+    stamp = await awardStampInTx(client, phone, orderId, options);
     await client.query("commit");
   } catch (error) {
     await client.query("rollback").catch(() => {});
@@ -275,7 +298,7 @@ export async function addStamp(
   } finally {
     client.release();
   }
-  return getLoyalty(phone);
+  return { ...(await getLoyalty(phone)), stamp };
 }
 
 // Recuperación del sello de un cobro del panel cuyo cobro SÍ se registró pero el sello no
@@ -290,8 +313,9 @@ const RECOVERY_WINDOW_MS = 30 * 60 * 1000;
 
 export async function recoverClosedOrderStamp(
   orderId: string,
-  rawPhone: string
-): Promise<{ total: number; origin: string } | null> {
+  rawPhone: string,
+  userId: number | null = null
+): Promise<{ total: number; origin: string; stamp: StampResult } | null> {
   const pool = getPool();
   const { rows: orders } = await pool.query(
     "select status, closed_at, total, is_delivery, origin from gestion_orders where id = $1",
@@ -313,8 +337,11 @@ export async function recoverClosedOrderStamp(
 
   const total = money(order.total);
   const origin = order.is_delivery ? "delivery" : String(order.origin);
-  await addStamp(rawPhone, String(key), { orderTotal: total, origin });
-  return { total, origin };
+  const account = await addStamp(rawPhone, String(key), { orderTotal: total, origin, userId });
+  // Si no sumó nada (por ejemplo, ese teléfono ya tiene su sello de hoy) no hubo nada que
+  // recuperar: se devuelve null y el cobro repetido recibe "ya fue cerrado" (no reimprime).
+  if (!account.stamp.awarded) return null;
+  return { total, origin, stamp: account.stamp };
 }
 
 // ---------- Premios del cliente ----------
@@ -399,6 +426,8 @@ export interface RedeemInput {
   // producto vinculado al premio si no se indica otro.
   productId?: number | null;
   note?: string | null;
+  /** Momento del canje; solo lo cambian los tests. */
+  now?: Date;
 }
 
 // Registra la entrega física de un premio. Todo en una transacción:
@@ -423,6 +452,19 @@ export async function redeemGrant(input: RedeemInput): Promise<LoyaltyGrant> {
     const grant = found[0];
     if (!grant) throw new Error("Ese premio no existe");
     if (grant.status !== "disponible") throw new Error("Ese premio ya fue canjeado");
+
+    // Seguridad: el premio solo se entrega si el cliente compró HOY con ese mismo teléfono
+    // (tiene el sello de hoy). Así no alcanza con decir un número ajeno en el mostrador.
+    const { rows: boughtToday } = await client.query(
+      `select 1 as found from gestion_loyalty_transactions
+       where phone = $1 and type = 'stamp' and stamp_day = $2 limit 1`,
+      [grant.phone, businessDayKey(input.now)]
+    );
+    if (!boughtToday[0]) {
+      throw new Error(
+        "Para canjear el premio, el cliente tiene que comprar hoy con este mismo teléfono: cobrá primero su pedido cargando su número de fidelidad."
+      );
+    }
 
     // Producto entregado: el indicado, o el vinculado al premio (papas).
     let productId: number | null = input.productId ?? null;

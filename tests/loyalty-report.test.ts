@@ -4,6 +4,7 @@ import path from "node:path";
 import { seedFreshDb, tearDownTestDb } from "./helpers";
 import { getPool } from "@/lib/admin/db";
 import { getLoyaltyReport, withReadOnly } from "@/lib/admin/loyalty-report";
+import { businessDayKey } from "@/lib/admin/business-day";
 import {
   burgerMilestones,
   papasMilestones,
@@ -222,6 +223,38 @@ describe("informe sobre una base real (SQLite)", () => {
     ).rejects.toThrow(/readonly|read-only|read only/i);
     expect(await dumpAll()).toEqual(before);
     expect(pool).toBeTruthy();
+  });
+
+  it("sellos por empleado: cuenta por usuario y marca el par empleado–cliente que se repite (sin escribir nada)", async () => {
+    const pool = getPool();
+    const { rows } = await pool.query("insert into gestion_users (name, pin_hash, role, active) values ('Mozo Pepe', 'x', 'mozo', true) returning id");
+    const pepe = Number(rows[0].id);
+    const day = (k: number) => businessDayKey(new Date(Date.now() - k * 24 * 3600 * 1000));
+    for (let k = 0; k < 6; k++) {
+      await pool.query(
+        "insert into gestion_loyalty_transactions (phone, order_id, type, stamps, stamp_day, user_id) values ('5493751777001', $1, 'stamp', 1, $2, $3)",
+        [`pepe-rita-${k}`, day(k), pepe]
+      );
+    }
+    await pool.query(
+      "insert into gestion_loyalty_transactions (phone, order_id, type, stamps, stamp_day, user_id) values ('5493751000002', 'pepe-nuevo', 'stamp', 1, $1, $2)",
+      [day(0), pepe]
+    );
+    // Fuera de la ventana de 30 días: no cuenta.
+    await pool.query(
+      "insert into gestion_loyalty_transactions (phone, order_id, type, stamps, stamp_day, user_id) values ('5493751000002', 'pepe-viejo', 'stamp', 1, $1, $2)",
+      [day(45), pepe]
+    );
+
+    const before = await dumpAll();
+    const report = await getLoyaltyReport();
+    expect(await dumpAll()).toEqual(before);
+
+    expect(report.staff.byUser).toEqual([{ userId: pepe, userName: "Mozo Pepe", stamps: 7, phones: 2 }]);
+    expect(report.staff.repeatedPairs).toEqual([
+      { userId: pepe, userName: "Mozo Pepe", phone: "5493751777001", customerName: "Rita", stamps: 6 },
+    ]);
+    expect(report.staff.sinceDay).toBe(day(30));
   });
 });
 

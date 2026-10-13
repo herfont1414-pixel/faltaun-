@@ -139,7 +139,7 @@ export function FidelidadInformeView() {
   }
   if (!report) return <div className="mostrador">Generando informe…</div>;
 
-  const { source, fingerprint: fp, retroactive: retro, legacy, duplicates: dup, consistency: cons } = report;
+  const { source, fingerprint: fp, retroactive: retro, legacy, duplicates: dup, consistency: cons, staff } = report;
   const style = LEVEL_STYLE[source.level];
 
   return (
@@ -330,6 +330,55 @@ export function FidelidadInformeView() {
           Tipos de transacción en el historial:{" "}
           {fp.transactionTypes.length === 0 ? "ninguna" : fp.transactionTypes.map((t) => `${t.type}: ${t.count}`).join(" · ")}
         </p>
+      </Section>
+
+      <Section
+        title="5 · Sellos por empleado (últimos 30 días)"
+        hint={`Quién cargó cada sello al cobrar, desde el ${staff.sinceDay || "—"}. Los sellos anteriores a este control no tienen empleado registrado. Recordá: se suma un solo sello por teléfono por día.`}
+      >
+        {staff.byUser.length === 0 ? (
+          <Empty>Todavía no hay sellos con empleado registrado.</Empty>
+        ) : (
+          <table className="m-table">
+            <thead>
+              <tr><th>Empleado</th><th style={{ textAlign: "right" }}>Sellos dados</th><th style={{ textAlign: "right" }}>Clientes distintos</th></tr>
+            </thead>
+            <tbody>
+              {staff.byUser.map((u) => (
+                <tr key={String(u.userId)}>
+                  <td>{u.userId === null ? "Sin registrar (anteriores a este control)" : u.userName ?? `Usuario #${u.userId}`}</td>
+                  <td style={{ textAlign: "right" }}>{u.stamps}</td>
+                  <td style={{ textAlign: "right" }}>{u.phones}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <h3 style={{ fontSize: 14, margin: "14px 0 6px" }}>
+          Mismo empleado y mismo cliente con {staff.pairThreshold} sellos o más (para revisar)
+        </h3>
+        <p style={{ fontSize: 12, color: "var(--muted, #6b6b66)", margin: "0 0 6px" }}>
+          Un cliente habitual puede aparecer acá sin que haya nada raro; sirve para mirar si un número se repite demasiado con la misma persona.
+        </p>
+        {staff.repeatedPairs.length === 0 ? (
+          <Empty>Sin casos.</Empty>
+        ) : (
+          <table className="m-table">
+            <thead>
+              <tr><th>Empleado</th><th>Cliente</th><th>Teléfono</th><th style={{ textAlign: "right" }}>Sellos</th></tr>
+            </thead>
+            <tbody>
+              {staff.repeatedPairs.map((p) => (
+                <tr key={`${p.userId}-${p.phone}`}>
+                  <td>{p.userName ?? `Usuario #${p.userId}`}</td>
+                  <td>{p.customerName || "Sin nombre"}</td>
+                  <td>{p.phone}</td>
+                  <td style={{ textAlign: "right" }}>{p.stamps}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Section>
     </div>
   );
