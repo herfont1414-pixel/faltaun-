@@ -40,6 +40,8 @@ interface OrderPanelProps {
   onChangeCategory: (category: string) => void;
   onAddProduct: (productId: number) => void;
   onChangeQty: (itemId: string, delta: number) => void;
+  // Solo delivery: cambiar a mano el precio del envío.
+  onChangeShipping?: (cost: number) => void;
   onClose: () => void;
   onSendKitchen: () => void;
   onRequestBill: () => void;
@@ -71,6 +73,7 @@ export function OrderPanel({
   onChangeCategory,
   onAddProduct,
   onChangeQty,
+  onChangeShipping,
   onClose,
   onSendKitchen,
   onRequestBill,
@@ -318,7 +321,7 @@ export function OrderPanel({
                         <button type="button" onClick={() => onChangeQty(item.id, -1)}>
                           −
                         </button>
-                        <span>{item.qty}</span>
+                        <QtyInput qty={item.qty} onCommit={(qty) => onChangeQty(item.id, qty - item.qty)} />
                         <button type="button" onClick={() => onChangeQty(item.id, 1)}>
                           +
                         </button>
@@ -358,12 +361,8 @@ export function OrderPanel({
                 );
               })
             )}
-            {order.isDelivery && order.shippingCost > 0 && (
-              <div className="ticket-item">
-                <div />
-                <div className="ti-name">Envío</div>
-                <div className="ti-price">{money(order.shippingCost)}</div>
-              </div>
+            {order.isDelivery && (
+              <ShippingRow cost={order.shippingCost} onChange={onChangeShipping} />
             )}
           </div>
 
@@ -430,6 +429,104 @@ export function OrderPanel({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Cantidad: se ve como número; al tocarla se puede escribir (Enter o salir del campo
+// confirma; 0 lo quita del pedido; Escape cancela).
+function QtyInput({ qty, onCommit }: { qty: number; onCommit: (qty: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(qty));
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="qty-value"
+        title="Tocá para escribir la cantidad"
+        onClick={() => {
+          setDraft(String(qty));
+          setEditing(true);
+        }}
+      >
+        {qty}
+      </button>
+    );
+  }
+  const commit = () => {
+    setEditing(false);
+    const next = Math.floor(Number(draft));
+    if (Number.isFinite(next) && next >= 0 && next !== qty) onCommit(Math.min(next, 999));
+  };
+  return (
+    <input
+      className="qty-input"
+      type="number"
+      inputMode="numeric"
+      min={0}
+      autoFocus
+      value={draft}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          setDraft(String(qty));
+          setEditing(false);
+        }
+      }}
+    />
+  );
+}
+
+// Envío del delivery con su precio editable (lápiz).
+function ShippingRow({ cost, onChange }: { cost: number; onChange?: (cost: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(cost));
+  const commit = () => {
+    setEditing(false);
+    const next = Math.round(Number(draft.replace(/[^\d.]/g, "")));
+    if (Number.isFinite(next) && next >= 0 && next !== cost && onChange) onChange(next);
+  };
+  return (
+    <div className="ticket-item">
+      <div />
+      <div className="ti-name">Envío</div>
+      {editing ? (
+        <input
+          className="shipping-input"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={100}
+          autoFocus
+          value={draft}
+          onFocus={(e) => e.currentTarget.select()}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+            if (e.key === "Escape") setEditing(false);
+          }}
+        />
+      ) : (
+        <div className="ti-price">{money(cost)}</div>
+      )}
+      {onChange && !editing && (
+        <button
+          type="button"
+          className="ti-note-btn"
+          aria-label="Cambiar el precio del envío"
+          title="Cambiar el precio del envío"
+          onClick={() => {
+            setDraft(String(cost));
+            setEditing(true);
+          }}
+        >
+          <Pencil size={13} />
+        </button>
+      )}
     </div>
   );
 }

@@ -300,7 +300,7 @@ export function SalesDayView() {
           <div className="prod-toolbar">
             <input
               type="search"
-              className="prod-search"
+              className="pv-search"
               placeholder="Buscar por mesa, cliente, mozo o producto…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

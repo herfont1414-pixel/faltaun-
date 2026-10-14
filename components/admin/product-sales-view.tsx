@@ -180,7 +180,7 @@ export function ProductSalesView() {
           <div className="prod-toolbar">
             <input
               type="search"
-              className="prod-search"
+              className="pv-search"
               placeholder="Buscar producto…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

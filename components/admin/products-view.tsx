@@ -294,7 +294,7 @@ export function ProductsView() {
       <div className="prod-toolbar">
         <input
           type="search"
-          className="prod-search"
+          className="pv-search"
           placeholder="Buscar producto en todas las categorías…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

@@ -30,45 +30,69 @@ async function syncCatalog(client: DbClient) {
   if (metaRows[0]?.value === hash) return;
 
   const catalog = JSON.parse(raw) as Record<string, CatalogProduct[]>;
-  const keep = new Set<string>();
-  let sortOrder = 0;
-  for (const [categoryName, products] of Object.entries(catalog)) {
-    sortOrder += 1;
-    const { rows } = await client.query(
-      `insert into gestion_categories (name, sort_order) values ($1, $2)
-       on conflict (name) do update set sort_order = excluded.sort_order
-       returning id`,
-      [categoryName, sortOrder]
+  // Todo en una transacción y en lotes (no un producto por consulta): con la base en la
+  // nube, 200 consultas sueltas podían pasar el tiempo máximo de una función de Vercel y
+  // la carga quedaba a medias, repitiéndose en cada pedido. Así se aplica entera o nada.
+  await client.query("begin");
+  try {
+    const keep = new Set<string>();
+    let sortOrder = 0;
+    for (const [categoryName, products] of Object.entries(catalog)) {
+      sortOrder += 1;
+      const { rows } = await client.query(
+        `insert into gestion_categories (name, sort_order) values ($1, $2)
+         on conflict (name) do update set sort_order = excluded.sort_order
+         returning id`,
+        [categoryName, sortOrder]
+      );
+      const categoryId = rows[0].id;
+      for (let i = 0; i < products.length; i += CATALOG_BATCH) {
+        const batch = products.slice(i, i + CATALOG_BATCH);
+        const values: string[] = [];
+        const params: unknown[] = [];
+        for (const product of batch) {
+          keep.add(`${categoryId}::${product.name}`);
+          const stockQty =
+            typeof product.stock === "number" && Number.isFinite(product.stock) ? Math.max(0, Math.floor(product.stock)) : null;
+          const n = params.length;
+          values.push(`($${n + 1}, $${n + 2}, $${n + 3}, true, $${n + 4}, $${n + 5})`);
+          params.push(categoryId, product.name, product.price, product.inStock !== false, stockQty);
+        }
+        await client.query(
+          `insert into gestion_products (category_id, name, price, active, in_stock, stock_qty)
+           values ${values.join(", ")}
+           on conflict (category_id, name) do update set
+             price = excluded.price, active = true, in_stock = excluded.in_stock, stock_qty = excluded.stock_qty`,
+          params
+        );
+      }
+    }
+
+    const { rows: existing } = await client.query<{ id: number; category_id: number; name: string }>(
+      "select id, category_id, name from gestion_products where active = true"
     );
-    const categoryId = rows[0].id;
-    for (const product of products) {
-      keep.add(`${categoryId}::${product.name}`);
-      const stockQty = typeof product.stock === "number" && Number.isFinite(product.stock) ? Math.max(0, Math.floor(product.stock)) : null;
+    const toPause = existing.filter((p) => !keep.has(`${p.category_id}::${p.name}`)).map((p) => Number(p.id));
+    for (let i = 0; i < toPause.length; i += CATALOG_BATCH) {
+      const ids = toPause.slice(i, i + CATALOG_BATCH);
       await client.query(
-        `insert into gestion_products (category_id, name, price, active, in_stock, stock_qty)
-         values ($1, $2, $3, true, $4, $5)
-         on conflict (category_id, name) do update set
-           price = excluded.price, active = true, in_stock = excluded.in_stock, stock_qty = excluded.stock_qty`,
-        [categoryId, product.name, product.price, product.inStock !== false, stockQty]
+        `update gestion_products set active = false where id in (${ids.map((_, j) => `$${j + 1}`).join(", ")})`,
+        ids
       );
     }
-  }
 
-  const { rows: existing } = await client.query<{ id: number; category_id: number; name: string }>(
-    "select id, category_id, name from gestion_products where active = true"
-  );
-  for (const p of existing) {
-    if (!keep.has(`${p.category_id}::${p.name}`)) {
-      await client.query("update gestion_products set active = false where id = $1", [p.id]);
-    }
+    await client.query(
+      `insert into gestion_meta (key, value) values ('catalog_hash', $1)
+       on conflict (key) do update set value = excluded.value`,
+      [hash]
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback").catch(() => {});
+    throw error;
   }
-
-  await client.query(
-    `insert into gestion_meta (key, value) values ('catalog_hash', $1)
-     on conflict (key) do update set value = excluded.value`,
-    [hash]
-  );
 }
+
+const CATALOG_BATCH = 50;
 
 interface CsvIngredient {
   externalId: number;
@@ -180,8 +204,19 @@ async function ensureDefaultAdminUser(client: DbClient) {
 
 let schemaApplied = false;
 let rewardsSeeded = false;
+// Una vez que el proceso verificó todo (esquema, catálogo, ingredientes, mesas), no se
+// vuelve a consultar en cada pedido: los archivos de data/ no cambian mientras el
+// servidor está andando (una actualización reinicia el proceso). Con la base en la nube,
+// esto ahorra varias idas y vueltas por cada toque en el panel.
+let seededOnce = false;
+
+/** Solo para tests: fuerza a que ensureSeeded vuelva a verificar todo. */
+export function resetSeedCache() {
+  seededOnce = false;
+}
 
 export async function ensureSeeded() {
+  if (seededOnce) return;
   const pool = getPool();
   const client = await pool.connect();
   try {
@@ -301,7 +336,10 @@ export async function ensureSeeded() {
     }
 
     const { rows: zoneRows } = await client.query("select count(*) as count from gestion_zones");
-    if (Number(zoneRows[0].count) > 0) return;
+    if (Number(zoneRows[0].count) > 0) {
+      seededOnce = true;
+      return;
+    }
 
     const zones = [
       { name: "salon", from: 1, to: 35 },
