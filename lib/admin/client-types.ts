@@ -10,6 +10,7 @@ export type Section =
   | "productos"
   | "caja"
   | "reportes"
+  | "ventas"
   | "gastos"
   | "delivery"
   | "express"

@@ -1404,3 +1404,184 @@
     padding: 9px 13px;
   }
 }
+
+/* Ventas: control de la jornada. */
+.sales-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.sales-kpi {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sales-kpi span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.sales-kpi strong {
+  font-size: 22px;
+  font-weight: 800;
+}
+.sales-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) {
+  .sales-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.sales-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+  padding: 4px 0;
+}
+.sales-table {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  text-align: left;
+}
+.sales-table strong {
+  font-size: 14px;
+}
+.sales-table span {
+  font-weight: 700;
+  font-size: 14px;
+}
+.sales-table small {
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+.sales-table.active {
+  background: #18181b;
+  border-color: #18181b;
+  color: #fff;
+}
+.sales-table.active small {
+  color: rgba(255, 255, 255, 0.7);
+}
+.sales-row {
+  cursor: pointer;
+}
+.sales-row:hover td {
+  background: #fafaf8;
+}
+.sales-detail td {
+  background: #fafaf8;
+}
+.sales-detail-box {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 18px;
+  padding: 4px 2px;
+}
+@media (max-width: 700px) {
+  .sales-detail-box {
+    grid-template-columns: 1fr;
+  }
+}
+.sales-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+.sales-item em {
+  color: var(--orange-dark);
+  font-style: normal;
+}
+.sales-meta {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Reservas: alta desde el panel y próximas reservas. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  padding: 16px;
+}
+.modal-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.res-form .caja-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+.res-form .caja-field > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.res-row {
+  display: grid;
+  grid-template-columns: 0.8fr 1.3fr 1fr;
+  gap: 8px;
+}
+@media (max-width: 480px) {
+  .res-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.res-error {
+  color: var(--red);
+  font-size: 13px;
+  margin-top: 8px;
+}
+.res-flash {
+  background: #e8f6ec;
+  border: 1px solid #7bc58f;
+  color: #1d5a31;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.res-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+}
+.res-day {
+  font-size: 13px;
+  font-weight: 800;
+  margin: 4px 0 8px;
+}

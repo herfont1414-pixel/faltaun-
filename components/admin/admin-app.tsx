@@ -11,6 +11,7 @@ import { ProductsView } from "@/components/admin/products-view";
 import { WebOrdersView } from "@/components/admin/web-orders-view";
 import { CajaView } from "@/components/admin/caja-view";
 import { ReportsView } from "@/components/admin/reports-view";
+import { SalesDayView } from "@/components/admin/sales-day-view";
 import { ReservationsView } from "@/components/admin/reservations-view";
 import { ExpensesView } from "@/components/admin/expenses-view";
 import { ClientesView } from "@/components/admin/clientes-view";
@@ -620,8 +621,10 @@ export function AdminApp() {
         <CajaView />
       ) : section === "reportes" ? (
         <ReportsView />
+      ) : section === "ventas" ? (
+        <SalesDayView />
       ) : section === "reservas" ? (
-        <ReservationsView />
+        <ReservationsView tables={data.tables} />
       ) : section === "gastos" ? (
         <ExpensesView />
       ) : section === "clientes" ? (
