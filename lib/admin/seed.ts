@@ -10,7 +10,8 @@ function readJson(file: string) {
   return JSON.parse(readFileSync(path.join(process.cwd(), "data", file), "utf-8"));
 }
 
-type CatalogProduct = { name: string; price: number; inStock?: boolean };
+// stock: cantidad controlada (baja con cada venta); sin stock = sin control de cantidad.
+type CatalogProduct = { name: string; price: number; inStock?: boolean; stock?: number };
 
 // Sincroniza categorías/productos contra data/catalogo_productos.json cada vez
 // que ese archivo cambia (comparando un hash guardado en gestion_meta), no solo
@@ -42,11 +43,13 @@ async function syncCatalog(client: DbClient) {
     const categoryId = rows[0].id;
     for (const product of products) {
       keep.add(`${categoryId}::${product.name}`);
+      const stockQty = typeof product.stock === "number" && Number.isFinite(product.stock) ? Math.max(0, Math.floor(product.stock)) : null;
       await client.query(
-        `insert into gestion_products (category_id, name, price, active, in_stock)
-         values ($1, $2, $3, true, $4)
-         on conflict (category_id, name) do update set price = excluded.price, active = true, in_stock = excluded.in_stock`,
-        [categoryId, product.name, product.price, product.inStock !== false]
+        `insert into gestion_products (category_id, name, price, active, in_stock, stock_qty)
+         values ($1, $2, $3, true, $4, $5)
+         on conflict (category_id, name) do update set
+           price = excluded.price, active = true, in_stock = excluded.in_stock, stock_qty = excluded.stock_qty`,
+        [categoryId, product.name, product.price, product.inStock !== false, stockQty]
       );
     }
   }

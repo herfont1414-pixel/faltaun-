@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { money } from "@/lib/admin/format";
 import type { SalesReport } from "@/lib/admin/types";
+import { ProductSalesView } from "@/components/admin/product-sales-view";
 
 const PAYMENT_LABELS: Record<string, string> = {
   efectivo: "Efectivo",
@@ -62,7 +63,27 @@ const PRESETS: { value: Preset; label: string }[] = [
   { value: "mes", label: "Este mes" },
 ];
 
+// Reportes: "Ventas" (lo cobrado en MaderoSys) y "Productos vendidos" (incluye el
+// historial de Fudo hasta el día anterior al arranque del sistema).
 export function ReportsView() {
+  const [tab, setTab] = useState<"ventas" | "productos">("ventas");
+  return (
+    <div className="mostrador">
+      <h1 style={{ marginBottom: 14 }}>Reportes</h1>
+      <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+        <button type="button" className={`btn ${tab === "ventas" ? "btn-primary" : ""}`} style={{ flex: "none" }} onClick={() => setTab("ventas")}>
+          Ventas
+        </button>
+        <button type="button" className={`btn ${tab === "productos" ? "btn-primary" : ""}`} style={{ flex: "none" }} onClick={() => setTab("productos")}>
+          Productos vendidos
+        </button>
+      </div>
+      {tab === "ventas" ? <SalesReportView /> : <ProductSalesView />}
+    </div>
+  );
+}
+
+function SalesReportView() {
   const [preset, setPreset] = useState<Preset>("hoy");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
@@ -91,8 +112,7 @@ export function ReportsView() {
   }
 
   return (
-    <div className="mostrador">
-      <h1 style={{ marginBottom: 14 }}>Reportes de ventas</h1>
+    <div>
 
       <div className="footer-actions" style={{ marginBottom: 10, maxWidth: 520 }}>
         {PRESETS.map((p) => (
