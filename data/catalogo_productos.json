@@ -11,7 +11,8 @@
     },
     {
       "name": "Papas Chedar Con Bacon",
-      "price": 8500
+      "price": 8500,
+      "stock": 109
     },
     {
       "name": "Papas Fritas",
@@ -66,15 +67,18 @@
     },
     {
       "name": "Lomo Al Plato",
-      "price": 12500
+      "price": 12500,
+      "stock": 2
     },
     {
       "name": "Milanesa Ternera Al Plato",
-      "price": 12500
+      "price": 12500,
+      "stock": 34
     },
     {
       "name": "Bondiola Al Plato",
-      "price": 12000
+      "price": 12000,
+      "stock": 3
     },
     {
       "name": "Vacio Al Plato Provolone/ Muzza",
@@ -93,17 +97,20 @@
     },
     {
       "name": "Milanesa De Pollo Al Plato",
-      "price": 10500
+      "price": 10500,
+      "stock": 3
     }
   ],
   "Burger": [
     {
       "name": "Burger American",
-      "price": 8500
+      "price": 8500,
+      "stock": 183
     },
     {
       "name": "Burger Bacon",
-      "price": 8500
+      "price": 8500,
+      "stock": 26
     },
     {
       "name": "Burger Black Widow",
@@ -111,12 +118,13 @@
     },
     {
       "name": "Burger Blue Cheese",
-      "price": 8500
+      "price": 8500,
+      "stock": 96
     },
     {
       "name": "Burger Cebolla",
       "price": 8000,
-      "inStock": false
+      "stock": 19
     },
     {
       "name": "Burger Chedar",
@@ -128,7 +136,8 @@
     },
     {
       "name": "Burger Criolla (Nueva)",
-      "price": 10000
+      "price": 10000,
+      "stock": 24
     },
     {
       "name": "Burger Mexican",
@@ -177,7 +186,8 @@
     },
     {
       "name": "Burguer Spider",
-      "price": 9000
+      "price": 9000,
+      "stock": 1
     },
     {
       "name": "Burguer Cebolla",
@@ -185,7 +195,8 @@
     },
     {
       "name": "Burger Madero Crispy (Nueva)",
-      "price": 10500
+      "price": 10500,
+      "stock": 210
     },
     {
       "name": "Doble Carne",
@@ -200,19 +211,23 @@
     },
     {
       "name": "Sandwich Bondiola",
-      "price": 10000
+      "price": 10000,
+      "stock": 30
     },
     {
       "name": "Sandwich Lomito",
-      "price": 12000
+      "price": 12000,
+      "inStock": false
     },
     {
       "name": "Sandwich Milanesa Ternera",
-      "price": 12000
+      "price": 12000,
+      "stock": 74
     },
     {
       "name": "Sandwich Jamon Y Queso",
-      "price": 7000
+      "price": 7000,
+      "stock": 491
     },
     {
       "name": "Sandwich Vacio",
@@ -226,7 +241,8 @@
     },
     {
       "name": "Sandwich Milanesa De Pollo",
-      "price": 9500
+      "price": 9500,
+      "stock": 3
     },
     {
       "name": "Promo Sandwich De Lomito",
@@ -262,11 +278,13 @@
   "Pizzas": [
     {
       "name": "Pizza 4 Quesos",
-      "price": 13500
+      "price": 13500,
+      "stock": 110
     },
     {
       "name": "Pizza Aceituna",
-      "price": 12500
+      "price": 12500,
+      "stock": 220
     },
     {
       "name": "Pizza Ajo",
@@ -279,7 +297,8 @@
     },
     {
       "name": "Pizza Bacon",
-      "price": 14000
+      "price": 14000,
+      "stock": 98
     },
     {
       "name": "Pizza Calabresa",
@@ -292,7 +311,8 @@
     },
     {
       "name": "Pizza Fugazza",
-      "price": 13000
+      "price": 13000,
+      "stock": 221
     },
     {
       "name": "Pizza Jamon",
@@ -300,7 +320,8 @@
     },
     {
       "name": "Pizza Jamon C/ Morron",
-      "price": 14500
+      "price": 14500,
+      "stock": 497
     },
     {
       "name": "Pizza Muzzarella",
@@ -317,15 +338,18 @@
     },
     {
       "name": "Pizza Provoleta",
-      "price": 14500
+      "price": 14500,
+      "stock": 111
     },
     {
       "name": "Pizza Roqefort C Nuez",
-      "price": 14500
+      "price": 14500,
+      "inStock": false
     },
     {
       "name": "Pizza Rucula",
-      "price": 14000
+      "price": 14000,
+      "inStock": false
     },
     {
       "name": "Pizza Bacon Y Verdeo",
@@ -338,13 +362,15 @@
     },
     {
       "name": "Pizza Madero",
-      "price": 15500
+      "price": 15500,
+      "stock": 219
     }
   ],
   "Media Pizza 1/2": [
     {
       "name": "1/2 Aceituna",
-      "price": 6500
+      "price": 6500,
+      "stock": 218
     },
     {
       "name": "1/2 Ajo",
@@ -357,7 +383,8 @@
     },
     {
       "name": "1/2 Bacon",
-      "price": 7500
+      "price": 7500,
+      "stock": 375
     },
     {
       "name": "1/2 Calabresa",
@@ -370,7 +397,8 @@
     },
     {
       "name": "1/2 Fugaza",
-      "price": 7000
+      "price": 7000,
+      "stock": 213
     },
     {
       "name": "1/2 Jamon",
@@ -378,7 +406,8 @@
     },
     {
       "name": "1/2 Jamon C/ Morron",
-      "price": 7500
+      "price": 7500,
+      "stock": 109
     },
     {
       "name": "1/2 Muzzarela",
@@ -390,19 +419,23 @@
     },
     {
       "name": "1/2 Pizza 4 Quesos",
-      "price": 7000
+      "price": 7000,
+      "stock": 105
     },
     {
       "name": "1/2 Pizza Provoleta",
-      "price": 7500
+      "price": 7500,
+      "stock": 109
     },
     {
       "name": "1/2 Roq C/ Nuez",
-      "price": 7500
+      "price": 7500,
+      "inStock": false
     },
     {
       "name": "1/2 Rucula",
-      "price": 7500
+      "price": 7500,
+      "inStock": false
     },
     {
       "name": "1/2 Rucula C/ Jamon",
@@ -411,7 +444,8 @@
     },
     {
       "name": "1/2 Pizza Bacon Y Verdeo",
-      "price": 7500
+      "price": 7500,
+      "stock": 29
     },
     {
       "name": "1/2 Pizza Palmitoo",
@@ -424,13 +458,15 @@
     },
     {
       "name": "1/2 Madero",
-      "price": 8000
+      "price": 8000,
+      "stock": 17
     }
   ],
   "Empanadas": [
     {
       "name": "Emp 4 Quesos",
-      "price": 1600
+      "price": 1600,
+      "stock": 156
     },
     {
       "name": "Emp Capresse",
@@ -443,7 +479,8 @@
     },
     {
       "name": "Emp Choclo",
-      "price": 1600
+      "price": 1600,
+      "stock": 211
     },
     {
       "name": "Emp Jamon Y Queso",
@@ -451,11 +488,13 @@
     },
     {
       "name": "Emp Matambre",
-      "price": 1800
+      "price": 1800,
+      "stock": 44
     },
     {
       "name": "Emp Carne Pic Cuchillo",
-      "price": 1800
+      "price": 1800,
+      "stock": 405
     },
     {
       "name": "Emp Pollo Al Curry",
@@ -467,15 +506,18 @@
     },
     {
       "name": "Emp Wakanda",
-      "price": 1600
+      "price": 1600,
+      "stock": 8
     },
     {
       "name": "Emp Queso Y Aceitunas",
-      "price": 1600
+      "price": 1600,
+      "stock": 189
     },
     {
       "name": "Emp Roq Con Nueces",
-      "price": 1600
+      "price": 1600,
+      "inStock": false
     },
     {
       "name": "Empanada Fugazza",
@@ -483,12 +525,13 @@
     },
     {
       "name": "Emp Matambre C/ Roq",
-      "price": 1800
+      "price": 1800,
+      "stock": 16
     },
     {
       "name": "Emp Rocket",
       "price": 1600,
-      "inStock": false
+      "stock": 30
     },
     {
       "name": "Emp. Vacio Y Provolone",
@@ -497,11 +540,13 @@
     },
     {
       "name": "Emp Salchichedar",
-      "price": 1600
+      "price": 1600,
+      "stock": 492
     },
     {
       "name": "Emp Madero",
-      "price": 1600
+      "price": 1600,
+      "stock": 488
     },
     {
       "name": "Emp. Cordero",
@@ -516,7 +561,7 @@
     {
       "name": "Emp Osobuco",
       "price": 1600,
-      "inStock": false
+      "stock": 152
     },
     {
       "name": "Emp Espinaca Y Queso",
@@ -536,7 +581,8 @@
     },
     {
       "name": "Miller 1L",
-      "price": 5000
+      "price": 5000,
+      "stock": 4
     },
     {
       "name": "Warsteiner",
@@ -746,7 +792,8 @@
     },
     {
       "name": "Agua Con Gas 1.5",
-      "price": 3500
+      "price": 3500,
+      "stock": 4
     },
     {
       "name": "Agua Sin Gas 500ml",
@@ -786,7 +833,8 @@
     },
     {
       "name": "Speed 250Ml",
-      "price": 2500
+      "price": 2500,
+      "stock": 11
     },
     {
       "name": "Coca 1.5 De Plastico",
@@ -814,7 +862,8 @@
     },
     {
       "name": "Fanta Uva/Naranja 500Ml",
-      "price": 3500
+      "price": 3500,
+      "stock": 2
     },
     {
       "name": "Coca Cola Lata 354Ml",
@@ -826,7 +875,8 @@
     },
     {
       "name": "Pepsi Chica",
-      "price": 2300
+      "price": 2300,
+      "stock": 4
     },
     {
       "name": "Fanta 1,5 (Grande)",
