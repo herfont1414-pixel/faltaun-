@@ -52,6 +52,8 @@ interface OrderPanelProps {
   onPrintTicket: () => void;
   // Solo mesas: abre "Editar mesa" (personas, cliente, mozo).
   onEditTable?: () => void;
+  // Anular el pedido abierto (sin cobrarlo).
+  onCancelOrder?: () => void;
 }
 
 // Preferencia de cada PC: mostrar u ocultar la carta por categorías (en PC arranca oculta,
@@ -74,6 +76,7 @@ export function OrderPanel({
   onAddProduct,
   onChangeQty,
   onChangeShipping,
+  onCancelOrder,
   onClose,
   onSendKitchen,
   onRequestBill,
@@ -425,6 +428,11 @@ export function OrderPanel({
                   Cobrar {money(order.total)}
                 </button>
               </div>
+              {onCancelOrder && (
+                <button type="button" className="op-cancel" onClick={onCancelOrder}>
+                  Anular pedido
+                </button>
+              )}
             </div>
           )}
         </div>
