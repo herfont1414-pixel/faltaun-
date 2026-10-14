@@ -219,22 +219,23 @@ export async function openTable(
 // Stock controlado (stock_qty con número): no se deja cargar en un pedido más unidades
 // de las que quedan. Así el aviso aparece al cargar, y no recién al cobrar (donde el
 // cobro entero se rechazaría y la mesa no se podría cerrar).
-async function assertStockFor(orderId: string, productId: number | null, wanted: number) {
-  if (productId == null) return;
+// Una sola consulta (con la base en la nube, cada ida y vuelta se nota): el producto
+// se identifica por su id o por la línea del pedido.
+async function assertStockFor(orderId: string, ref: { productId: number } | { itemId: string }, wanted: number) {
   const pool = getPool();
-  const { rows } = await pool.query<{ name: string; stock_qty: number | null }>(
-    "select name, stock_qty from gestion_products where id = $1",
-    [productId]
+  const byItem = "itemId" in ref;
+  const { rows } = await pool.query<{ name: string; stock_qty: number | null; already: string | number | null }>(
+    `select p.name, p.stock_qty,
+            (select coalesce(sum(i.qty), 0) from gestion_order_items i where i.order_id = $1 and i.product_id = p.id) as already
+     from gestion_products p
+     where p.id = ${byItem ? "(select product_id from gestion_order_items where id = $2 and order_id = $1)" : "$2"}`,
+    [orderId, byItem ? ref.itemId : ref.productId]
   );
   const product = rows[0];
   if (!product || product.stock_qty === null || product.stock_qty === undefined) return;
-  const { rows: inOrder } = await pool.query<{ qty: string | number | null }>(
-    "select sum(qty) as qty from gestion_order_items where order_id = $1 and product_id = $2",
-    [orderId, productId]
-  );
-  const already = Number(inOrder[0]?.qty ?? 0);
-  if (already + wanted > Number(product.stock_qty)) {
-    const left = Number(product.stock_qty);
+  const already = Number(product.already ?? 0);
+  const left = Number(product.stock_qty);
+  if (already + wanted > left) {
     throw new Error(
       left <= 0
         ? `${product.name} está sin stock`
@@ -256,7 +257,7 @@ export async function addItem(orderId: string, productId: number) {
   if (!product) throw new Error("Ese producto no existe");
   if (!product.active) throw new Error(`${product.name} ya no está disponible`);
   if (!product.in_stock) throw new Error(`${product.name} está sin stock`);
-  await assertStockFor(orderId, product.id, 1);
+  await assertStockFor(orderId, { productId: product.id }, 1);
 
   const price = money(product.price);
   const { rows: existing } = await pool.query(
@@ -276,13 +277,7 @@ export async function addItem(orderId: string, productId: number) {
 
 export async function setQty(orderId: string, itemId: string, delta: number) {
   const pool = getPool();
-  if (delta > 0) {
-    const { rows: item } = await pool.query<{ product_id: number | null }>(
-      "select product_id from gestion_order_items where id = $1 and order_id = $2",
-      [itemId, orderId]
-    );
-    if (item[0]) await assertStockFor(orderId, item[0].product_id, delta);
-  }
+  if (delta > 0) await assertStockFor(orderId, { itemId }, delta);
   const { rows } = await pool.query(
     "update gestion_order_items set qty = qty + $2 where id = $1 and order_id = $3 returning qty",
     [itemId, delta, orderId]
@@ -540,6 +535,22 @@ export async function updateTableDetails(
     details.customerName?.trim().slice(0, 60) || null,
     details.waiter?.trim().slice(0, 40) || null,
   ]);
+  return getOrderRow(orderId);
+}
+
+// Precio del envío de un pedido de delivery abierto (se puede ajustar a mano en el pedido).
+export async function setShippingCost(orderId: string, rawCost: number) {
+  const cost = Number(rawCost);
+  if (!Number.isFinite(cost) || cost < 0 || cost > 1_000_000) throw new Error("El envío tiene que ser un monto entre $0 y $1.000.000");
+  const pool = getPool();
+  const { rows } = await pool.query<{ status: string; is_delivery: boolean | number }>(
+    "select status, is_delivery from gestion_orders where id = $1",
+    [orderId]
+  );
+  if (!rows[0]) throw new Error("Ese pedido no existe");
+  if (rows[0].status !== "abierta") throw new Error("El pedido ya fue cobrado");
+  if (!rows[0].is_delivery) throw new Error("Solo los pedidos de delivery tienen envío");
+  await pool.query("update gestion_orders set shipping_cost = $2 where id = $1", [orderId, Math.round(cost * 100) / 100]);
   return getOrderRow(orderId);
 }
 

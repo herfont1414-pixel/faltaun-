@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { seedFreshDb, tearDownTestDb } from "./helpers";
 import { getPool } from "@/lib/admin/db";
-import { ensureSeeded } from "@/lib/admin/seed";
+import { ensureSeeded, resetSeedCache } from "@/lib/admin/seed";
 
 let dbPath: string;
 beforeAll(async () => {
@@ -62,6 +62,7 @@ describe("catálogo con stock de Fudo", () => {
     const pool = getPool();
     await pool.query("update gestion_products set price = 1, stock_qty = 999, in_stock = false, show_online = false where name = 'Lomo Al Plato'");
     await pool.query("delete from gestion_meta where key = 'catalog_hash'");
+    resetSeedCache(); // en producción equivale a reiniciar el servidor con un catálogo nuevo
     await ensureSeeded();
     expect(await product("Lomo Al Plato")).toMatchObject({ price: 12500, stockQty: 2, inStock: true, showOnline: false });
   });
@@ -69,6 +70,7 @@ describe("catálogo con stock de Fudo", () => {
   it("sin cambios en el archivo no se vuelve a aplicar (lo editado en el panel se respeta)", async () => {
     const pool = getPool();
     await pool.query("update gestion_products set price = 13000, stock_qty = 7 where name = 'Lomo Al Plato'");
+    resetSeedCache();
     await ensureSeeded();
     expect(await product("Lomo Al Plato")).toMatchObject({ price: 13000, stockQty: 7 });
   });

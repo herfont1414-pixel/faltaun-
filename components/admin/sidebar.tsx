@@ -150,6 +150,18 @@ export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile, 
             </div>
           ))}
         </nav>
+        <div suppressHydrationWarning className="px-4 pb-4 pt-2 text-[11px] text-slate-500" title="Si la PC y la página muestran versiones distintas, la PC no se actualizó">
+          Versión {process.env.NEXT_PUBLIC_APP_VERSION ?? "local"}
+          {process.env.NEXT_PUBLIC_BUILD_TIME
+            ? ` · ${new Date(process.env.NEXT_PUBLIC_BUILD_TIME).toLocaleString("es-AR", {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: "America/Argentina/Buenos_Aires",
+              })}`
+            : ""}
+        </div>
       </aside>
     </>
   );

@@ -1284,7 +1284,8 @@
   align-items: center;
   margin-bottom: 12px;
 }
-.prod-search {
+/* "pv-search" (no "prod-search": ese nombre ya lo usa el buscador del panel de pedido). */
+.pv-search {
   flex: 1 1 260px;
   min-width: 0;
   padding: 10px 14px;
@@ -1584,4 +1585,57 @@
   font-size: 13px;
   font-weight: 800;
   margin: 4px 0 8px;
+}
+
+/* Panel de pedido: cantidad que se puede escribir y envío con precio editable. */
+.qty-ctrl .qty-value {
+  width: auto;
+  min-width: 22px;
+  height: 24px;
+  padding: 0 3px;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 800;
+  border-radius: 5px;
+  cursor: text;
+}
+.qty-ctrl .qty-value:hover {
+  background: #fff;
+}
+.qty-input {
+  width: 46px;
+  height: 24px;
+  border: 1px solid var(--orange);
+  border-radius: 5px;
+  font-size: 12.5px;
+  font-weight: 800;
+  text-align: center;
+  padding: 0 2px;
+}
+.shipping-input {
+  width: 96px;
+  height: 26px;
+  border: 1px solid var(--orange);
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: right;
+  padding: 0 6px;
+}
+/* Con la carta abierta en PC, la carta ocupa menos y el pedido actual conserva su lugar. */
+@media (min-width: 901px) {
+  /* La carta se achica según el alto de la pantalla para dejar siempre lugar al pedido. */
+  .catalog.open .product-list {
+    max-height: clamp(110px, calc(100vh - 780px), 30vh);
+  }
+  .ticket-wrap {
+    min-height: 120px;
+  }
+  /* Si en una pantalla baja no entra todo, el panel se desliza (nunca se corta "Cobrar"). */
+  .order-panel {
+    overflow-y: auto;
+  }
+  .order-ticket {
+    min-height: min-content;
+  }
 }

@@ -281,12 +281,55 @@ export function AdminApp() {
     if (state) applyState(state);
   }
 
-  async function changeQty(itemId: string, delta: number) {
-    if (!selectedOrderId) return;
-    const state = await safeCall(() =>
-      postJson("/api/admin/set-qty", { orderId: selectedOrderId, itemId, delta })
+  // Cambia el pedido en pantalla al instante (sin esperar al servidor, que con la base en
+  // la nube tarda): si el servidor lo rechaza (por ejemplo, sin stock) se vuelve a lo real.
+  function patchOrderLocally(orderId: string, update: (order: Order) => Order) {
+    stateVersion.current += 1; // que una actualización automática vieja no lo pise
+    setData((prev) =>
+      prev ? { ...prev, openOrders: prev.openOrders.map((o) => (o.id === orderId ? update(o) : o)) } : prev
     );
+  }
+  const withTotal = (order: Order): Order => ({
+    ...order,
+    total: order.items.reduce((sum, it) => sum + it.price * it.qty, 0) + (order.isDelivery ? order.shippingCost : 0),
+  });
+
+  async function reloadState() {
+    try {
+      const res = await fetch("/api/admin/state", { cache: "no-store" });
+      if (res.ok) applyState((await res.json()) as AdminStateResponse);
+    } catch {
+      // la actualización automática lo corrige en unos segundos
+    }
+  }
+
+  // Varios toques seguidos en +/−: cada uno va al servidor, pero la pantalla solo toma la
+  // respuesta del último (las anteriores ya están reflejadas y podrían llegar desordenadas).
+  const qtyPending = useRef(0);
+  async function changeQty(itemId: string, delta: number) {
+    if (!selectedOrderId || delta === 0) return;
+    const orderId = selectedOrderId;
+    patchOrderLocally(orderId, (o) =>
+      withTotal({
+        ...o,
+        items: o.items.map((it) => (it.id === itemId ? { ...it, qty: it.qty + delta } : it)).filter((it) => it.qty > 0),
+      })
+    );
+    qtyPending.current += 1;
+    const state = await safeCall(() => postJson("/api/admin/set-qty", { orderId, itemId, delta }));
+    qtyPending.current -= 1;
+    if (qtyPending.current > 0) return;
     if (state) applyState(state);
+    else reloadState(); // falló (sin stock, sin conexión…): se muestra lo que quedó guardado
+  }
+
+  async function changeShipping(cost: number) {
+    if (!selectedOrderId) return;
+    const orderId = selectedOrderId;
+    patchOrderLocally(orderId, (o) => withTotal({ ...o, shippingCost: cost }));
+    const state = await safeCall(() => postJson("/api/admin/set-shipping", { orderId, shippingCost: cost }));
+    if (state) applyState(state);
+    else reloadState();
   }
 
   async function sendKitchen() {
@@ -602,6 +645,7 @@ export function AdminApp() {
             onChangeCategory={setActiveCategory}
             onAddProduct={addProduct}
             onChangeQty={changeQty}
+            onChangeShipping={changeShipping}
             onClose={closePanel}
             onSendKitchen={sendKitchen}
             onRequestBill={requestBill}
