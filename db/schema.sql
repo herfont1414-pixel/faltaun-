@@ -610,3 +610,10 @@ alter table gestion_loyalty_transactions add column if not exists user_id int;
 create unique index if not exists gestion_loyalty_one_stamp_per_day
   on gestion_loyalty_transactions(phone, stamp_day)
   where type = 'stamp' and stamp_day is not null;
+
+-- Reservas cargadas desde el panel: mesa asignada (opcional), origen (web o panel)
+-- y qué usuario la cargó. Las reservas existentes quedan con origen "web".
+alter table gestion_reservations add column if not exists table_number int;
+alter table gestion_reservations add column if not exists source text not null default 'web';
+alter table gestion_reservations add column if not exists created_by int;
+create index if not exists gestion_reservations_date_idx on gestion_reservations(reservation_date);

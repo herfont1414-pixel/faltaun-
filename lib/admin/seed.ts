@@ -269,6 +269,10 @@ export async function ensureSeeded() {
         await client.query(
           "update gestion_delivery_customers set created_at = updated_at where created_at is null"
         );
+        await ensureSqliteColumn(client, "gestion_reservations", "table_number", "int");
+        await ensureSqliteColumn(client, "gestion_reservations", "source", "text not null default 'web'");
+        await ensureSqliteColumn(client, "gestion_reservations", "created_by", "int");
+        await client.query("create index if not exists gestion_reservations_date_idx on gestion_reservations(reservation_date)");
         await ensureSqliteColumn(client, "gestion_loyalty_transactions", "stamp_day", "text");
         await ensureSqliteColumn(client, "gestion_loyalty_transactions", "user_id", "int");
         await client.query(

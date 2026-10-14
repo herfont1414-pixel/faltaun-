@@ -13,6 +13,7 @@ const SECTION_LABEL: Record<Section, string> = {
   productos: "Productos",
   caja: "Caja",
   reportes: "Reportes",
+  ventas: "Ventas",
   gastos: "Gastos",
   delivery: "Delivery",
   express: "Mostrador express",

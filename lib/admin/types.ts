@@ -227,6 +227,8 @@ export interface Reservation {
   status: ReservationStatus;
   createdAt: string;
   respondedAt: string | null;
+  tableNumber: number | null;
+  source: "web" | "panel";
 }
 
 export type PaperWidthMm = 58 | 80;

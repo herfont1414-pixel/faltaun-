@@ -21,6 +21,7 @@ import {
   Star,
   Carrot,
   ShoppingCart,
+  ClipboardList,
   X,
 } from "lucide-react";
 import { BrandLogo } from "@/components/admin/brand-logo";
@@ -54,6 +55,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { label: "Compras", Icon: ShoppingCart, section: "compras" },
       { label: "Clientes", Icon: Users, section: "clientes" },
       { label: "Fidelidad", Icon: Star, section: "fidelidad" },
+      { label: "Ventas", Icon: ClipboardList, section: "ventas" },
       { label: "Caja", Icon: Wallet, section: "caja" },
       { label: "Reportes", Icon: BarChart3, section: "reportes" },
       { label: "Gastos", Icon: Receipt, section: "gastos" },
