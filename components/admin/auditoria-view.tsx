@@ -25,6 +25,7 @@ const ACTION_LABEL: Record<string, string> = {
   shift_open: "Apertura de caja",
   shift_close: "Cierre de caja",
   order_close: "Pedido cobrado",
+  order_cancel: "Pedido anulado (sin cobrar)",
 };
 
 function fmt(d: string) {

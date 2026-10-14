@@ -1639,3 +1639,43 @@
     min-height: min-content;
   }
 }
+
+/* Aviso de pedidos que quedaron abiertos de días anteriores */
+.stale-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 12px 26px 0;
+  padding: 10px 14px;
+  border: 1px solid #f6c9c2;
+  border-radius: 10px;
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 14px;
+}
+.stale-banner .btn {
+  padding: 8px 14px;
+}
+.op-cancel {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px;
+  border: none;
+  background: none;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.op-cancel:hover {
+  color: #a3271b;
+}
+@media (max-width: 760px) {
+  .stale-banner {
+    margin: 10px 12px 0;
+  }
+}

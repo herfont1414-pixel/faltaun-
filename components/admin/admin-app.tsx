@@ -103,6 +103,14 @@ export function AdminApp() {
   // Pedidos web pendientes (para el aviso y el contador del menú lateral, en cualquier pantalla).
   const [pendingWeb, setPendingWeb] = useState(0);
   const [webAlert, setWebAlert] = useState<string | null>(null);
+  // Anular pedidos es solo para admin y encargado (el servidor también lo exige).
+  const [canCancel, setCanCancel] = useState(false);
+  useEffect(() => {
+    fetch("/api/admin/me")
+      .then((res) => res.json())
+      .then((d: { user?: { role?: string } | null }) => setCanCancel(d.user?.role === "admin" || d.user?.role === "encargado"))
+      .catch(() => setCanCancel(false));
+  }, []);
   const seenWebIds = useRef<Set<string> | null>(null);
   const sectionRef = useRef<Section>("inicio");
   // Cada cambio hecho desde esta pantalla sube la versión: así una actualización automática
@@ -144,6 +152,13 @@ export function AdminApp() {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 2200);
   }, []);
+
+  // Pedidos que siguen abiertos desde antes de la jornada actual (que arranca a las 6:00).
+  const jornadaStartMs = (() => {
+    const day = new Date(Date.now() - 9 * 3600_000).toISOString().slice(0, 10); // hora AR − 6 h
+    return new Date(`${day}T09:00:00.000Z`).getTime();
+  })();
+  const staleOrders = (data?.openOrders ?? []).filter((o) => new Date(o.openedAt).getTime() < jornadaStartMs);
 
   function applyState(state: AdminStateResponse) {
     stateVersion.current += 1;
@@ -321,6 +336,35 @@ export function AdminApp() {
     if (qtyPending.current > 0) return;
     if (state) applyState(state);
     else reloadState(); // falló (sin stock, sin conexión…): se muestra lo que quedó guardado
+  }
+
+  // Anular un pedido abierto (nunca cobrado): se borra, libera la mesa y queda en Auditoría.
+  async function cancelOrder() {
+    if (!selectedOrderId) return;
+    const orderId = selectedOrderId;
+    const order = data?.openOrders.find((o) => o.id === orderId);
+    const label = order?.tableNumber ? `la mesa ${order.tableNumber}` : "este pedido";
+    if (!window.confirm(`¿Anular ${label}${order ? ` (${money(order.total)})` : ""}? Se borra sin cobrarse y queda registrado en Auditoría.`)) return;
+    const state = await safeCall(() => postJson("/api/admin/cancel-order", { orderId }));
+    if (!state) return;
+    applyState(state);
+    closePanel();
+    showToast(order?.tableNumber ? `Mesa ${order.tableNumber} anulada y liberada` : "Pedido anulado");
+  }
+
+  async function cancelStaleOrders() {
+    const total = staleOrders.reduce((sum, o) => sum + o.total, 0);
+    if (
+      !window.confirm(
+        `¿Anular ${staleOrders.length} pedido(s) que quedaron abiertos de días anteriores (${money(total)})? Se borran sin cobrarse, se liberan las mesas y queda registrado en Auditoría.`
+      )
+    )
+      return;
+    const state = await safeCall(() => postJson("/api/admin/cancel-stale-orders"));
+    if (!state) return;
+    applyState(state);
+    closePanel();
+    showToast(`Se anularon ${state.result?.count ?? staleOrders.length} pedido(s) de días anteriores`);
   }
 
   async function changeShipping(cost: number) {
@@ -569,6 +613,18 @@ export function AdminApp() {
           </div>
         )}
 
+        {canCancel && staleOrders.length > 0 && ["inicio", "mesas", "mostrador", "delivery", "express"].includes(section) && (
+          <div className="stale-banner">
+            <span>
+              Hay <strong>{staleOrders.length}</strong> pedido{staleOrders.length === 1 ? "" : "s"} abierto
+              {staleOrders.length === 1 ? "" : "s"} de días anteriores ({money(staleOrders.reduce((sum, o) => sum + o.total, 0))}).
+            </span>
+            <button type="button" className="btn btn-danger" style={{ flex: "none" }} onClick={cancelStaleOrders}>
+              Anular los de días anteriores
+            </button>
+          </div>
+        )}
+
         {section === "inicio" ? (
         <DashboardView
           tables={data.tables}
@@ -655,6 +711,7 @@ export function AdminApp() {
             onChangeItemNote={changeItemNote}
             onPrintTicket={() => currentOrder && printTicket(currentOrder.id)}
             onEditTable={() => setEditingTable(true)}
+            onCancelOrder={canCancel ? cancelOrder : undefined}
           />
         </div>
       ) : section === "productos" ? (

@@ -2,6 +2,8 @@ import { getPool } from "@/lib/admin/db";
 import { ensureSeeded } from "@/lib/admin/seed";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { assertPaymentsCoverTotal, normalizePayments } from "@/lib/admin/payments";
+import { recordAudit } from "@/lib/admin/auth";
+import { jornadaKey, jornadaStart } from "@/lib/admin/sales-day";
 import type {
   AdminProduct,
   Catalog,
@@ -536,6 +538,78 @@ export async function updateTableDetails(
     details.waiter?.trim().slice(0, 40) || null,
   ]);
   return getOrderRow(orderId);
+}
+
+// Anular un pedido ABIERTO (mesa, mostrador o delivery que nunca se cobró): se borra el
+// pedido con sus productos, se libera la mesa y, si venía del menú online, el pedido web
+// queda como rechazado. No toca stock (el stock se descuenta recién al cobrar) ni ventas.
+// Queda en la auditoría con todo lo que tenía, quién lo anuló y por qué. Los pedidos ya
+// cobrados no se pueden anular: son ventas.
+export async function cancelOpenOrder(orderId: string, userId: number | null, reason: string | null = null) {
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const { rows } = await client.query(
+      `select o.*, t.number as table_number from gestion_orders o
+       left join gestion_tables t on t.id = o.table_id
+       where o.id = $1 for update of o`,
+      [orderId]
+    );
+    const order = rows[0];
+    if (!order) throw new Error("Ese pedido no existe");
+    if (order.status !== "abierta") throw new Error("Solo se pueden anular pedidos abiertos; los cobrados quedan registrados en Ventas");
+    const { rows: items } = await client.query<{ product_name: string; qty: number; price: string | number; note: string | null }>(
+      "select product_name, qty, price, note from gestion_order_items where order_id = $1",
+      [orderId]
+    );
+    const total =
+      items.reduce((sum, it) => sum + money(it.price) * Number(it.qty), 0) + (order.is_delivery ? money(order.shipping_cost ?? 0) : 0);
+
+    await client.query("update gestion_web_orders set status = 'rechazado', order_id = null where order_id = $1", [orderId]);
+    await client.query("delete from gestion_orders where id = $1", [orderId]);
+    if (order.table_id) {
+      await client.query("update gestion_tables set status = 'libre' where id = $1", [order.table_id]);
+    }
+    await recordAudit({
+      userId,
+      action: "order_cancel",
+      entity: "gestion_orders",
+      entityId: orderId,
+      oldValue: {
+        mesa: order.table_number ?? null,
+        origen: order.is_delivery ? "delivery" : order.origin,
+        cliente: order.customer_name ?? null,
+        abierto: order.opened_at instanceof Date ? order.opened_at.toISOString() : order.opened_at,
+        total,
+        items: items.map((it) => ({ producto: it.product_name, cantidad: Number(it.qty), precio: money(it.price), nota: it.note })),
+      },
+      newValue: { motivo: reason },
+      client,
+    });
+    await client.query("commit");
+    return { orderId, tableNumber: order.table_number ?? null, total };
+  } catch (error) {
+    await client.query("rollback").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// Anula todos los pedidos que siguen abiertos desde antes de la jornada actual (6:00).
+export async function cancelStaleOpenOrders(userId: number | null, now: Date = new Date()) {
+  const cutoff = jornadaStart(jornadaKey(now)).toISOString();
+  const { rows } = await getPool().query<{ id: string }>(
+    "select id from gestion_orders where status = 'abierta' and opened_at < $1 order by opened_at",
+    [cutoff]
+  );
+  let total = 0;
+  for (const r of rows) {
+    const result = await cancelOpenOrder(String(r.id), userId, "Pedido abierto de un día anterior");
+    total += result.total;
+  }
+  return { count: rows.length, total };
 }
 
 // Precio del envío de un pedido de delivery abierto (se puede ajustar a mano en el pedido).

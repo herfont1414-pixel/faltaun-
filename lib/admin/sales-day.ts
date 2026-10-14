@@ -73,7 +73,7 @@ function addDays(day: string, n: number) {
 }
 
 // 6:00 en Argentina (UTC-3) = 9:00 UTC.
-const jornadaStart = (day: string) => new Date(`${day}T${String(JORNADA_START_HOUR + 3).padStart(2, "0")}:00:00.000Z`);
+export const jornadaStart = (day: string) => new Date(`${day}T${String(JORNADA_START_HOUR + 3).padStart(2, "0")}:00:00.000Z`);
 
 const iso = (v: unknown) => (v instanceof Date ? v.toISOString() : v ? String(v) : null);
 const num = (v: unknown) => (typeof v === "string" ? parseFloat(v) : Number(v ?? 0));
