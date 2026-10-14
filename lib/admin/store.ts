@@ -216,6 +216,33 @@ export async function openTable(
 // nunca se confía en lo que mande el cliente: el frontend solo manda el id
 // del producto (tomado del catálogo que el propio servidor le dio), así que
 // un request manipulado no puede cobrar un producto real a otro precio.
+// Stock controlado (stock_qty con número): no se deja cargar en un pedido más unidades
+// de las que quedan. Así el aviso aparece al cargar, y no recién al cobrar (donde el
+// cobro entero se rechazaría y la mesa no se podría cerrar).
+async function assertStockFor(orderId: string, productId: number | null, wanted: number) {
+  if (productId == null) return;
+  const pool = getPool();
+  const { rows } = await pool.query<{ name: string; stock_qty: number | null }>(
+    "select name, stock_qty from gestion_products where id = $1",
+    [productId]
+  );
+  const product = rows[0];
+  if (!product || product.stock_qty === null || product.stock_qty === undefined) return;
+  const { rows: inOrder } = await pool.query<{ qty: string | number | null }>(
+    "select sum(qty) as qty from gestion_order_items where order_id = $1 and product_id = $2",
+    [orderId, productId]
+  );
+  const already = Number(inOrder[0]?.qty ?? 0);
+  if (already + wanted > Number(product.stock_qty)) {
+    const left = Number(product.stock_qty);
+    throw new Error(
+      left <= 0
+        ? `${product.name} está sin stock`
+        : `Quedan ${left} de ${product.name}${already > 0 ? ` y este pedido ya tiene ${already}` : ""}. Si hay más, actualizá el stock en Productos.`
+    );
+  }
+}
+
 export async function addItem(orderId: string, productId: number) {
   const pool = getPool();
   const { rows: productRows } = await pool.query<{
@@ -229,6 +256,7 @@ export async function addItem(orderId: string, productId: number) {
   if (!product) throw new Error("Ese producto no existe");
   if (!product.active) throw new Error(`${product.name} ya no está disponible`);
   if (!product.in_stock) throw new Error(`${product.name} está sin stock`);
+  await assertStockFor(orderId, product.id, 1);
 
   const price = money(product.price);
   const { rows: existing } = await pool.query(
@@ -248,6 +276,13 @@ export async function addItem(orderId: string, productId: number) {
 
 export async function setQty(orderId: string, itemId: string, delta: number) {
   const pool = getPool();
+  if (delta > 0) {
+    const { rows: item } = await pool.query<{ product_id: number | null }>(
+      "select product_id from gestion_order_items where id = $1 and order_id = $2",
+      [itemId, orderId]
+    );
+    if (item[0]) await assertStockFor(orderId, item[0].product_id, delta);
+  }
   const { rows } = await pool.query(
     "update gestion_order_items set qty = qty + $2 where id = $1 and order_id = $3 returning qty",
     [itemId, delta, orderId]

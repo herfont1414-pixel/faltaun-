@@ -44,10 +44,14 @@ describe("stock: suficiente, insuficiente, consumo por venta, ajuste manual", ()
     await addItem(order.id, product.id);
     const state1 = await getState();
     const itemId = state1.openOrders.find((o) => o.id === order.id)!.items[0].id;
-    await setQty(order.id, itemId, 4); // pide 5 en total, solo hay 2
+    // Al cargar ya no deja pedir más de lo que hay (5 con stock 2).
+    await expect(setQty(order.id, itemId, 4)).rejects.toThrow(/Quedan 2/);
+    await setQty(order.id, itemId, 1); // 2 en total: justo lo que hay
 
+    // Mientras la mesa está abierta, el stock baja (otra venta / ajuste): al cobrar se frena igual.
+    await updateProduct(product.id, { stockQty: 1 });
     await expect(
-      finalizeOrder(order.id, [{ method: "efectivo", amount: product.price * 5 }], null)
+      finalizeOrder(order.id, [{ method: "efectivo", amount: product.price * 2 }], null)
     ).rejects.toThrow("No hay suficiente stock");
 
     const pool = getPool();
@@ -55,7 +59,7 @@ describe("stock: suficiente, insuficiente, consumo por venta, ajuste manual", ()
       "select stock_qty from gestion_products where id = $1",
       [product.id]
     );
-    expect(rows[0].stock_qty).toBe(2); // sin cambios
+    expect(rows[0].stock_qty).toBe(1); // sin cambios
 
     const state2 = await getState();
     expect(state2.openOrders.find((o) => o.id === order.id)?.status).toBe("abierta");
