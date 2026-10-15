@@ -27,6 +27,9 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
   const [recent, setRecent] = useState<WebOrder[]>([]);
   const [newOrder, setNewOrder] = useState<WebOrder | null>(null);
   const [acceptTarget, setAcceptTarget] = useState<WebOrder | null>(null);
+  // Último pedido aceptado: queda a la vista el botón para mandarle la confirmación por
+  // WhatsApp (en la app de la PC a veces WhatsApp no se abre solo al aceptar).
+  const [justAccepted, setJustAccepted] = useState<{ order: WebOrder; minutes: number } | null>(null);
   const [rejectTarget, setRejectTarget] = useState<WebOrder | null>(null);
   const [rejectReason, setRejectReason] = useState(REJECT_REASONS[0].value);
   const [rejectOther, setRejectOther] = useState("");
@@ -86,6 +89,7 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
     const order = acceptTarget;
     setAcceptTarget(null);
     const message = buildOrderConfirmationMessage(order, minutes);
+    setJustAccepted({ order, minutes });
     window.open(waLink(order.customerPhone, message), "_blank");
     respond(order, "confirmado", minutes).then((result) => {
       if (!result.ok) {
@@ -128,6 +132,28 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
           }}
         >
           🔔 Nuevo pedido de <strong>{newOrder.customerName}</strong> · {money(newOrder.total)}
+        </div>
+      )}
+
+      {justAccepted && (
+        <div className="wa-confirm">
+          <div>
+            ✅ Aceptaste el pedido de <strong>{justAccepted.order.customerName}</strong> ({justAccepted.minutes} min).
+            <div className="wa-confirm-sub">Si no se abrió WhatsApp, mandale la confirmación desde acá:</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <a
+              className="btn btn-wa"
+              href={waLink(justAccepted.order.customerPhone, buildOrderConfirmationMessage(justAccepted.order, justAccepted.minutes))}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Enviar confirmación por WhatsApp
+            </a>
+            <button type="button" className="op-close" onClick={() => setJustAccepted(null)} aria-label="Cerrar">
+              ×
+            </button>
+          </div>
         </div>
       )}
 
@@ -253,7 +279,19 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
                     </span>
                   </td>
                   <td className="m-total">{money(o.total)}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    {o.status === "confirmado" && o.customerPhone && (
+                      <a
+                        className="btn btn-sm btn-wa"
+                        style={{ marginRight: 6 }}
+                        href={waLink(o.customerPhone, buildOrderConfirmationMessage(o, o.etaMinutes ?? 30))}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Mandarle por WhatsApp la confirmación del pedido"
+                      >
+                        WhatsApp: confirmación
+                      </a>
+                    )}
                     {o.status === "confirmado" &&
                       (o.orderStatus === "cerrada" ? (
                         <span style={{ fontSize: 12.5, color: "var(--text-dim)" }}>Cobrado</span>
