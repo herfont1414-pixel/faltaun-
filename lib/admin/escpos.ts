@@ -141,6 +141,7 @@ export function renderComandaEscPos(data: ComandaPrintData, config: PrintConfig)
   const b = new EscPosBuilder().init();
   b.align("center").size(2, 2);
   for (const l of wrapWords(origin, doubleWidth)) b.line(l);
+  if (data.addition) b.size(1, 2).line("** AGREGADO **");
   b.size(1, 1).align("left");
   for (const l of lines) for (const w of wrapWords(l, width, "  ")) b.line(w);
   b.hr(width);

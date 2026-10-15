@@ -128,6 +128,9 @@ create table if not exists gestion_order_items (
 );
 
 alter table gestion_order_items add column if not exists note text;
+-- Cuántas unidades de la línea ya salieron en una comanda: "Enviar a cocina" imprime solo
+-- la diferencia (qty - comanda_printed_qty), también cuando se suma otra unidad de lo mismo.
+alter table gestion_order_items add column if not exists comanda_printed_qty int not null default 0;
 
 -- Referencia al producto, además de product_name/price (que se mantienen
 -- como "foto" histórica de lo vendido: cambiar el precio de un producto no

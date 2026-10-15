@@ -88,6 +88,7 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
     price: string;
     qty: number;
     sent_to_kitchen: boolean;
+    comanda_printed_qty: number;
     note: string | null;
   }>(`select * from gestion_order_items where order_id in (${placeholders}) order by id`, ids);
 
@@ -100,6 +101,7 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
         price: money(it.price),
         qty: it.qty,
         sentToKitchen: it.sent_to_kitchen,
+        comandaPrintedQty: Number(it.comanda_printed_qty ?? 0),
         note: it.note ?? null,
       }));
     const shippingCost = money(o.shipping_cost ?? 0);
@@ -284,7 +286,12 @@ export async function setQty(orderId: string, itemId: string, delta: number) {
   const pool = getPool();
   if (delta > 0) await assertStockFor(orderId, { itemId }, delta);
   const { rows } = await pool.query(
-    "update gestion_order_items set qty = qty + $2 where id = $1 and order_id = $3 returning qty",
+    // Si se baja la cantidad, lo "ya impreso" no puede quedar por encima (si no, al volver a
+    // subirla no se imprimiría la unidad nueva). case en vez de least(): también vale en SQLite.
+    `update gestion_order_items
+       set qty = qty + $2,
+           comanda_printed_qty = case when comanda_printed_qty > qty + $2 then qty + $2 else comanda_printed_qty end
+     where id = $1 and order_id = $3 returning qty`,
     [itemId, delta, orderId]
   );
   if (rows[0] && rows[0].qty <= 0) {

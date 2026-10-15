@@ -12,6 +12,8 @@ export interface OrderItem {
   price: number;
   qty: number;
   sentToKitchen: boolean;
+  // Unidades de esta línea que ya salieron en una comanda (el próximo envío imprime el resto).
+  comandaPrintedQty: number;
   note: string | null;
 }
 

@@ -317,6 +317,7 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_products", "print_area_id", "int");
         await ensureSqliteColumn(client, "gestion_orders", "notes", "text");
         await ensureSqliteColumn(client, "gestion_order_items", "note", "text");
+        await ensureSqliteColumn(client, "gestion_order_items", "comanda_printed_qty", "int not null default 0");
         await ensureSqliteColumn(client, "gestion_business_config", "logo_url", "text");
         await ensureSqliteColumn(client, "gestion_print_config", "direct_print_enabled", "boolean not null default 0");
         await ensureSqliteColumn(client, "gestion_print_config", "printer_name", "text");
@@ -345,6 +346,13 @@ export async function ensureSeeded() {
              on gestion_loyalty_transactions(phone, stamp_day)
              where type = 'stamp' and stamp_day is not null`
         );
+      }
+      // Una sola vez: lo que ya estaba enviado a cocina antes de esta versión se da por impreso
+      // (si no, el primer "Enviar a cocina" reimprimiría todo lo de las mesas abiertas).
+      const { rows: backfilled } = await client.query("select 1 from gestion_meta where key = 'comanda_printed_backfill'");
+      if (!backfilled[0]) {
+        await client.query("update gestion_order_items set comanda_printed_qty = qty where sent_to_kitchen = true");
+        await client.query("insert into gestion_meta (key, value) values ('comanda_printed_backfill', 'ok') on conflict (key) do nothing");
       }
       await client.query(
         `insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')

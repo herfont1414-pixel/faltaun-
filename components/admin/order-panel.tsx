@@ -54,6 +54,8 @@ interface OrderPanelProps {
   onEditTable?: () => void;
   // Anular el pedido abierto (sin cobrarlo).
   onCancelOrder?: () => void;
+  // Reimprime la comanda con todo lo ya enviado (el envío normal imprime solo lo nuevo).
+  onReprintComanda?: () => void;
 }
 
 // Preferencia de cada PC: mostrar u ocultar la carta por categorías (en PC arranca oculta,
@@ -77,6 +79,7 @@ export function OrderPanel({
   onChangeQty,
   onChangeShipping,
   onCancelOrder,
+  onReprintComanda,
   onClose,
   onSendKitchen,
   onRequestBill,
@@ -428,6 +431,11 @@ export function OrderPanel({
                   Cobrar {money(order.total)}
                 </button>
               </div>
+              {onReprintComanda && order.items.some((it) => it.sentToKitchen) && (
+                <button type="button" className="op-reprint" onClick={onReprintComanda}>
+                  Reimprimir comanda completa
+                </button>
+              )}
               {onCancelOrder && (
                 <button type="button" className="op-cancel" onClick={onCancelOrder}>
                   Anular pedido

@@ -383,13 +383,35 @@ export function AdminApp() {
       showToast("Agregá productos antes de enviar");
       return;
     }
+    // La comanda lleva solo lo nuevo; si todo ya salió impreso no se repite.
+    if (!order.items.some((it) => it.qty > it.comandaPrintedQty)) {
+      showToast("No hay productos nuevos desde la última comanda. Para sacarla completa tocá «Reimprimir comanda completa».");
+      return;
+    }
     const orderId = selectedOrderId;
     const state = await safeCall(() => postJson("/api/admin/send-kitchen", { orderId }));
     if (!state) return;
     applyState(state);
-    showToast("Comanda enviada a cocina");
     try {
-      await printOrderDocument("comanda", orderId);
+      const result = await printOrderDocument("comanda", orderId);
+      showToast(result === "printed" ? "Comanda enviada a cocina (solo lo nuevo)" : "No hay productos nuevos para imprimir");
+    } catch {
+      showToast("No se pudo imprimir la comanda");
+    }
+    reloadState(); // trae la marca de "ya impreso" de cada producto
+  }
+
+  // Saca de nuevo la comanda con TODO lo que ya se envió a cocina (por si se perdió o falló).
+  async function reprintComanda() {
+    if (!selectedOrderId) return;
+    const order = data?.openOrders.find((o) => o.id === selectedOrderId);
+    if (!order?.items.some((it) => it.sentToKitchen)) {
+      showToast("Todavía no se envió nada a cocina");
+      return;
+    }
+    try {
+      await printOrderDocument("comanda", selectedOrderId, { all: true });
+      showToast("Comanda completa reimpresa");
     } catch {
       showToast("No se pudo imprimir la comanda");
     }
@@ -712,6 +734,7 @@ export function AdminApp() {
             onPrintTicket={() => currentOrder && printTicket(currentOrder.id)}
             onEditTable={() => setEditingTable(true)}
             onCancelOrder={canCancel ? cancelOrder : undefined}
+            onReprintComanda={reprintComanda}
           />
         </div>
       ) : section === "productos" ? (
