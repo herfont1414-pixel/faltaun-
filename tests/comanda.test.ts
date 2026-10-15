@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { renderComandaEscPos } from "@/lib/admin/escpos";
 import { kitchenNotes, renderComandaHtml, type ComandaPrintData } from "@/lib/admin/print-templates";
 import type { PrintConfig } from "@/lib/admin/types";
+import { pageSizeCss } from "@/lib/print-client";
 
 const config58: PrintConfig = {
   paperWidthMm: 58,
@@ -150,6 +151,12 @@ describe("comanda de cocina", () => {
     expect(item).toMatchObject({ double: false, tall: true });
     for (const l of lines) expect(l.text.length).toBeLessThanOrEqual(l.double ? 15 : 32);
     expect(lines.find((l) => l.text === "MOSTRADOR")!.double).toBe(true);
+  });
+
+  it("navegador: la hoja mide lo mismo que la comanda (sin metros de papel en blanco)", () => {
+    expect(renderComandaHtml(comanda, config58)).toContain('<body data-paper-mm="58">');
+    expect(pageSizeCss(58, 300)).toBe("@page { size: 58mm 82mm; margin: 0; }");
+    expect(pageSizeCss(80, 10)).toBe("@page { size: 80mm 30mm; margin: 0; }");
   });
 
   it("HTML (impresión desde el navegador): mismo contenido, aclaración debajo y sin cobro", () => {

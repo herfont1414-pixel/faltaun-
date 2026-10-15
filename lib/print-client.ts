@@ -78,6 +78,7 @@ export async function printUrl(url: string) {
     if (printed) return;
     printed = true;
     try {
+      fitPageToContent(iframe.contentDocument);
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
     } finally {
@@ -87,4 +88,22 @@ export async function printUrl(url: string) {
 
   iframe.srcdoc = html;
   document.body.appendChild(iframe);
+}
+
+// "@page { size: 58mm auto }" no lo entiende Chrome, que entonces usa la hoja de largo fijo
+// del driver de la térmica: la comanda salía arriba y el resto de la hoja en blanco (que
+// después quedaba encima de la comanda siguiente). Acá se mide lo impreso y se pide una
+// hoja exactamente de ese largo.
+export function pageSizeCss(widthMm: number, contentHeightPx: number) {
+  const heightMm = Math.max(30, Math.ceil((contentHeightPx * 25.4) / 96) + 2);
+  return `@page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }`;
+}
+
+function fitPageToContent(doc: Document | null) {
+  const body = doc?.body;
+  const widthMm = Number(body?.dataset.paperMm);
+  if (!doc || !body || !widthMm) return;
+  const style = doc.createElement("style");
+  style.textContent = pageSizeCss(widthMm, body.getBoundingClientRect().height);
+  doc.head.appendChild(style);
 }

@@ -1628,6 +1628,12 @@
   .catalog.open .product-list {
     max-height: clamp(110px, calc(100vh - 780px), 30vh);
   }
+  /* La carta abierta ocupa lo que necesita (pestañas + lista): antes se podía achicar por
+     debajo de su contenido y las pestañas quedaban montadas sobre "Pedido actual". */
+  .catalog.open,
+  .catalog.searching {
+    flex: none;
+  }
   .ticket-wrap {
     min-height: 120px;
   }
@@ -1678,4 +1684,15 @@
   .stale-banner {
     margin: 10px 12px 0;
   }
+}
+
+.prod-flash {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #e8f6ec;
+  border: 1px solid #bfe3c9;
+  color: #1d6b38;
+  font-size: 14px;
+  font-weight: 600;
 }

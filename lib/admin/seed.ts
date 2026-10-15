@@ -18,7 +18,8 @@ type CatalogProduct = { name: string; price: number; inStock?: boolean; stock?: 
 // la primera vez: así una actualización del menú (ej. sacar descontinuados,
 // marcar sin stock) se aplica sola en una base que ya tenía datos cargados,
 // sin perder pedidos ni clientes. Los productos que ya no están en el archivo
-// se pausan (active = false) en vez de borrarse, para poder reactivarlos.
+// se pausan (active = false) en vez de borrarse, para poder reactivarlos; los creados
+// desde el panel (created_in_panel) no se tocan.
 async function syncCatalog(client: DbClient) {
   const raw = readFileSync(path.join(process.cwd(), "data", "catalogo_productos.json"), "utf-8");
   const hash = crypto.createHash("sha256").update(raw).digest("hex");
@@ -69,7 +70,7 @@ async function syncCatalog(client: DbClient) {
     }
 
     const { rows: existing } = await client.query<{ id: number; category_id: number; name: string }>(
-      "select id, category_id, name from gestion_products where active = true"
+      "select id, category_id, name from gestion_products where active = true and created_in_panel = false"
     );
     const toPause = existing.filter((p) => !keep.has(`${p.category_id}::${p.name}`)).map((p) => Number(p.id));
     for (let i = 0; i < toPause.length; i += CATALOG_BATCH) {
@@ -93,6 +94,34 @@ async function syncCatalog(client: DbClient) {
 }
 
 const CATALOG_BATCH = 50;
+
+// Productos activos en Fudo que no estaban en el catálogo y el local pidió tener. Se
+// cargan UNA sola vez (marca en gestion_meta) como si se hubieran creado desde el panel:
+// no tocan el resto del catálogo ni el stock, y si después se pausan o editan a mano,
+// queda así.
+const MISSING_FUDO_PRODUCTS: { key: string; category: string; name: string; price: number }[] = [
+  { key: "champinon_2026_10", category: "Pizzas", name: "Pizza Champiñon", price: 15000 },
+  { key: "champinon_2026_10", category: "Media Pizza 1/2", name: "1/2 Champiñon", price: 8000 },
+];
+
+async function addMissingFudoProducts(client: DbClient) {
+  for (const key of [...new Set(MISSING_FUDO_PRODUCTS.map((p) => p.key))]) {
+    const metaKey = `extra_products_${key}`;
+    const { rows } = await client.query("select 1 from gestion_meta where key = $1", [metaKey]);
+    if (rows[0]) continue;
+    for (const p of MISSING_FUDO_PRODUCTS.filter((x) => x.key === key)) {
+      const { rows: cat } = await client.query<{ id: number }>("select id from gestion_categories where name = $1", [p.category]);
+      if (!cat[0]) continue;
+      await client.query(
+        `insert into gestion_products (category_id, name, price, active, in_stock, stock_qty, created_in_panel)
+         values ($1, $2, $3, true, true, null, true)
+         on conflict (category_id, name) do nothing`,
+        [cat[0].id, p.name, p.price]
+      );
+    }
+    await client.query("insert into gestion_meta (key, value) values ($1, 'ok') on conflict (key) do nothing", [metaKey]);
+  }
+}
 
 interface CsvIngredient {
   externalId: number;
@@ -233,6 +262,7 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_products", "in_stock", "boolean not null default 1");
         await ensureSqliteColumn(client, "gestion_products", "stock_qty", "int");
         await ensureSqliteColumn(client, "gestion_products", "show_online", "boolean not null default 1");
+        await ensureSqliteColumn(client, "gestion_products", "created_in_panel", "boolean not null default 0");
         await ensureSqliteColumn(client, "gestion_shifts", "expenses_efectivo", "numeric(12, 2) not null default 0");
         await ensureSqliteColumn(client, "gestion_orders", "kitchen_status", "text");
         await ensureSqliteColumn(client, "gestion_orders", "kitchen_sent_at", "text");
@@ -327,6 +357,7 @@ export async function ensureSeeded() {
     }
 
     await syncCatalog(client);
+    await addMissingFudoProducts(client);
     await syncIngredients(client);
     await ensureDefaultAdminUser(client);
     if (!rewardsSeeded) {

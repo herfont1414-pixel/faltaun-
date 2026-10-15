@@ -95,7 +95,7 @@ function wrap(config: PrintConfig, body: string) {
 <title>Impresión</title>
 <style>${baseStyles(config)}</style>
 </head>
-<body>
+<body data-paper-mm="${config.paperWidthMm}">
 ${body}
 </body>
 </html>`;
