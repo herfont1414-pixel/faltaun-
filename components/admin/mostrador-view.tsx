@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { money } from "@/lib/admin/format";
 import { CHANNEL_LABEL, DELIVERY_STATUS_LABEL } from "@/lib/admin/order-labels";
+import { CustomerNameInput, customerSummary } from "@/components/admin/customer-name-input";
+import type { DirectoryCustomer } from "@/lib/admin/crm";
 import type { DeliveryZone, Order } from "@/lib/admin/types";
 
 // Lo que se pide antes de cargar los productos de un pedido nuevo.
@@ -12,6 +14,8 @@ export interface NewOrderInput {
   name: string;
   zone: string | null;
   address: string;
+  // Teléfono del cliente elegido en el buscador (si se eligió uno).
+  phone?: string;
 }
 
 interface MostradorViewProps {
@@ -107,6 +111,7 @@ export function MostradorView({
   const enCurso = openOrders.filter((order) => order.items.length > 0 || order.isDelivery || order.channel === "web");
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
+  const [picked, setPicked] = useState<DirectoryCustomer | null>(null);
   const [channel, setChannel] = useState<"mostrador" | "whatsapp">("mostrador");
   const [delivery, setDelivery] = useState(false);
   const [zones, setZones] = useState<DeliveryZone[]>([]);
@@ -127,6 +132,7 @@ export function MostradorView({
   function resetForm() {
     setShowForm(false);
     setName("");
+    setPicked(null);
     setChannel("mostrador");
     setDelivery(false);
     setZoneName("");
@@ -139,7 +145,14 @@ export function MostradorView({
       setFormError("Elegí la zona para calcular el envío.");
       return;
     }
-    onNewOrder({ channel, delivery, name: name.trim(), zone: delivery ? zoneName || null : null, address: address.trim() });
+    onNewOrder({
+      channel,
+      delivery,
+      name: name.trim(),
+      zone: delivery ? zoneName || null : null,
+      address: address.trim(),
+      phone: picked?.phone ?? "",
+    });
     resetForm();
   }
 
@@ -167,13 +180,21 @@ export function MostradorView({
           <div className="caja-card" style={{ maxWidth: 440 }}>
             <div className="caja-field">
               <label>Nombre de quien pidió (opcional)</label>
-              <input
-                type="text"
+              <CustomerNameInput
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(text) => {
+                  setName(text);
+                  setPicked(null);
+                }}
+                onPick={(c) => {
+                  setName(c.name);
+                  setPicked(c);
+                  if (c.address && !address.trim()) setAddress(c.address);
+                }}
                 className="caja-input"
-                placeholder="Ej: Carmen"
+                placeholder="Ej: Carmen — escribí y elegí"
               />
+              {picked && <p className="cust-picked">{customerSummary(picked)}</p>}
             </div>
 
             <div className="caja-field">

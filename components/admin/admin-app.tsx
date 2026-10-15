@@ -522,14 +522,14 @@ export function AdminApp() {
     if (input.delivery) {
       await newDeliveryOrder({
         name: input.name,
-        phone: "",
+        phone: input.phone ?? "",
         address: input.address,
         zone: input.zone,
         shippingCost: 0,
         channel: input.channel,
       });
     } else {
-      await newCounterOrder(input.channel, { name: input.name, phone: "" });
+      await newCounterOrder(input.channel, { name: input.name, phone: input.phone ?? "" });
     }
   }
 

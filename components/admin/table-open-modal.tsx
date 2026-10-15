@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CustomerNameInput } from "@/components/admin/customer-name-input";
 
 interface TableOpenModalProps {
   tableNumber: number;
@@ -85,10 +86,11 @@ export function TableOpenModal({ tableNumber, busy, onCancel, onConfirm, mode = 
 
         <div style={{ marginBottom: 12 }}>
           <label style={labelStyle}>Cliente</label>
-          <input
+          <CustomerNameInput
             value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Nombre (opcional)"
+            onChange={setCustomerName}
+            onPick={(c) => setCustomerName(c.name)}
+            placeholder="Nombre (opcional) — escribí y elegí"
             style={inputStyle}
           />
         </div>
