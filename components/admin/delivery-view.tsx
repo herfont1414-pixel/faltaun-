@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CustomerNameInput, customerSummary } from "@/components/admin/customer-name-input";
 import { money } from "@/lib/admin/format";
 import { LocationPicker } from "@/components/geo/location-picker";
 import type { LatLng } from "@/lib/geo";
@@ -306,12 +307,17 @@ export function DeliveryView({ openOrders, closedOrders, onNewOrder, onOpenOrder
             </div>
             <div className="caja-field" style={{ flex: 1 }}>
               <label>Nombre</label>
-              <input
-                type="text"
+              <CustomerNameInput
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={setName}
+                onPick={(c) => {
+                  setName(c.name);
+                  if (c.phone) setPhone(c.phone);
+                  if (c.address) setAddress(c.address);
+                  setLookupMsg(`Cliente cargado · ${customerSummary(c)}`);
+                }}
                 className="caja-input"
-                placeholder="Nombre del cliente"
+                placeholder="Escribí y elegí el cliente"
               />
             </div>
           </div>

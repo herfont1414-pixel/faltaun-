@@ -16,6 +16,9 @@ export interface CrmCustomer {
   cuentaCorriente: boolean;
   ccBalance: number | null;
   lastOrderAt: string | null;
+  // Pedidos cobrados en el panel con este teléfono (incluye los web, que se cobran ahí).
+  posOrders: number;
+  posSpent: number;
 }
 
 // Un cliente puede existir en hasta 3 tablas independientes (fidelidad,
@@ -38,7 +41,7 @@ export async function listCrmCustomers(): Promise<CrmCustomer[]> {
       select phone from gestion_customers where phone is not null and phone <> ''
     ),
     last_orders as (
-      select customer_phone as phone, max(closed_at) as last_at
+      select customer_phone as phone, max(closed_at) as last_at, count(*) as n, sum(total) as spent
       from gestion_orders
       where customer_phone is not null and status = 'cerrada'
       group by customer_phone
@@ -63,7 +66,9 @@ export async function listCrmCustomers(): Promise<CrmCustomer[]> {
         when lw.last_at is null then lo.last_at
         when lo.last_at > lw.last_at then lo.last_at
         else lw.last_at
-      end as last_order_at
+      end as last_order_at,
+      coalesce(lo.n, 0) as pos_orders,
+      coalesce(lo.spent, 0) as pos_spent
     from phones p
     left join gestion_loyalty_accounts l on l.phone = p.phone
     left join gestion_delivery_customers d on d.phone = p.phone
@@ -83,5 +88,54 @@ export async function listCrmCustomers(): Promise<CrmCustomer[]> {
     cuentaCorriente: !!r.cuenta_corriente,
     ccBalance: r.cc_balance === null || r.cc_balance === undefined ? null : money(r.cc_balance),
     lastOrderAt: r.last_order_at ?? null,
+    posOrders: Number(r.pos_orders ?? 0),
+    posSpent: money(r.pos_spent ?? 0),
   }));
+}
+
+export interface DirectoryCustomer {
+  name: string;
+  phone: string | null;
+  address: string | null;
+  orders: number;
+  spent: number;
+  stamps: number;
+  lastOrderAt: string | null;
+  ccBalance: number | null;
+}
+
+// Clientes para el buscador al cargar un pedido (mesa, mostrador, delivery): los del CRM
+// (fidelidad, delivery, cuentas corrientes) con sus compras, más los clientes de Fudo que
+// no tienen teléfono (se buscan por nombre). Sin nombre no sirven para buscar.
+export async function listCustomerDirectory(): Promise<DirectoryCustomer[]> {
+  const crm = await listCrmCustomers();
+  const { rows } = await getPool().query(
+    "select name, balance, cuenta_corriente from gestion_customers where active = true and (phone is null or phone = '')"
+  );
+  const out: DirectoryCustomer[] = crm
+    .filter((c) => c.name && c.name.trim())
+    .map((c) => ({
+      name: c.name!.trim(),
+      phone: c.phone,
+      address: c.address,
+      orders: Math.max(c.orderCount, c.posOrders),
+      spent: Math.max(c.totalSpent, c.posSpent),
+      stamps: Number(c.stamps),
+      lastOrderAt: c.lastOrderAt,
+      ccBalance: c.cuentaCorriente ? c.ccBalance : null,
+    }));
+  for (const r of rows) {
+    if (!r.name || !String(r.name).trim()) continue;
+    out.push({
+      name: String(r.name).trim(),
+      phone: null,
+      address: null,
+      orders: 0,
+      spent: 0,
+      stamps: 0,
+      lastOrderAt: null,
+      ccBalance: r.cuenta_corriente ? money(r.balance) : null,
+    });
+  }
+  return out;
 }
