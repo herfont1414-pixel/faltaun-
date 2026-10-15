@@ -48,6 +48,9 @@ async function getCatalog(): Promise<Catalog> {
       inStock: product.in_stock,
     });
   }
+  // Categorías sin ningún producto activo (ej. las que quedaron vacías al limpiar el
+  // catálogo) no se muestran: eran pestañas vacías que además empujaban la carta.
+  for (const name of Object.keys(catalog)) if (catalog[name].length === 0) delete catalog[name];
   return catalog;
 }
 
@@ -734,6 +737,96 @@ export async function listAllProducts(): Promise<AdminProduct[]> {
     category: r.category_name,
     printAreaId: r.print_area_id,
   }));
+}
+
+// Alta de un producto desde el panel (Productos → Nuevo producto). Queda marcado como
+// creado en el panel para que una carga futura del catálogo no lo pause. El nombre no
+// se puede repetir (la comanda busca el producto por nombre): si ya existe pausado en
+// la misma categoría, se reactiva con los datos nuevos en vez de duplicarlo.
+export async function createProduct(
+  input: {
+    name: string;
+    category: string;
+    price: number;
+    stockQty?: number | null;
+    showOnline?: boolean;
+    printAreaId?: number | null;
+  },
+  userId: number | null = null
+) {
+  const name = String(input.name ?? "").replace(/\s+/g, " ").trim();
+  if (name.length < 2 || name.length > 60) throw new Error("Escribí el nombre del producto (de 2 a 60 letras)");
+  const price = Number(input.price);
+  if (!Number.isFinite(price) || price < 0 || price > 10_000_000) throw new Error("Precio inválido");
+  const stockQty =
+    input.stockQty === null || input.stockQty === undefined || (input.stockQty as unknown) === ""
+      ? null
+      : Math.floor(Number(input.stockQty));
+  if (stockQty !== null && (!Number.isFinite(stockQty) || stockQty < 0 || stockQty > 100_000)) {
+    throw new Error("Stock inválido (dejalo vacío si no se controla)");
+  }
+  const showOnline = input.showOnline !== false;
+  const printAreaId = input.printAreaId ? Number(input.printAreaId) : null;
+
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const { rows: cat } = await client.query<{ id: number }>("select id from gestion_categories where name = $1", [
+      input.category,
+    ]);
+    if (!cat[0]) throw new Error("Elegí una categoría");
+    const categoryId = Number(cat[0].id);
+
+    const { rows: same } = await client.query<{ id: number; category_id: number; active: boolean; category_name: string }>(
+      `select p.id, p.category_id, p.active, c.name as category_name
+       from gestion_products p join gestion_categories c on c.id = p.category_id
+       where lower(p.name) = lower($1)`,
+      [name]
+    );
+    const inThisCategory = same.find((p) => Number(p.category_id) === categoryId);
+    const elsewhere = same.find((p) => Number(p.category_id) !== categoryId);
+    if (elsewhere || (inThisCategory && inThisCategory.active)) {
+      const where = (inThisCategory && inThisCategory.active ? inThisCategory : elsewhere)!;
+      throw new Error(
+        `Ya existe "${name}" en ${where.category_name}${where.active ? "" : " (pausado: activalo desde ahí)"}`
+      );
+    }
+
+    let id: number;
+    if (inThisCategory) {
+      id = Number(inThisCategory.id);
+      await client.query(
+        `update gestion_products set name = $2, price = $3, active = true, in_stock = $4, stock_qty = $5,
+           show_online = $6, print_area_id = $7, created_in_panel = true
+         where id = $1`,
+        [id, name, price, stockQty === null || stockQty > 0, stockQty, showOnline, printAreaId]
+      );
+    } else {
+      const { rows } = await client.query<{ id: number }>(
+        `insert into gestion_products (category_id, name, price, active, in_stock, stock_qty, show_online, print_area_id, created_in_panel)
+         values ($1, $2, $3, true, $4, $5, $6, $7, true)
+         returning id`,
+        [categoryId, name, price, stockQty === null || stockQty > 0, stockQty, showOnline, printAreaId]
+      );
+      id = Number(rows[0].id);
+    }
+    await recordAudit({
+      userId,
+      action: "product_create",
+      entity: "gestion_products",
+      entityId: id,
+      newValue: { nombre: name, categoria: input.category, precio: price, stock: stockQty, menuOnline: showOnline },
+      client,
+    });
+    await client.query("commit");
+    return { id, name };
+  } catch (error) {
+    await client.query("rollback").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function updateProduct(

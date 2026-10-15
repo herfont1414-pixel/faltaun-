@@ -36,6 +36,124 @@ function matchesFilter(p: AdminProduct, filter: Filter) {
 const normalize = (text: string) =>
   text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+// Alta de un producto: nombre, categoría, precio y (opcional) stock y área de impresión.
+function NewProductModal({
+  categories,
+  defaultCategory,
+  printAreas,
+  onClose,
+  onCreated,
+}: {
+  categories: string[];
+  defaultCategory: string;
+  printAreas: PrintArea[];
+  onClose: () => void;
+  onCreated: (products: AdminProduct[], created: { id: number; name: string }, category: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState(defaultCategory);
+  const [price, setPrice] = useState("");
+  const [stock, setStock] = useState("");
+  const [printAreaId, setPrintAreaId] = useState("");
+  const [showOnline, setShowOnline] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function save() {
+    setError("");
+    if (name.trim().length < 2) return setError("Escribí el nombre del producto");
+    if (!category) return setError("Elegí una categoría");
+    if (price.trim() === "" || Number.isNaN(Number(price)) || Number(price) < 0) return setError("Poné el precio");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          category,
+          price: Number(price),
+          stockQty: stock.trim() === "" ? null : Number(stock),
+          showOnline,
+          printAreaId: printAreaId ? Number(printAreaId) : null,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        product?: { id: number; name: string };
+        products?: AdminProduct[];
+      };
+      if (!res.ok || !data.product || !data.products) {
+        setError(res.status === 401 ? "Solo el dueño o el encargado pueden crear productos" : data.error ?? "No se pudo guardar");
+        return;
+      }
+      onCreated(data.products, data.product, category);
+    } catch {
+      setError("Sin conexión. Probá de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={busy ? undefined : onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+        <h2 style={{ margin: "0 0 12px" }}>Nuevo producto</h2>
+        <div className="res-form">
+          <label className="caja-field">
+            <span>Nombre</span>
+            <input className="caja-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Pizza Champiñon" autoFocus />
+          </label>
+          <label className="caja-field">
+            <span>Categoría</span>
+            <select className="caja-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="res-row">
+            <label className="caja-field">
+              <span>Precio</span>
+              <input className="caja-input" type="number" min={0} inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="$" />
+            </label>
+            <label className="caja-field">
+              <span>Stock</span>
+              <input className="caja-input" type="number" min={0} inputMode="numeric" value={stock} onChange={(e) => setStock(e.target.value)} placeholder="∞ sin control" />
+            </label>
+          </div>
+          <label className="caja-field">
+            <span>Área de impresión</span>
+            <select className="caja-input" value={printAreaId} onChange={(e) => setPrintAreaId(e.target.value)}>
+              <option value="">Automática (bebidas a Barra, el resto a Cocina)</option>
+              {printAreas.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+            <input type="checkbox" checked={showOnline} onChange={(e) => setShowOnline(e.target.checked)} />
+            Mostrarlo en el menú online
+          </label>
+        </div>
+        {error && <div className="res-error">{error}</div>}
+        <div className="footer-actions" style={{ marginTop: 14 }}>
+          <button type="button" className="btn" onClick={onClose} disabled={busy}>
+            Cancelar
+          </button>
+          <button type="button" className="btn btn-primary" onClick={save} disabled={busy}>
+            {busy ? "Guardando…" : "Crear producto"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProductsView() {
   const [products, setProducts] = useState<AdminProduct[] | null>(null);
   const [printAreas, setPrintAreas] = useState<PrintArea[]>([]);
@@ -45,6 +163,8 @@ export function ProductsView() {
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("todos");
+  const [creating, setCreating] = useState(false);
+  const [flash, setFlash] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/products")
@@ -289,7 +409,13 @@ export function ProductsView() {
 
   return (
     <div className="mostrador">
-      <h1 style={{ marginBottom: 14 }}>Productos</h1>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+        <h1 style={{ margin: 0 }}>Productos</h1>
+        <button type="button" className="btn btn-primary" style={{ flex: "none" }} onClick={() => setCreating(true)}>
+          + Nuevo producto
+        </button>
+      </div>
+      {flash && <div className="prod-flash">{flash}</div>}
 
       <div className="prod-toolbar">
         <input
@@ -367,6 +493,28 @@ export function ProductsView() {
             {table(items)}
           </div>
         ))
+      )}
+
+      {creating && (
+        <NewProductModal
+          categories={[...grouped.keys()]}
+          defaultCategory={
+            (activeCat && activeCat !== ALL ? activeCat.split("::")[0] : null) ?? [...grouped.keys()][0] ?? ""
+          }
+          printAreas={printAreas}
+          onClose={() => setCreating(false)}
+          onCreated={(list, created, category) => {
+            setProducts(list);
+            setCreating(false);
+            setQuery("");
+            setFilter("todos");
+            const cat = list.find((p) => p.id === created.id)?.category ?? category;
+            const key = isDrinksCategory(cat) ? `${cat}::${drinkGroupOf(created.name)}` : cat;
+            openCategory(key);
+            setFlash(`Listo: "${created.name}" ya está disponible en Mesas, Mostrador y Delivery.`);
+            setTimeout(() => setFlash(""), 6000);
+          }}
+        />
       )}
 
       {recipeProductId !== null && (
