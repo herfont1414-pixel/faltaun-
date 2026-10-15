@@ -6,7 +6,6 @@ import { X, Printer, Pencil, ChevronDown } from "lucide-react";
 import { openedSince } from "@/lib/admin/format";
 import { money } from "@/lib/admin/format";
 import { PaymentPicker } from "@/components/admin/payment-picker";
-import { buildCustomerNotice, customerWhatsappLink } from "@/lib/order-messages";
 import type { Catalog, Order, OrderPayment } from "@/lib/admin/types";
 
 function plain(text: string) {
@@ -266,28 +265,6 @@ export function OrderPanel({
 
         <div className={`order-ticket ${sheetOpen ? "sheet-open" : ""}`}>
           <div className="sheet-handle" onClick={() => setSheetOpen(false)} />
-
-          {order.customerPhone?.trim() && (
-            <div className="wa-row">
-              <span className="wa-label">
-                WhatsApp{order.customerName ? ` · ${order.customerName}` : ""}
-                {!order.isDelivery ? ` · ${order.customerPhone}` : ""}
-              </span>
-              <div className="wa-actions">
-                {(order.isDelivery ? (["en_camino", "listo", "chat"] as const) : (["listo", "chat"] as const)).map((kind) => (
-                  <a
-                    key={kind}
-                    className={`btn btn-sm btn-wa ${kind === (order.isDelivery ? "en_camino" : "listo") ? "main" : ""}`}
-                    href={customerWhatsappLink(order.customerPhone!, buildCustomerNotice(order.customerName, kind))}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {kind === "listo" ? "Avisar: está listo" : kind === "en_camino" ? "Avisar: en camino" : "Abrir chat"}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
 
           {order.isDelivery && (
             <div className="delivery-info">

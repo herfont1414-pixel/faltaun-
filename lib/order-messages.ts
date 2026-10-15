@@ -1,4 +1,3 @@
-import { whatsappDigits } from "@/lib/phone";
 import type { WebOrder } from "@/lib/admin/types";
 
 // Formato de plata del mensaje: $14.000,00 (separador de miles y dos decimales).
@@ -44,20 +43,4 @@ export function buildOrderConfirmationMessage(
   );
   lines.push("", "¡Gracias por tu compra!", "Madero Restó");
   return lines.join("\n");
-}
-
-// Avisos rápidos al cliente desde el pedido abierto (botones de WhatsApp del panel).
-export type CustomerNotice = "listo" | "en_camino" | "chat";
-
-export function buildCustomerNotice(customerName: string | null, kind: CustomerNotice) {
-  const hola = `Hola${customerName?.trim() ? ` ${customerName.trim()}` : ""}`;
-  if (kind === "listo") return `${hola}, tu pedido ya está listo para retirar en Madero Restó 🙌\n¡Te esperamos!`;
-  if (kind === "en_camino") return `${hola}, tu pedido ya salió y está en camino 🛵\n¡Gracias por elegirnos! Madero Restó`;
-  return `${hola}, te escribimos de Madero Restó por tu pedido.`;
-}
-
-// Link de WhatsApp al cliente con el mensaje ya escrito (se abre con un <a>, no con
-// window.open, así ningún bloqueador de ventanas lo frena).
-export function customerWhatsappLink(phone: string, message: string) {
-  return `https://wa.me/${whatsappDigits(phone)}?text=${encodeURIComponent(message)}`;
 }
