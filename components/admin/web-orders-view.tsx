@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { money } from "@/lib/admin/format";
 import { playBeep } from "@/lib/admin/beep";
 import { osmLink } from "@/lib/geo";
-import { buildOrderConfirmationMessage } from "@/lib/order-messages";
+import { buildCustomerNotice, buildOrderConfirmationMessage, customerWhatsappLink } from "@/lib/order-messages";
 import type { WebOrder } from "@/lib/admin/types";
 
 const ETA_OPTIONS = [15, 30, 45, 60];
@@ -253,7 +253,22 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
                     </span>
                   </td>
                   <td className="m-total">{money(o.total)}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    {o.status === "confirmado" && o.customerPhone && (
+                      <a
+                        className="btn btn-sm btn-wa"
+                        style={{ marginRight: 6 }}
+                        href={customerWhatsappLink(
+                          o.customerPhone,
+                          buildCustomerNotice(o.customerName, o.fulfillment === "delivery" ? "en_camino" : "listo")
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={o.fulfillment === "delivery" ? "Avisarle que está en camino" : "Avisarle que está listo"}
+                      >
+                        {o.fulfillment === "delivery" ? "WhatsApp: en camino" : "WhatsApp: listo"}
+                      </a>
+                    )}
                     {o.status === "confirmado" &&
                       (o.orderStatus === "cerrada" ? (
                         <span style={{ fontSize: 12.5, color: "var(--text-dim)" }}>Cobrado</span>
