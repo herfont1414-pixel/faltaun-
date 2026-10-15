@@ -17,20 +17,27 @@ const config58: PrintConfig = {
 
 // Lee el ESC/POS como lo imprime la impresora: cada línea con el ancho de letra activo.
 function printed(buf: Buffer) {
-  const out: { text: string; double: boolean }[] = [];
+  const out: { text: string; double: boolean; tall?: boolean; bold?: boolean }[] = [];
   let width = 1;
+  let height = 1;
+  let bold = false;
   let text = "";
   for (let i = 0; i < buf.length; i++) {
     const c = buf[i];
     if (c === 0x1b) {
       const cmd = buf[i + 1];
+      if (cmd === 0x45) bold = buf[i + 2] === 1;
+      if (cmd === 0x40) bold = false;
       i += cmd === 0x40 ? 1 : 2; // ESC @ | ESC a n / ESC E n / ESC d n
     } else if (c === 0x1d) {
       const cmd = buf[i + 1];
-      if (cmd === 0x21) width = (buf[i + 2] >> 4) + 1;
+      if (cmd === 0x21) {
+        width = (buf[i + 2] >> 4) + 1;
+        height = (buf[i + 2] & 0x0f) + 1;
+      }
       i += 2; // GS ! n | GS V n
     } else if (c === 0x0a) {
-      out.push({ text, double: width === 2 });
+      out.push({ text, double: width === 2, ...(height === 2 ? { tall: true } : {}), ...(bold ? { bold: true } : {}) });
       text = "";
     } else {
       text += String.fromCharCode(c);
@@ -89,7 +96,7 @@ describe("comanda de cocina", () => {
     const noteAt = lines.findIndex((l) => l.text.includes("> doble carne, sin tomate"));
     const cebollaAt = lines.findIndex((l) => l.text.startsWith("2 BURGUER"));
     // Los nombres largos siguen en la línea de abajo (con sangría), también en letra doble.
-    expect(lines[cebollaAt + 1]).toEqual({ text: "  CEBOLLA", double: true });
+    expect(lines[cebollaAt + 1]).toEqual({ text: "  CEBOLLA", double: true, tall: true });
     expect(noteAt).toBeGreaterThan(crispyAt);
     expect(noteAt).toBeLessThan(cebollaAt);
     expect(all).toContain("3 EMP OSOBUCO");
@@ -124,6 +131,25 @@ describe("comanda de cocina", () => {
     expect(all).toContain("1 BURGER\n  CLASICA");
     expect(all).toContain("2 BURGER\n  CLASICA");
     expect(all).toContain("> sin tomate");
+  });
+
+  it("la letra grande va sin negrita (la POS-58 no da abasto y salía desteñida y cortada)", () => {
+    const lines = printed(renderComandaEscPos(comanda, config58));
+    const big = lines.filter((l) => l.double || l.tall);
+    expect(big.length).toBeGreaterThan(4);
+    for (const l of big) expect(l.bold).toBeUndefined();
+    // Siguen en letra doble los productos, y la aclaración en letra alta.
+    expect(lines.find((l) => l.text === "1 BURGER MADERO")).toMatchObject({ double: true, tall: true });
+    expect(lines.find((l) => l.text.includes("> doble carne"))).toMatchObject({ double: false, tall: true });
+    expect(lines.find((l) => l.text === "COCINA")).toMatchObject({ bold: true, double: false });
+  });
+
+  it("cuerpo 'pequeña': productos en letra alta pero no ancha (entran 32 por línea)", () => {
+    const lines = printed(renderComandaEscPos(comanda, { ...config58, fontSizeBody: "pequena" }));
+    const item = lines.find((l) => l.text.startsWith("1 BURGER MADERO CRISPY"))!;
+    expect(item).toMatchObject({ double: false, tall: true });
+    for (const l of lines) expect(l.text.length).toBeLessThanOrEqual(l.double ? 15 : 32);
+    expect(lines.find((l) => l.text === "MOSTRADOR")!.double).toBe(true);
   });
 
   it("HTML (impresión desde el navegador): mismo contenido, aclaración debajo y sin cobro", () => {

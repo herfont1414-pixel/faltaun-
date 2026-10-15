@@ -123,16 +123,25 @@ function wrapWords(text: string, width: number, indent = ""): string[] {
 // pedido en letra común y cada producto en letra DOBLE (ancho y alto) con la cantidad
 // adelante. La aclaración de cada producto va debajo, en letra alta. Sin precios, forma de
 // pago, encabezado ni pie: a la cocina solo le sirve qué preparar.
+//
+// La letra doble va SIN negrita: en la POS-58 la negrita repasa cada punto y, sumada a la
+// letra doble, una línea llena (ej. "2 PAPAS CHEDAR") pedía más corriente de la que da la
+// impresora: salía desteñida, cortada a la mitad, y el resto de la comanda quedaba trabado
+// hasta la impresión siguiente. La letra doble ya es gruesa y se lee igual de lejos.
+// Con "Cuerpo: pequeña" en Impresión, los productos van en letra alta (no ancha): la mitad
+// de puntos por línea, para impresoras todavía más débiles.
 export function renderComandaEscPos(data: ComandaPrintData, config: PrintConfig): Buffer {
   const width = charsFor(config.paperWidthMm);
+  const small = config.fontSizeBody === "pequena";
   // En letra doble entra la mitad (a la POS-58 le entran 15 caracteres dobles por línea).
-  const bigWidth = config.paperWidthMm === 58 ? 15 : 24;
+  const doubleWidth = config.paperWidthMm === 58 ? 15 : 24;
+  const itemWidth = small ? width : doubleWidth;
   const { origin, lines } = comandaHeader(data);
 
   const b = new EscPosBuilder().init();
-  b.align("center").bold(true).size(2, 2);
-  for (const l of wrapWords(origin, bigWidth)) b.line(l);
-  b.size(1, 1).bold(false).align("left");
+  b.align("center").size(2, 2);
+  for (const l of wrapWords(origin, doubleWidth)) b.line(l);
+  b.size(1, 1).align("left");
   for (const l of lines) for (const w of wrapWords(l, width, "  ")) b.line(w);
   b.hr(width);
 
@@ -142,20 +151,20 @@ export function renderComandaEscPos(data: ComandaPrintData, config: PrintConfig)
     printedAny = true;
     b.bold(true).line(area.name.toUpperCase()).bold(false);
     for (const item of groupItems(area.items, config.paperSavingMode)) {
-      b.bold(true).size(2, 2);
-      for (const l of wrapWords(`${item.qty} ${item.name.toUpperCase()}`, bigWidth, "  ")) b.line(l);
+      b.size(small ? 1 : 2, 2);
+      for (const l of wrapWords(`${item.qty} ${item.name.toUpperCase()}`, itemWidth, "  ")) b.line(l);
       b.size(1, 2);
       if (item.note) for (const l of wrapWords(`> ${item.note}`, width - 2, "  ")) b.line(`  ${l}`);
-      b.size(1, 1).bold(false);
+      b.size(1, 1);
     }
     b.feed(1);
   }
   if (!printedAny) b.align("center").line("Sin productos enviados").align("left");
 
   if (data.notes) {
-    b.hr(width).bold(true).size(1, 2).line("NOTAS:");
+    b.hr(width).bold(true).line("NOTAS:").bold(false).size(1, 2);
     for (const l of wrapWords(data.notes, width)) b.line(l);
-    b.size(1, 1).bold(false);
+    b.size(1, 1);
   }
 
   b.cut();
