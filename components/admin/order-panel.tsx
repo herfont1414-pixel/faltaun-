@@ -396,7 +396,6 @@ export function OrderPanel({
             <PaymentPicker
               total={order.total}
               hint={order.paymentHint}
-              loyaltyDefault={order.customerPhone}
               onCancel={() => setShowPayment(false)}
               onConfirm={(payments, customerId, loyaltyPhone) => {
                 setShowPayment(false);

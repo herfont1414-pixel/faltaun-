@@ -13,8 +13,6 @@ interface PaymentPickerProps {
   onPartial: () => void;
   // Lo que el cliente dijo al pedir por la web: precarga el medio y, en efectivo, con cuánto paga.
   hint?: { method: "efectivo" | "transferencia"; cashGiven: number | null } | null;
-  // Teléfono del cliente que ya trae el pedido (web, delivery, WhatsApp): el sello va ahí.
-  loyaltyDefault?: string | null;
 }
 
 const METHODS: { value: PaymentMethod; label: string }[] = [
@@ -43,7 +41,7 @@ function amountToString(cents: number) {
   return cents > 0 ? String(fromCents(cents)) : "";
 }
 
-export function PaymentPicker({ total, onCancel, onConfirm, onPartial, hint, loyaltyDefault }: PaymentPickerProps) {
+export function PaymentPicker({ total, onCancel, onConfirm, onPartial, hint }: PaymentPickerProps) {
   const [lines, setLines] = useState<Line[]>([
     {
       key: "0",
@@ -60,7 +58,7 @@ export function PaymentPicker({ total, onCancel, onConfirm, onPartial, hint, loy
   const [results, setResults] = useState<Customer[]>([]);
   const [selected, setSelected] = useState<Customer | null>(null);
   const [searching, setSearching] = useState(false);
-  const [loyaltyPhone, setLoyaltyPhone] = useState(loyaltyDefault?.trim() ?? "");
+  const [loyaltyPhone, setLoyaltyPhone] = useState("");
   const [partial, setPartial] = useState(false);
 
   async function search(value: string) {
@@ -336,11 +334,6 @@ export function PaymentPicker({ total, onCancel, onConfirm, onPartial, hint, loy
           )}
 
           <div style={{ marginBottom: 10 }}>
-            {loyaltyDefault?.trim() && (
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-dim)", marginBottom: 4 }}>
-                Sello de fidelidad para el teléfono del pedido
-              </div>
-            )}
             <input
               value={loyaltyPhone}
               onChange={(e) => setLoyaltyPhone(e.target.value)}

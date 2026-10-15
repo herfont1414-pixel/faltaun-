@@ -22,20 +22,7 @@ export async function POST(request: NextRequest) {
       "select id, customer_phone, customer_name from gestion_web_orders where order_id = $1",
       [orderId]
     );
-    // Pedidos cargados en el panel con datos del cliente (delivery, WhatsApp): si en el cobro
-    // no se escribió otro teléfono, el sello va al teléfono del pedido (con 8 dígitos o más,
-    // para no crear tarjetas con números incompletos). Así el primer pedido ya le arma la
-    // tarjeta al cliente, con su nombre, sin que tenga que registrarse antes.
-    const { rows: ord } = await getPool().query<{ customer_phone: string | null; customer_name: string | null }>(
-      "select customer_phone, customer_name from gestion_orders where id = $1",
-      [orderId]
-    );
-    const orderPhone = ord[0]?.customer_phone?.trim() || "";
-    const stampPhone =
-      loyaltyPhone?.trim() ||
-      web[0]?.customer_phone?.trim() ||
-      (orderPhone.replace(/\D/g, "").length >= 8 ? orderPhone : null);
-    const stampName = web[0]?.customer_name ?? ord[0]?.customer_name ?? null;
+    const stampPhone = loyaltyPhone?.trim() || web[0]?.customer_phone?.trim() || null;
     const stampKey = web[0]?.id ?? orderId;
 
     let result;
@@ -57,7 +44,7 @@ export async function POST(request: NextRequest) {
         const account = await addStamp(stampPhone, stampKey, {
           orderTotal: result.total,
           origin: web[0] ? "web" : result.origin,
-          name: stampName,
+          name: web[0]?.customer_name ?? null,
           userId: actor.id,
         });
         loyalty = account.stamp;
