@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { noteQuery } from "@/lib/admin/read-cache";
 
 export interface QueryResult<T = any> {
   rows: T[];
@@ -20,7 +21,7 @@ export interface Db extends DbClient {
 
 export type DbMode = "postgres" | "sqlite" | "none";
 
-const globalForDb = globalThis as unknown as { __adminDb?: Db };
+const globalForDb = globalThis as unknown as { __adminDb?: Db; __adminDbTracked?: { raw: Db; tracked: Db } };
 
 function isRunningOnVercel() {
   return Boolean(process.env.VERCEL);
@@ -36,7 +37,41 @@ export function isDbConfigured() {
   return getDbMode() !== "none";
 }
 
+// Envuelve la base para avisarle a la caché de lecturas (read-cache.ts) de cada escritura,
+// también las hechas dentro de una transacción (cliente de connect()).
+function trackWrites(db: Db): Db {
+  const wrapQuery = (target: any) => async (sql: string, params?: unknown[]) => {
+    const result = await target.query(sql, params);
+    noteQuery(sql);
+    return result;
+  };
+  const wrapClient = (client: any) =>
+    new Proxy(client, {
+      get(target, prop) {
+        if (prop === "query") return wrapQuery(target);
+        const value = target[prop];
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+  return new Proxy(db as any, {
+    get(target, prop) {
+      if (prop === "query") return wrapQuery(target);
+      if (prop === "connect") return async () => wrapClient(await target.connect());
+      const value = target[prop];
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as Db;
+}
+
 export function getPool(): Db {
+  const raw = getRawPool();
+  if (globalForDb.__adminDbTracked?.raw !== raw) {
+    globalForDb.__adminDbTracked = { raw, tracked: trackWrites(raw) };
+  }
+  return globalForDb.__adminDbTracked.tracked;
+}
+
+function getRawPool(): Db {
   if (globalForDb.__adminDb) return globalForDb.__adminDb;
 
   const mode = getDbMode();

@@ -40,6 +40,7 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
     let cancelled = false;
 
     async function poll() {
+      if (document.visibilityState !== "visible") return;
       const [pendingRes, recentRes] = await Promise.all([
         fetch("/api/admin/web-orders?status=pendiente").then((r) => r.json()),
         fetch("/api/admin/web-orders").then((r) => r.json()),
@@ -62,7 +63,7 @@ export function WebOrdersView({ onOpenOrder }: { onOpenOrder: (webOrderId: strin
     }
 
     poll();
-    const interval = setInterval(poll, 5000);
+    const interval = setInterval(poll, 10000);
     return () => {
       cancelled = true;
       clearInterval(interval);

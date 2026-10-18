@@ -103,7 +103,7 @@ export function OrderHistoryModal({ onClose }: { onClose: () => void }) {
   // Mientras el modal está abierto, el estado de los pedidos se refresca solo.
   useEffect(() => {
     if (!savedPhone) return;
-    const timer = setInterval(() => load(savedPhone, true), 15000);
+    const timer = setInterval(() => document.visibilityState === "visible" && load(savedPhone, true), 30000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedPhone]);

@@ -34,6 +34,7 @@ export function KdsBoard() {
     let cancelled = false;
 
     async function poll() {
+      if (document.visibilityState !== "visible") return;
       const data = await fetch("/api/admin/kitchen").then((r) => r.json());
       if (cancelled) return;
       const list: KitchenTicket[] = data.tickets ?? [];
@@ -49,7 +50,7 @@ export function KdsBoard() {
     }
 
     poll();
-    const interval = setInterval(poll, 4000);
+    const interval = setInterval(poll, 8000);
     return () => {
       cancelled = true;
       clearInterval(interval);

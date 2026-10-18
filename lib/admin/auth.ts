@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/admin/db";
+import { cached } from "@/lib/admin/read-cache";
 import type { DbClient } from "@/lib/admin/db";
 
 export const SESSION_COOKIE = "admin_session";
@@ -65,6 +66,12 @@ export async function findUserByPin(pin: string): Promise<AuthUser | null> {
 
 export async function getSessionUser(token: string | undefined): Promise<AuthUser | null> {
   if (!token) return null;
+  // Cada pedido al servidor valida la sesión: se recuerda unos segundos (se descarta al
+  // instante si cambian sesiones o usuarios: cierre de sesión, usuario desactivado…).
+  return cached(`session:${token}`, 20_000, ["gestion_sessions", "gestion_users"], () => loadSessionUser(token));
+}
+
+async function loadSessionUser(token: string): Promise<AuthUser | null> {
   const pool = getPool();
   const { rows } = await pool.query<{ id: number; name: string; role: Role }>(
     `select u.id, u.name, u.role
