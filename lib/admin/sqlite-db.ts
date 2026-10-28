@@ -102,6 +102,10 @@ export function createSqliteDb(): Db {
         ro.close();
       }
     },
+    // Copia consistente de la base (aunque se esté usando) a otro archivo: copias de seguridad.
+    async backupTo(destPath: string) {
+      await conn.backup(destPath);
+    },
     async connect() {
       const previous = lock;
       let releaseLock!: () => void;

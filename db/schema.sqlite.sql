@@ -453,3 +453,13 @@ create table if not exists gestion_rate_limits (
 );
 
 create index if not exists gestion_rate_limits_lookup_idx on gestion_rate_limits(bucket, subject, created_ms);
+
+-- Conexión PC <-> nube (lib/admin/sync.ts): las columnas pos_* de gestion_web_orders se agregan
+-- en seed.ts (ensureSqliteColumn). Bandeja de entrada de la nube:
+create table if not exists gestion_sync_inbox (
+  id integer primary key autoincrement,
+  kind text not null check (kind in ('web', 'reserva')),
+  ref_id text not null,
+  created_at text not null default (now()),
+  unique (kind, ref_id)
+);

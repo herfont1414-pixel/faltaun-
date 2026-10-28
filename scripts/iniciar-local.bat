@@ -83,11 +83,16 @@ goto :base_msg_fin
 echo [OK] Base de datos: la MISMA que Vercel
 :base_msg_fin
 
+rem ---------- 3c. Conexion con el menu online (nube): se pregunta una sola vez ----------
+if "%MADERO_FORCE_LOCAL%"=="1" goto :nube_fin
+if exist "scripts\configurar-nube.mjs" node "scripts\configurar-nube.mjs"
+:nube_fin
+
 rem ---------- 4. Armar la aplicacion (solo si hace falta) ----------
 set "NECESITA_BUILD=0"
 if not exist ".next\BUILD_ID" set "NECESITA_BUILD=1"
 if "%NECESITA_BUILD%"=="1" goto :build_decidido
-powershell -NoProfile -Command "$b=(Get-Item '.next\BUILD_ID').LastWriteTime; $n=Get-ChildItem app,components,lib,db,data,middleware.ts,package.json,next.config.mjs -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -gt $b } | Select-Object -First 1; if ($n) { exit 1 } else { exit 0 }"
+powershell -NoProfile -Command "$b=(Get-Item '.next\BUILD_ID').LastWriteTime; $n=Get-ChildItem app,components,lib,db,data,middleware.ts,package.json,next.config.mjs,.env.local -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -gt $b } | Select-Object -First 1; if ($n) { exit 1 } else { exit 0 }"
 if errorlevel 1 set "NECESITA_BUILD=1"
 :build_decidido
 if not "%NECESITA_BUILD%"=="1" goto :build_ok

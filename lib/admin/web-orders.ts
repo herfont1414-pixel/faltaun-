@@ -1,5 +1,6 @@
 import { getPool } from "@/lib/admin/db";
 import { cached } from "@/lib/admin/read-cache";
+import { insertWithInbox, isPcOnline } from "@/lib/admin/sync";
 import type { DbClient } from "@/lib/admin/db";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { quoteDelivery } from "@/lib/admin/delivery-quote";
@@ -74,6 +75,12 @@ export async function createWebOrder(input: {
   cashGiven?: number | null;
 }): Promise<WebOrder> {
   const pool = getPool();
+
+  // En la nube solo se pide comida con el local abierto (la PC conectada); el menú y las
+  // reservas se pueden usar siempre.
+  if (!(await isPcOnline(pool))) {
+    throw new Error("El local no está recibiendo pedidos por ahora. Podés ver el menú y reservar una mesa.");
+  }
 
   // Solo existen efectivo y transferencia (el link de pago no se usa). La
   // transferencia exige que el local haya cargado su alias, para que el
@@ -189,7 +196,9 @@ export async function createWebOrder(input: {
     [input.customerPhone, input.customerName, input.customerAddress]
   );
 
-  const { rows } = await pool.query(
+  const rows = await insertWithInbox(
+    pool,
+    "web",
     `insert into gestion_web_orders
        (customer_name, customer_phone, customer_address, fulfillment, delivery_zone, shipping_cost, notes, items, total,
         delivery_lat, delivery_lng, payment_method, cash_given)
@@ -214,8 +223,10 @@ export async function createWebOrder(input: {
   return mapRow(rows[0]);
 }
 
-const WITH_ORDER = `select w.*, o.status as order_status, o.delivery_status as order_delivery_status,
-    o.kitchen_status as order_kitchen_status
+// En la nube no hay pedido real: el estado lo informa la PC (columnas pos_* de gestion_web_orders).
+const WITH_ORDER = `select w.*, coalesce(o.status, w.pos_order_status) as order_status,
+    coalesce(o.delivery_status, w.pos_delivery_status) as order_delivery_status,
+    coalesce(o.kitchen_status, w.pos_kitchen_status) as order_kitchen_status
   from gestion_web_orders w
   left join gestion_orders o on o.id = w.order_id`;
 

@@ -20,6 +20,8 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
   experimental: {
+    // Permite instrumentation.ts (tareas de fondo de la PC: copias de seguridad y conexión con la nube).
+    instrumentationHook: true,
     outputFileTracingIncludes: {
       "/**": ["./data/**/*", "./db/**/*"],
     },

@@ -50,6 +50,8 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
   const { items, changeQty, setNote, total, clear, fulfillment, setFulfillment, scheduledTime } = useCart();
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const businessConfig = useBusinessConfig();
+  // La nube avisa si el local (la PC) está conectado; una versión vieja del servidor no manda el dato: abierto.
+  const ordersClosed = businessConfig?.ordersOpen === false;
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -545,13 +547,19 @@ export function CheckoutPanel({ onClose }: CheckoutPanelProps) {
 
           {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
+          {ordersClosed && (
+            <p className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              Ahora el local no está recibiendo pedidos. Podés ver el menú y reservar una mesa; los pedidos se abren cuando el local está atendiendo.
+            </p>
+          )}
+
           <button
             type="button"
             onClick={submit}
-            disabled={loading}
+            disabled={loading || ordersClosed}
             className="mt-4 w-full rounded-full bg-ember px-5 py-2.5 text-sm font-medium text-base transition hover:bg-ember-soft disabled:opacity-50"
           >
-            {loading ? "Enviando..." : "Enviar pedido"}
+            {loading ? "Enviando..." : ordersClosed ? "Local cerrado por ahora" : "Enviar pedido"}
           </button>
         </>
       )}

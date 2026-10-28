@@ -7,6 +7,7 @@ import { ContactFooter } from "@/components/menu/contact-footer";
 import { MenuExperience } from "@/components/menu/menu-experience";
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { getMenuHighlights, getMenuItems } from "@/lib/menu";
+import { isCloudRole } from "@/lib/admin/role";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,13 @@ export default async function HomePage() {
         <DeliveryToggleCard />
         <LoyaltyBanner />
         <div className="mt-2">
-          <MenuExperience items={items} highlights={highlights} />
+          {items.length === 0 && isCloudRole() ? (
+            <p className="mx-auto max-w-xl px-5 py-12 text-center text-sm text-stone-400">
+              Estamos actualizando el menú. Volvé a entrar en unos minutos; mientras tanto podés reservar una mesa.
+            </p>
+          ) : (
+            <MenuExperience items={items} highlights={highlights} />
+          )}
         </div>
         <div className="mx-auto max-w-3xl">
           <ReservationForm />

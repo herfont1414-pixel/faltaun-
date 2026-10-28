@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { isDbConfigured } from "@/lib/admin/db";
+import { getPool, isDbConfigured } from "@/lib/admin/db";
+import { isPcOnline } from "@/lib/admin/sync";
 import { ensureSeeded } from "@/lib/admin/seed";
 import { getBusinessConfig } from "@/lib/admin/business-config";
 
@@ -23,6 +24,7 @@ export async function GET() {
       whatsappNumber: config.whatsappNumber,
       transferAlias: config.transferAlias,
       transferHolder: config.transferHolder,
+      ordersOpen: await isPcOnline(getPool()),
     },
   });
 }

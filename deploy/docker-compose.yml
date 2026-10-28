@@ -36,6 +36,9 @@ services:
     environment:
       DATABASE_URL: postgres://${DB_USUARIO:-maderosys}:${DB_CLAVE}@db:5432/${DB_NOMBRE:-maderosys}
       DATABASE_SSL: "off"
+      # Modo "nube": solo menú online, reservas y pedidos web; la PC del local es el sistema (ver LEEME-SERVIDOR.md).
+      MADERO_ROL: ${MADERO_ROL:-}
+      SYNC_TOKEN: ${SYNC_TOKEN:-}
       # PIN del primer usuario administrador: solo se usa si la base todavía no tiene usuarios.
       ADMIN_PIN: ${ADMIN_PIN:-}
       # "false" solo para probar por http:// antes de tener la dirección con candado.
