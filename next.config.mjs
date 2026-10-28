@@ -25,6 +25,16 @@ const nextConfig = {
     },
     serverComponentsExternalPackages: ["better-sqlite3"],
   },
+  // SQLite solo se usa en la PC del local (modo sin internet). El servidor Docker no lo instala:
+  // se deja como módulo externo para que la compilación no lo busque (si no está instalado,
+  // solo falla al intentar abrir una base SQLite, que ahí nunca ocurre).
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      const externals = Array.isArray(config.externals) ? config.externals : [config.externals].filter(Boolean);
+      config.externals = [...externals, { "better-sqlite3": "commonjs better-sqlite3" }];
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

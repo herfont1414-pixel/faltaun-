@@ -1,0 +1,13 @@
+# Caddy: da el candado HTTPS automático (certificado gratuito de Let's Encrypt) y pasa el
+# tráfico a la aplicación. DOMINIO viene del archivo .env (ej: madero.midominio.com.ar).
+# Con DOMINIO=:80 funciona por http:// (solo para pruebas dentro de la red).
+{$DOMINIO} {
+	encode gzip
+
+	reverse_proxy app:3000 {
+		# La aplicación limita los intentos de PIN y los pedidos por conexión usando estas
+		# cabeceras: se pisan con la dirección real para que nadie pueda falsearlas.
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+	}
+}

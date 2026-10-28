@@ -27,6 +27,22 @@ function isRunningOnVercel() {
   return Boolean(process.env.VERCEL);
 }
 
+// Conexión cifrada (SSL) según dónde esté la base: las bases en la nube la exigen; la que corre en
+// el mismo servidor (Docker: host "db", o localhost) no la ofrece. Se puede forzar con
+// DATABASE_SSL=on|off. Una dirección con ?sslmode=... se respeta tal cual (la maneja pg).
+export function sslOptionFor(url: string, override = process.env.DATABASE_SSL): false | { rejectUnauthorized: false } {
+  if (override && /^(off|false|0|no|disable)$/i.test(override.trim())) return false;
+  if (override && /^(on|true|1|yes|require)$/i.test(override.trim())) return { rejectUnauthorized: false };
+  let host = "";
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    host = url.includes("localhost") ? "localhost" : "";
+  }
+  if (["localhost", "127.0.0.1", "::1", "db", "postgres"].includes(host)) return false;
+  return { rejectUnauthorized: false };
+}
+
 export function getDbMode(): DbMode {
   if (process.env.DATABASE_URL) return "postgres";
   if (isRunningOnVercel()) return "none";
@@ -79,7 +95,7 @@ function getRawPool(): Db {
     const url = process.env.DATABASE_URL!;
     globalForDb.__adminDb = new Pool({
       connectionString: url,
-      ssl: url.includes("localhost") ? false : { rejectUnauthorized: false },
+      ssl: sslOptionFor(url),
     }) as unknown as Db;
   } else if (mode === "sqlite") {
     // Cargado dinámicamente: better-sqlite3 es una dependencia opcional que

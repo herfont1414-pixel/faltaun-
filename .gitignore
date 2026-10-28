@@ -16,3 +16,5 @@ next-env.d.ts
 .needs-install
 .sin-inicio-automatico
 .acceso-directo-creado
+deploy/backups/
+deploy/.env

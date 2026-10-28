@@ -1,0 +1,70 @@
+# MaderoSys en un servidor propio: la aplicación + la base PostgreSQL + el candado HTTPS (Caddy).
+# Se usa desde esta carpeta (deploy/):   docker compose up -d --build
+# Todos los valores salen del archivo .env (copiar .env.ejemplo a .env y completarlo).
+name: maderosys
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USUARIO:-maderosys}
+      POSTGRES_PASSWORD: ${DB_CLAVE:?Falta DB_CLAVE en el archivo .env}
+      POSTGRES_DB: ${DB_NOMBRE:-maderosys}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Solo accesible desde el propio servidor (copias de seguridad, mantenimiento).
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-servidor}
+        NEXT_PUBLIC_MENU_URL: ${MENU_URL:-}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${DB_USUARIO:-maderosys}:${DB_CLAVE}@db:5432/${DB_NOMBRE:-maderosys}
+      DATABASE_SSL: "off"
+      # PIN del primer usuario administrador: solo se usa si la base todavía no tiene usuarios.
+      ADMIN_PIN: ${ADMIN_PIN:-}
+      # "false" solo para probar por http:// antes de tener la dirección con candado.
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/admin/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO: ${DOMINIO:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

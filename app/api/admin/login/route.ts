@@ -45,7 +45,9 @@ export async function POST(request: NextRequest) {
   response.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // Solo se manda por HTTPS (la web y el panel van siempre con candado). COOKIE_SECURE=false
+    // permite probar un servidor nuevo por http:// antes de tener la dirección definitiva.
+    secure: process.env.NODE_ENV === "production" && !/^(false|0|no|off)$/i.test(process.env.COOKIE_SECURE ?? ""),
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
