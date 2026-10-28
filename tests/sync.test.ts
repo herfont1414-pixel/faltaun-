@@ -297,3 +297,18 @@ describe("la nube no tiene panel", () => {
     expect(middleware(new NextRequest("http://localhost/api/admin/state")).status).toBe(401);
   });
 });
+
+describe("la nube sin menú todavía", () => {
+  it("no muestra el menú de ejemplo: queda vacío hasta que la PC lo mande", async () => {
+    const empty = await makeDb("vacia", "nube");
+    rawCloud = empty.raw;
+    expect(await onCloud(() => getMenuItems())).toEqual([]);
+    // En la PC / instalación completa, sin productos cargados, sigue el menú de ejemplo.
+    const full = await makeDb("completa", "pc");
+    await full.db.query("delete from gestion_products");
+    await full.db.query("delete from gestion_categories");
+    resetReadCache();
+    rawPc = full.raw;
+    expect((await onPc(() => getMenuItems())).length).toBeGreaterThan(0);
+  });
+});

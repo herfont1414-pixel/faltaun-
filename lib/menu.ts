@@ -32,7 +32,8 @@ export async function getMenuItems(): Promise<MenuItem[]> {
 
     // Sin productos cargados todavía: menú de ejemplo. Si hay productos pero ninguno
     // está disponible (todos ocultos o agotados), el menú queda vacío a propósito.
-    if (rows.length === 0) return sampleMenu.filter((i) => i.inStock);
+    // (En la nube, antes de que la PC mande el menú, no se muestra uno inventado: queda vacío.)
+    if (rows.length === 0) return isCloudRole() ? [] : sampleMenu.filter((i) => i.inStock);
 
     // Solo se ofrece lo habilitado para el menú online y con existencias; lo demás
     // sigue en el sistema (admin, informes, historial) pero no se muestra.
@@ -51,7 +52,7 @@ export async function getMenuItems(): Promise<MenuItem[]> {
         inStock: true,
       }));
   } catch {
-    return sampleMenu.filter((i) => i.inStock);
+    return isCloudRole() ? [] : sampleMenu.filter((i) => i.inStock);
   }
 }
 
