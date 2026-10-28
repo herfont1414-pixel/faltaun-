@@ -11,6 +11,13 @@ const SESSION_COOKIE = "admin_session";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // En la nube (MADERO_ROL=nube) no hay panel: todo se maneja desde la PC del local.
+  if ((process.env.MADERO_ROL ?? "").trim().toLowerCase() === "nube") {
+    if (pathname.startsWith("/api/admin")) return NextResponse.json({ error: "No disponible" }, { status: 404 });
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   const isLoginPage = pathname === "/admin/login";
   const isLoginApi = pathname === "/api/admin/login";
 

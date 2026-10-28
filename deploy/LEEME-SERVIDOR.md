@@ -131,3 +131,37 @@ Si el servidor se reinicia, los contenedores arrancan solos (`restart: unless-st
 La impresión **directa** (sin ventana, para la térmica USB) hoy la hace el programa que corre en la PC de la caja (Windows). Con el servidor en
 otra máquina, la caja entra al panel por el navegador y la comanda se imprime con el diálogo normal del navegador hasta que se agregue
 un "agente de impresión" (pendiente de desarrollo). Esto **no** afecta al servidor.
+
+## 10. Modo nube: este servidor solo como menú online (la PC del local es el sistema)
+
+Hay dos formas de usar este paquete:
+
+- **Sistema completo** (todo lo anterior): la caja, las mesas y el menú online corren acá.
+- **Modo nube**: acá corre solo la parte pública (menú online, reservas, pedidos web, tarjeta de fidelidad). El sistema de verdad
+  (caja, mesas, stock, impresión) corre en la PC del local con su propia base, y las dos se hablan por internet.
+  Sirve si la PC está siempre prendida cuando el local trabaja y se quiere que el menú se vea aunque la PC esté apagada.
+
+Para el modo nube, en `.env` se completa además:
+
+```
+MADERO_ROL=nube
+SYNC_TOKEN=<clave larga al azar: openssl rand -hex 24>
+```
+
+(`ADMIN_PIN` no hace falta.) En este modo **no existe el panel**: `/admin` redirige al menú y `/api/admin` no responde.
+Lo único "de administración" es `/api/sync`, donde la PC se presenta con `SYNC_TOKEN` (con límite de intentos).
+
+**Qué pasa:**
+- La PC (cada ~30 s mientras está prendida) manda el menú, precios, stock, zonas de envío, datos del local, reglas y cuentas de fidelidad,
+  y baja los pedidos web y reservas nuevos. Solo viaja lo que cambió.
+- **PC apagada o sin internet:** el menú se sigue viendo y se pueden dejar reservas (quedan guardadas hasta que la PC vuelva);
+  no se aceptan pedidos de comida ("el local no está recibiendo pedidos"). La nube considera a la PC desconectada si pasan 2 minutos sin hablar.
+- La base de la nube es chica y casi no se usa: alcanza con cualquier PostgreSQL (incluida la del propio paquete).
+
+**En la PC del local** (Windows): al abrir MaderoSys por primera vez después de actualizar, pregunta la dirección del menú online
+(`https://DOMINIO`) y la clave de conexión (`SYNC_TOKEN`) y prueba la conexión. Se puede repetir con `scripts\conectar-nube.bat`.
+Abajo del menú lateral del panel se ve "Menú online: al día" y "Copia de seguridad: hace X".
+
+**Copias de seguridad de la PC:** automáticas, cada 6 horas mientras está prendida, en la carpeta del usuario de Windows
+(`C:\Users\<usuario>\MaderoSys-Copias`); se conservan 30 días. Con `MADERO_COPIAS_EXTRA=D:\MaderoSys-Copias` en `.env.local` también se copian
+a un pendrive o a una carpeta sincronizada con la nube. Restaurar: cerrar MaderoSys y ejecutar `scripts\restaurar-copia.bat`.

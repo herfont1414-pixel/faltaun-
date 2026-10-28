@@ -1,3 +1,4 @@
+import { insertWithInbox } from "@/lib/admin/sync";
 import { getPool } from "@/lib/admin/db";
 import { recordAudit } from "@/lib/admin/auth";
 import { businessDayKey } from "@/lib/admin/business-day";
@@ -30,7 +31,10 @@ export async function createReservation(input: {
   notes: string | null;
 }): Promise<Reservation> {
   const pool = getPool();
-  const { rows } = await pool.query(
+  // En la nube la reserva también queda en la bandeja de entrada para que la PC la baje.
+  const rows = await insertWithInbox(
+    pool,
+    "reserva",
     `insert into gestion_reservations
        (customer_name, customer_phone, party_size, reservation_date, reservation_time, notes)
      values ($1, $2, $3, $4, $5, $6)

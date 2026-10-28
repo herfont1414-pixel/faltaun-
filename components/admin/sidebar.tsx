@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Home,
   LayoutGrid,
@@ -26,6 +27,58 @@ import {
 } from "lucide-react";
 import { BrandLogo } from "@/components/admin/brand-logo";
 import type { Section } from "@/lib/admin/client-types";
+
+interface ConnectionStatus {
+  sync: { enabled: boolean; lastOkAt: number | null; lastError: string | null };
+  backup: { enabled: boolean; lastAt: number | null; lastError: string | null; extraError: string | null };
+}
+
+const ago = (ms: number | null) => {
+  if (!ms) return "nunca";
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (s < 90) return "recién";
+  if (s < 3600) return `hace ${Math.round(s / 60)} min`;
+  if (s < 86_400) return `hace ${Math.round(s / 3600)} h`;
+  return `hace ${Math.round(s / 86_400)} días`;
+};
+
+// Estado de la conexión con la nube y de las copias de seguridad (solo si están activadas en esta PC).
+function ConnectionInfo() {
+  const [status, setStatus] = useState<ConnectionStatus | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      document.visibilityState === "visible" &&
+      fetch("/api/admin/sync-status", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => alive && d && setStatus(d))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+  if (!status || (!status.sync.enabled && !status.backup.enabled)) return null;
+  const syncBad = status.sync.enabled && (status.sync.lastError || !status.sync.lastOkAt);
+  const backupBad = status.backup.enabled && (status.backup.lastError || status.backup.extraError);
+  return (
+    <div className="px-4 pt-2 text-[11px] leading-relaxed text-slate-500">
+      {status.sync.enabled && (
+        <div title={status.sync.lastError ?? "El menú online está al día con este sistema"}>
+          <span className={syncBad ? "text-amber-400" : "text-emerald-400"}>●</span> Menú online:{" "}
+          {syncBad ? "sin conexión" : `al día (${ago(status.sync.lastOkAt)})`}
+        </div>
+      )}
+      {status.backup.enabled && (
+        <div title={status.backup.lastError ?? status.backup.extraError ?? "Copia de seguridad automática de los datos"}>
+          <span className={backupBad ? "text-amber-400" : "text-emerald-400"}>●</span> Copia de seguridad: {ago(status.backup.lastAt)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface NavItem {
   label: string;
@@ -150,6 +203,7 @@ export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile, 
             </div>
           ))}
         </nav>
+        <ConnectionInfo />
         <div suppressHydrationWarning className="px-4 pb-4 pt-2 text-[11px] text-slate-500" title="Si la PC y la página muestran versiones distintas, la PC no se actualizó">
           Versión {process.env.NEXT_PUBLIC_APP_VERSION ?? "local"}
           {process.env.NEXT_PUBLIC_BUILD_TIME

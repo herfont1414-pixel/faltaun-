@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { getDbMode, getPool } from "@/lib/admin/db";
+import { isCloudRole } from "@/lib/admin/role";
 import type { DbClient } from "@/lib/admin/db";
 import { hashPin } from "@/lib/admin/auth";
 import { ensureDefaultRewards } from "@/lib/admin/loyalty";
@@ -242,6 +243,9 @@ let seededOnce = false;
 /** Solo para tests: fuerza a que ensureSeeded vuelva a verificar todo. */
 export function resetSeedCache() {
   seededOnce = false;
+  // También el esquema y los premios: otra base (tests con una PC y una nube) los necesita de nuevo.
+  schemaApplied = false;
+  rewardsSeeded = false;
 }
 
 export async function ensureSeeded() {
@@ -318,6 +322,9 @@ export async function ensureSeeded() {
         await ensureSqliteColumn(client, "gestion_orders", "notes", "text");
         await ensureSqliteColumn(client, "gestion_order_items", "note", "text");
         await ensureSqliteColumn(client, "gestion_order_items", "comanda_printed_qty", "int not null default 0");
+        await ensureSqliteColumn(client, "gestion_web_orders", "pos_order_status", "text");
+        await ensureSqliteColumn(client, "gestion_web_orders", "pos_delivery_status", "text");
+        await ensureSqliteColumn(client, "gestion_web_orders", "pos_kitchen_status", "text");
         await ensureSqliteColumn(client, "gestion_business_config", "logo_url", "text");
         await ensureSqliteColumn(client, "gestion_print_config", "direct_print_enabled", "boolean not null default 0");
         await ensureSqliteColumn(client, "gestion_print_config", "printer_name", "text");
@@ -364,6 +371,12 @@ export async function ensureSeeded() {
       schemaApplied = true;
     }
 
+    // En la nube el menú, los precios y la fidelidad vienen de la PC (sync.ts): no se carga nada
+    // desde los archivos ni se crean mesas, usuarios o premios propios.
+    if (isCloudRole()) {
+      seededOnce = true;
+      return;
+    }
     await syncCatalog(client);
     await addMissingFudoProducts(client);
     await syncIngredients(client);

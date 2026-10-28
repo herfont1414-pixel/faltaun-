@@ -9,6 +9,8 @@ export interface PublicBusinessConfig {
   whatsappNumber: string;
   transferAlias: string;
   transferHolder: string;
+  // false = el local no está recibiendo pedidos web (en la nube, cuando la PC no está conectada).
+  ordersOpen?: boolean;
 }
 
 export function useBusinessConfig() {

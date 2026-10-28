@@ -17,6 +17,8 @@ export interface Db extends DbClient {
   // Solo SQLite: abre una conexión aparte en modo solo lectura (el motor rechaza
   // cualquier escritura). En PostgreSQL se usa una transacción "read only".
   readOnly?<T>(fn: (query: ReadOnlyQuery) => Promise<T>): Promise<T>;
+  // Solo SQLite: copia consistente de la base a un archivo (copias de seguridad de la PC).
+  backupTo?(destPath: string): Promise<void>;
 }
 
 export type DbMode = "postgres" | "sqlite" | "none";

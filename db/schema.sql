@@ -623,3 +623,18 @@ alter table gestion_reservations add column if not exists table_number int;
 alter table gestion_reservations add column if not exists source text not null default 'web';
 alter table gestion_reservations add column if not exists created_by int;
 create index if not exists gestion_reservations_date_idx on gestion_reservations(reservation_date);
+
+-- Conexión PC <-> nube (lib/admin/sync.ts). En la nube, el estado del pedido que la PC va
+-- informando (no hay pedido real ni cocina en la nube) y la bandeja de entrada: pedidos web y
+-- reservas que entraron y la PC todavía no bajó.
+alter table gestion_web_orders add column if not exists pos_order_status text;
+alter table gestion_web_orders add column if not exists pos_delivery_status text;
+alter table gestion_web_orders add column if not exists pos_kitchen_status text;
+
+create table if not exists gestion_sync_inbox (
+  id serial primary key,
+  kind text not null check (kind in ('web', 'reserva')),
+  ref_id text not null,
+  created_at timestamptz not null default now(),
+  unique (kind, ref_id)
+);

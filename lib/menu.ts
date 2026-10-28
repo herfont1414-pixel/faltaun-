@@ -1,5 +1,7 @@
 import { getPool, isDbConfigured } from "@/lib/admin/db";
+import type { DbClient } from "@/lib/admin/db";
 import { ensureSeeded } from "@/lib/admin/seed";
+import { isCloudRole } from "@/lib/admin/role";
 import { sampleMenu } from "@/lib/data/sample-menu";
 import { isOnlineAvailable } from "@/lib/menu-availability";
 import type { MenuItem } from "@/lib/types";
@@ -53,6 +55,31 @@ export async function getMenuItems(): Promise<MenuItem[]> {
   }
 }
 
+// Nombres de los productos más vendidos (de más a menos), según los últimos pedidos cobrados.
+export async function popularProductNames(db: DbClient = getPool()): Promise<string[]> {
+  const { rows: sold } = await db.query<{ product_name: string }>(
+    `select oi.product_name, sum(oi.qty) as total
+     from gestion_order_items oi
+     where oi.order_id in (
+       select id from gestion_orders where status = 'cerrada' order by closed_at desc limit ${POPULAR_WINDOW}
+     )
+     group by oi.product_name
+     order by sum(oi.qty) desc, oi.product_name
+     limit 30`
+  );
+  return sold.map((r) => r.product_name);
+}
+
+async function publishedPopularNames(): Promise<string[]> {
+  const { rows } = await getPool().query<{ value: string | null }>("select value from gestion_meta where key = 'menu_popular_names'");
+  try {
+    const parsed = JSON.parse(rows[0]?.value ?? "[]");
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
 // Destacados del menú público. Todo se calcula con datos que ya existen (ventas
 // cerradas y la tabla gestion_meta): sin cambios de esquema.
 export interface MenuHighlights {
@@ -77,18 +104,11 @@ export async function getMenuHighlights(items: MenuItem[]): Promise<MenuHighligh
     const pool = getPool();
     const byName = new Map(items.map((i) => [i.name, i]));
 
-    const { rows: sold } = await pool.query<{ product_name: string }>(
-      `select oi.product_name, sum(oi.qty) as total
-       from gestion_order_items oi
-       where oi.order_id in (
-         select id from gestion_orders where status = 'cerrada' order by closed_at desc limit ${POPULAR_WINDOW}
-       )
-       group by oi.product_name
-       order by sum(oi.qty) desc, oi.product_name
-       limit 30`
-    );
-    const ranked = sold
-      .map((r) => byName.get(r.product_name))
+    // En la PC se calcula con los pedidos cobrados; en la nube no hay pedidos: la PC manda el
+    // ranking ya armado (clave menu_popular_names de gestion_meta, ver sync.ts).
+    const soldNames = isCloudRole() ? await publishedPopularNames() : await popularProductNames();
+    const ranked = soldNames
+      .map((name) => byName.get(name))
       .filter((i): i is MenuItem => !!i && i.inStock && !EXTRA_NAME.test(i.name));
     const popularIds = ranked.length >= POPULAR_MIN ? ranked.slice(0, POPULAR_MAX).map((i) => i.id) : [];
 
