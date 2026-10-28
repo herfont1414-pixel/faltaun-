@@ -5,7 +5,7 @@
 // Con MaderoSys CERRADO:   node scripts/traer-datos-de-prisma.mjs        (o doble clic en
 // scripts\traer-datos-de-prisma.bat). La dirección de la base se toma de .env.local (DATABASE_URL,
 // como ya la usa esta PC); si no está, la pide por teclado (no se muestra ni se guarda en ningún lado).
-import { copyFileSync, existsSync, readFileSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import net from "node:net";
 import path from "node:path";
@@ -167,6 +167,19 @@ async function main() {
   for (const [t, n] of summary.filter(([, n]) => n > 0)) say(`  ${t.replace("gestion_", "")}: ${n}`);
   if (skipped.length) say(`\nTablas de la nube que esta version no tiene (no se copiaron): ${skipped.join(", ")}`);
   if (broken.length) say(`\nAviso: ${broken.length} filas apuntan a datos que no estan (se pueden ignorar si son referencias viejas).`);
+  // Desde ahora esta PC usa SIEMPRE su base local: la direccion de la nube queda guardada pero apagada
+  // (comentada) y se marca MADERO_BASE=local, asi ningun acceso vuelve a intentar con la base bloqueada.
+  const envFile = path.join(ROOT, ".env.local");
+  if (existsSync(envFile)) {
+    const lines = readFileSync(envFile, "utf8").split(/\r?\n/);
+    const out = lines.map((l) => (/^\s*DATABASE_URL\s*=/.test(l) ? l.replace(/^\s*DATABASE_URL/, "#DATABASE_URL_ANTERIOR") : l));
+    if (!out.some((l) => /^\s*MADERO_BASE\s*=/.test(l))) {
+      while (out.length && out[out.length - 1].trim() === "") out.pop();
+      out.push("MADERO_BASE=local");
+    }
+    writeFileSync(envFile, out.join("\n") + "\n", "utf8");
+    say("(La PC queda usando su base local; la direccion de la nube quedo desactivada en .env.local)");
+  }
   say("\n[OK] Listo. Los datos de la nube ya estan en esta PC. Abri MaderoSys.");
   say(`(La base anterior de esta PC quedo en ${DB_FILE}.antes-de-traer-datos)`);
 }

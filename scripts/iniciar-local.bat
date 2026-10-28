@@ -112,7 +112,7 @@ rem MADERO_AUTO=1 = arranque automatico al encender la PC: la ventana del servid
 set "VENTANA_MIN="
 if "%MADERO_AUTO%"=="1" set "VENTANA_MIN=/min "
 if "%MODO_BASE%"=="compartida" goto :iniciar_compartida
-start %VENTANA_MIN%"MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "set DATABASE_URL=&& npm start"
+start %VENTANA_MIN%"MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "set MADERO_FORCE_LOCAL=1&& npm start"
 goto :esperar_servidor
 :iniciar_compartida
 start %VENTANA_MIN%"MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "npm start"
