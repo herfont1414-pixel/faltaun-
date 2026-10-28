@@ -1,4 +1,5 @@
 import { getPool } from "@/lib/admin/db";
+import { cached } from "@/lib/admin/read-cache";
 import { ensureSeeded } from "@/lib/admin/seed";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { assertPaymentsCoverTotal, normalizePayments } from "@/lib/admin/payments";
@@ -24,6 +25,11 @@ function money(value: string | number) {
 }
 
 async function getCatalog(): Promise<Catalog> {
+  // El menú casi no cambia: se guarda un minuto (y se descarta al instante si se toca un producto).
+  return cached("catalog", 60_000, ["gestion_products", "gestion_categories"], loadCatalog);
+}
+
+async function loadCatalog(): Promise<Catalog> {
   const pool = getPool();
   const categories = await pool.query<{ id: number; name: string }>(
     "select id, name from gestion_categories order by sort_order"
@@ -88,6 +94,7 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
     price: string;
     qty: number;
     sent_to_kitchen: boolean;
+    comanda_printed_qty: number;
     note: string | null;
   }>(`select * from gestion_order_items where order_id in (${placeholders}) order by id`, ids);
 
@@ -100,6 +107,7 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
         price: money(it.price),
         qty: it.qty,
         sentToKitchen: it.sent_to_kitchen,
+        comandaPrintedQty: Number(it.comanda_printed_qty ?? 0),
         note: it.note ?? null,
       }));
     const shippingCost = money(o.shipping_cost ?? 0);
@@ -142,9 +150,18 @@ async function attachItems(orderRows: any[]): Promise<Order[]> {
 
 export async function getState(): Promise<AdminState> {
   await ensureSeeded();
-  const pool = getPool();
-  const [catalog, tables, openRows, closedRows] = await Promise.all([
+  // Mesas y pedidos se comparten unos segundos entre todas las pantallas abiertas (cada una
+  // pregunta cada pocos segundos); cualquier escritura en esas tablas lo descarta al instante.
+  const [catalog, core] = await Promise.all([
     getCatalog(),
+    cached("state-core", 4000, ["gestion_tables", "gestion_zones", "gestion_orders", "gestion_order_items"], loadStateCore),
+  ]);
+  return { catalog, ...core };
+}
+
+async function loadStateCore(): Promise<Omit<AdminState, "catalog">> {
+  const pool = getPool();
+  const [tables, openRows, closedRows] = await Promise.all([
     getTables(),
     pool.query(`
       select o.*, t.number as table_number
@@ -163,12 +180,12 @@ export async function getState(): Promise<AdminState> {
     `),
   ]);
 
-  const [openOrders, closedOrders] = await Promise.all([
-    attachItems(openRows.rows),
-    attachItems(closedRows.rows),
-  ]);
+  // Una sola consulta de productos para los pedidos abiertos y los cerrados.
+  const all = await attachItems([...openRows.rows, ...closedRows.rows]);
+  const openOrders = all.slice(0, openRows.rows.length);
+  const closedOrders = all.slice(openRows.rows.length);
 
-  return { catalog, tables, openOrders, closedOrders };
+  return { tables, openOrders, closedOrders };
 }
 
 async function getOrderRow(orderId: string) {
@@ -284,7 +301,12 @@ export async function setQty(orderId: string, itemId: string, delta: number) {
   const pool = getPool();
   if (delta > 0) await assertStockFor(orderId, { itemId }, delta);
   const { rows } = await pool.query(
-    "update gestion_order_items set qty = qty + $2 where id = $1 and order_id = $3 returning qty",
+    // Si se baja la cantidad, lo "ya impreso" no puede quedar por encima (si no, al volver a
+    // subirla no se imprimiría la unidad nueva). case en vez de least(): también vale en SQLite.
+    `update gestion_order_items
+       set qty = qty + $2,
+           comanda_printed_qty = case when comanda_printed_qty > qty + $2 then qty + $2 else comanda_printed_qty end
+     where id = $1 and order_id = $3 returning qty`,
     [itemId, delta, orderId]
   );
   if (rows[0] && rows[0].qty <= 0) {

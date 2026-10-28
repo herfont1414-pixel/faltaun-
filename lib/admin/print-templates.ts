@@ -111,6 +111,8 @@ export interface ComandaPrintData {
   takeAway?: boolean;
   openedAt: string;
   notes: string | null;
+  // Comanda de lo agregado a un pedido que ya había salido antes: lleva el rótulo AGREGADO.
+  addition?: boolean;
   areas: { name: string; items: { name: string; qty: number; note: string | null }[] }[];
 }
 
@@ -129,6 +131,7 @@ export function toComandaPrintData(order: PrintableOrder): ComandaPrintData {
     takeAway: order.takeAway,
     openedAt: order.openedAt,
     notes: kitchenNotes(order.notes),
+    addition: order.addition,
     areas: order.areas.map((name) => ({
       name,
       items: order.items
@@ -189,6 +192,7 @@ export function renderComandaHtml(data: ComandaPrintData, config: PrintConfig): 
 
   const body = `
     <div class="center" style="font-size:${fontPx(config.fontSizeHeader, 28, 24)}px;font-weight:800;line-height:1.2">${escapeHtml(origin)}</div>
+    ${data.addition ? `<div class="center" style="font-size:${noteSize}px;font-weight:800;margin-top:4px">** AGREGADO **</div>` : ""}
     <div class="body-text" style="margin-top:6px">${lines.map(escapeHtml).join("<br />")}</div>
     <hr />
     ${areasHtml || `<div class="center body-text">Sin productos enviados</div>`}

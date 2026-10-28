@@ -177,12 +177,20 @@ export function AdminApp() {
     }
   }
 
-  // Actualización automática: cada 5 s (solo con la pestaña visible) trae mesas, pedidos y
-  // los pedidos web pendientes, así lo que entra desde el celular o desde otra PC aparece sin
-  // refrescar la página. No interrumpe una acción en curso ni pisa un cambio recién hecho.
+  // Actualización automática (solo con la pestaña visible): trae mesas, pedidos y los pedidos
+  // web pendientes, así lo que entra desde el celular o desde otra PC aparece sin refrescar la
+  // página. No interrumpe una acción en curso ni pisa un cambio recién hecho.
+  // Cada consulta a la base cuenta en el plan de la nube, así que el ritmo se adapta: cada 8 s
+  // mientras hay movimiento y cada vez más espaciado (hasta 20 s) si la pantalla no cambia.
   useEffect(() => {
     let cancelled = false;
     let running = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let unchanged = 0;
+    let lastSignature = "";
+    let lastVersion = stateVersion.current;
+    const nextDelay = () => (unchanged >= 10 ? 20_000 : unchanged >= 4 ? 12_000 : 8_000);
+
     async function tick() {
       if (running || document.visibilityState !== "visible") return;
       running = true;
@@ -197,13 +205,17 @@ export function AdminApp() {
           goToLogin();
           return;
         }
+        let signature = "";
         if (stateRes?.ok) {
-          const state = (await stateRes.json()) as AdminStateResponse;
+          const text = await stateRes.text();
+          signature += text;
+          const state = JSON.parse(text) as AdminStateResponse;
           if (!cancelled && state?.catalog && busy.current === 0 && version === stateVersion.current) setData(state);
         }
         if (webRes.ok) {
           const { orders = [] } = (await webRes.json()) as { orders?: { id: string; customerName: string }[] };
           if (cancelled) return;
+          signature += "|" + orders.map((o) => o.id).join(",");
           setPendingWeb(orders.length);
           const seen = seenWebIds.current;
           const fresh = seen ? orders.find((o) => !seen.has(o.id)) : undefined;
@@ -214,19 +226,34 @@ export function AdminApp() {
           }
           seenWebIds.current = new Set(orders.map((o) => o.id));
         }
+        // ¿Hubo movimiento? (algo cambió en el servidor o el usuario hizo algo en la pantalla)
+        if (signature !== lastSignature || stateVersion.current !== lastVersion) unchanged = 0;
+        else unchanged += 1;
+        lastSignature = signature;
+        lastVersion = stateVersion.current;
       } catch {
         // Sin conexión por un momento: se reintenta en el próximo ciclo.
       } finally {
         running = false;
       }
     }
-    tick();
-    const interval = setInterval(tick, 5000);
-    const onVisible = () => document.visibilityState === "visible" && tick();
+
+    async function loop() {
+      await tick();
+      if (!cancelled) timer = setTimeout(loop, nextDelay());
+    }
+    loop();
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      // Al volver a la pestaña se actualiza enseguida y se retoma el ritmo normal.
+      unchanged = 0;
+      if (timer) clearTimeout(timer);
+      loop();
+    };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (timer) clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
@@ -383,13 +410,35 @@ export function AdminApp() {
       showToast("Agregá productos antes de enviar");
       return;
     }
+    // La comanda lleva solo lo nuevo; si todo ya salió impreso no se repite.
+    if (!order.items.some((it) => it.qty > it.comandaPrintedQty)) {
+      showToast("No hay productos nuevos desde la última comanda. Para sacarla completa tocá «Reimprimir comanda completa».");
+      return;
+    }
     const orderId = selectedOrderId;
     const state = await safeCall(() => postJson("/api/admin/send-kitchen", { orderId }));
     if (!state) return;
     applyState(state);
-    showToast("Comanda enviada a cocina");
     try {
-      await printOrderDocument("comanda", orderId);
+      const result = await printOrderDocument("comanda", orderId);
+      showToast(result === "printed" ? "Comanda enviada a cocina (solo lo nuevo)" : "No hay productos nuevos para imprimir");
+    } catch {
+      showToast("No se pudo imprimir la comanda");
+    }
+    reloadState(); // trae la marca de "ya impreso" de cada producto
+  }
+
+  // Saca de nuevo la comanda con TODO lo que ya se envió a cocina (por si se perdió o falló).
+  async function reprintComanda() {
+    if (!selectedOrderId) return;
+    const order = data?.openOrders.find((o) => o.id === selectedOrderId);
+    if (!order?.items.some((it) => it.sentToKitchen)) {
+      showToast("Todavía no se envió nada a cocina");
+      return;
+    }
+    try {
+      await printOrderDocument("comanda", selectedOrderId, { all: true });
+      showToast("Comanda completa reimpresa");
     } catch {
       showToast("No se pudo imprimir la comanda");
     }
@@ -544,7 +593,11 @@ export function AdminApp() {
       <div className="admin-root">
         <div className="placeholder-view">
           <div className="pv-title">No se pudo abrir el panel</div>
-          <div className="pv-sub">{loadError}. Actualizá la página; si sigue igual, revisá la conexión a internet.</div>
+          <div className="pv-sub">
+            {loadError.includes("límite")
+              ? `${loadError}.`
+              : `${loadError}. Actualizá la página; si sigue igual, revisá la conexión a internet.`}
+          </div>
         </div>
       </div>
     );
@@ -712,6 +765,7 @@ export function AdminApp() {
             onPrintTicket={() => currentOrder && printTicket(currentOrder.id)}
             onEditTable={() => setEditingTable(true)}
             onCancelOrder={canCancel ? cancelOrder : undefined}
+            onReprintComanda={reprintComanda}
           />
         </div>
       ) : section === "productos" ? (

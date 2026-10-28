@@ -1,6 +1,6 @@
 interface DirectPrintResponse {
   ok: boolean;
-  reason?: "not_configured" | "unsupported_platform" | "print_failed" | "unauthorized" | "bad_request";
+  reason?: "not_configured" | "unsupported_platform" | "print_failed" | "unauthorized" | "bad_request" | "nothing_new";
   detail?: string;
 }
 
@@ -11,12 +11,12 @@ interface DirectPrintResponse {
 // deploy de Vercel el endpoint contesta unsupported_platform.
 // Devuelve el motivo del fallo en vez de tragárselo, para poder decidir qué
 // hacer: ver printOrderDocument.
-async function printDirect(type: "comanda" | "ticket", orderId: string): Promise<DirectPrintResponse> {
+async function printDirect(type: "comanda" | "ticket", orderId: string, all: boolean): Promise<DirectPrintResponse> {
   try {
     const res = await fetch("/api/admin/print-direct", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, orderId }),
+      body: JSON.stringify({ type, orderId, all }),
     });
     const data = (await res.json().catch(() => null)) as DirectPrintResponse | null;
     if (data && typeof data.ok === "boolean") return data;
@@ -34,19 +34,30 @@ async function printDirect(type: "comanda" | "ticket", orderId: string): Promise
 //    (apagada, sin papel, nombre mal escrito), no se abre el diálogo del
 //    navegador por sorpresa en medio del servicio: se muestra el motivo y se
 //    pregunta si se quiere imprimir con el navegador.
-export async function printOrderDocument(type: "comanda" | "ticket", orderId: string) {
-  const direct = await printDirect(type, orderId);
-  if (direct.ok) return;
+//
+// La comanda imprime solo lo que todavía no salió ("Enviar a cocina" de nuevo no repite lo
+// anterior); con { all: true } se reimprime completa. Devuelve "nothing_new" si no había
+// productos nuevos (no se imprimió nada).
+export async function printOrderDocument(
+  type: "comanda" | "ticket",
+  orderId: string,
+  options: { all?: boolean } = {}
+): Promise<"printed" | "nothing_new"> {
+  const all = options.all === true;
+  const direct = await printDirect(type, orderId, all);
+  if (direct.ok) return "printed";
+  if (direct.reason === "nothing_new") return "nothing_new";
 
   if (direct.reason === "print_failed") {
     const motivo = direct.detail ? `\n\nMotivo: ${direct.detail}` : "";
     const useBrowser = window.confirm(
       `No se pudo imprimir directo en la impresora.${motivo}\n\n¿Querés imprimir con el navegador?`
     );
-    if (!useBrowser) return;
+    if (!useBrowser) return "printed";
   }
 
-  await printUrl(`/api/admin/print/${type}/${orderId}`);
+  const printed = await printUrl(`/api/admin/print/${type}/${orderId}${type === "comanda" && all ? "?all=1" : ""}`);
+  return printed ? "printed" : "nothing_new";
 }
 
 // Imprime una URL (que devuelve HTML listo para imprimir) con window.print()
@@ -55,9 +66,11 @@ export async function printOrderDocument(type: "comanda" | "ticket", orderId: st
 // el evento load dos veces (una sobre el iframe todavía vacío y otra con el
 // contenido), lo que abría dos diálogos de impresión seguidos, el primero
 // en blanco.
-export async function printUrl(url: string) {
+// Devuelve false si no había nada para imprimir (respuesta vacía, 204).
+export async function printUrl(url: string): Promise<boolean> {
   const res = await fetch(url);
   if (!res.ok) throw new Error("No se pudo generar la impresión");
+  if (res.status === 204) return false;
   const html = await res.text();
 
   const iframe = document.createElement("iframe");
@@ -88,6 +101,7 @@ export async function printUrl(url: string) {
 
   iframe.srcdoc = html;
   document.body.appendChild(iframe);
+  return true;
 }
 
 // "@page { size: 58mm auto }" no lo entiende Chrome, que entonces usa la hoja de largo fijo

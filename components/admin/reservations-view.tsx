@@ -202,10 +202,10 @@ export function ReservationsView({ tables = [] }: { tables?: TableRow[] }) {
   useEffect(() => {
     let cancelled = false;
     const tick = () => {
-      if (!cancelled) poll().catch(() => {});
+      if (!cancelled && document.visibilityState === "visible") poll().catch(() => {});
     };
     tick();
-    const interval = setInterval(tick, 5000);
+    const interval = setInterval(tick, 15000);
     return () => {
       cancelled = true;
       clearInterval(interval);

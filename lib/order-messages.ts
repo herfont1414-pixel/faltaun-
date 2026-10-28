@@ -6,7 +6,8 @@ function ars(amount: number) {
 }
 
 // Menú online público: ahí el cliente sigue su pedido (ícono "Mis pedidos").
-export const MENU_URL = "https://madero14.vercel.app";
+// (NEXT_PUBLIC_MENU_URL cambia la dirección cuando el menú pasa a otro servidor.)
+export const MENU_URL = process.env.NEXT_PUBLIC_MENU_URL?.replace(/\/+$/, "") || "https://madero14.vercel.app";
 
 // Referencia corta para el cliente, derivada del id del pedido (no hay un
 // número correlativo de pedidos web): los primeros 6 caracteres en mayúscula.

@@ -1,4 +1,5 @@
 import { getPool } from "@/lib/admin/db";
+import { cached } from "@/lib/admin/read-cache";
 import type { DbClient } from "@/lib/admin/db";
 import { recordStockMovement } from "@/lib/admin/stock-movements";
 import { quoteDelivery } from "@/lib/admin/delivery-quote";
@@ -228,6 +229,12 @@ export async function listWebOrdersByPhone(phone: string, limit = 15): Promise<W
 }
 
 export async function listWebOrders(status?: WebOrderStatus): Promise<WebOrder[]> {
+  // Lo piden todas las pantallas abiertas cada pocos segundos: se comparte por unos segundos
+  // (se descarta solo apenas alguien escribe en pedidos web o pedidos).
+  return cached(`web-orders:${status ?? "all"}`, 4000, ["gestion_web_orders", "gestion_orders"], () => loadWebOrders(status));
+}
+
+async function loadWebOrders(status?: WebOrderStatus): Promise<WebOrder[]> {
   const pool = getPool();
   const base = WITH_ORDER;
   const { rows } = status

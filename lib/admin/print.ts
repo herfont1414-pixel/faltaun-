@@ -1,6 +1,9 @@
 import { getPool } from "@/lib/admin/db";
 
 export interface PrintableItem {
+  id: string;
+  // Unidades que salen en esta comanda (en "solo lo nuevo", lo que falta imprimir de la línea).
+  // `qty` ya es esa cantidad.
   name: string;
   qty: number;
   category: string;
@@ -21,6 +24,8 @@ export interface PrintableOrder {
   notes: string | null;
   items: PrintableItem[];
   areas: string[];
+  // Comanda de lo agregado: el pedido ya tenía productos impresos antes.
+  addition: boolean;
 }
 
 // Si el producto no tiene un área de impresión asignada en Productos, se
@@ -31,7 +36,10 @@ function fallbackArea(category: string) {
   return category === "Bebidas" ? "Barra" : "Cocina";
 }
 
-export async function getPrintableOrder(orderId: string): Promise<PrintableOrder> {
+// Por defecto devuelve solo lo enviado a cocina que todavía no salió en una comanda
+// (por línea: las unidades que faltan imprimir, así "1 papas más" sale como 1 y no como el
+// total); con { all: true } devuelve todo lo enviado (reimpresión completa).
+export async function getPrintableOrder(orderId: string, options: { all?: boolean } = {}): Promise<PrintableOrder> {
   const pool = getPool();
   const { rows: orderRows } = await pool.query(
     `select o.id, o.origin, o.opened_at, o.notes, o.is_delivery, o.customer_name, o.party_size, o.waiter,
@@ -45,7 +53,7 @@ export async function getPrintableOrder(orderId: string): Promise<PrintableOrder
   const orderRow = orderRows[0];
 
   const { rows: itemRows } = await pool.query(
-    `select oi.product_name, oi.qty, oi.note, c.name as category_name, pa.nombre as area_name
+    `select oi.id, oi.product_name, oi.qty, oi.note, oi.comanda_printed_qty, c.name as category_name, pa.nombre as area_name
      from gestion_order_items oi
      join gestion_products p on p.name = oi.product_name
      join gestion_categories c on c.id = p.category_id
@@ -55,9 +63,13 @@ export async function getPrintableOrder(orderId: string): Promise<PrintableOrder
     [orderId]
   );
 
-  const items: PrintableItem[] = itemRows.map((r) => ({
+  const pending = (r: { qty: number; comanda_printed_qty: number | null }) => Math.max(0, Number(r.qty) - Number(r.comanda_printed_qty ?? 0));
+  const wanted = options.all ? itemRows : itemRows.filter((r) => pending(r) > 0);
+  const addition = !options.all && itemRows.some((r) => Number(r.comanda_printed_qty ?? 0) > 0) && wanted.length > 0;
+  const items: PrintableItem[] = wanted.map((r) => ({
+    id: String(r.id),
     name: r.product_name,
-    qty: r.qty,
+    qty: options.all ? Number(r.qty) : pending(r),
     category: r.category_name,
     area: r.area_name ?? fallbackArea(r.category_name),
     note: r.note ?? null,
@@ -75,7 +87,21 @@ export async function getPrintableOrder(orderId: string): Promise<PrintableOrder
     notes: orderRow.notes ?? null,
     items,
     areas: [...new Set(items.map((it) => it.area))],
+    addition,
   };
+}
+
+// Marca como impresas las unidades que acaban de salir en una comanda (solo esas: si mientras
+// se imprimía se agregó otra, queda pendiente para la próxima). Nunca pasa del total de la línea.
+export async function markComandaPrinted(orderId: string, printed: { id: string; qty: number }[]) {
+  for (const p of printed) {
+    await getPool().query(
+      `update gestion_order_items
+         set comanda_printed_qty = case when comanda_printed_qty + $3 > qty then qty else comanda_printed_qty + $3 end
+       where order_id = $1 and id = $2`,
+      [orderId, p.id, p.qty]
+    );
+  }
 }
 
 export interface PrintableTicket {

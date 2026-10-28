@@ -1,7 +1,13 @@
 import { getPool } from "@/lib/admin/db";
+import { cached } from "@/lib/admin/read-cache";
 import type { KitchenSource, KitchenStatus, KitchenTicket } from "@/lib/admin/types";
 
 export async function getKitchenTickets(): Promise<KitchenTicket[]> {
+  // La pantalla de cocina consulta cada pocos segundos: varias pantallas comparten la lectura.
+  return cached("kitchen", 3000, ["gestion_orders", "gestion_order_items", "gestion_tables", "gestion_web_orders"], loadKitchenTickets);
+}
+
+async function loadKitchenTickets(): Promise<KitchenTicket[]> {
   const pool = getPool();
 
   const { rows: orderRows } = await pool.query<{
