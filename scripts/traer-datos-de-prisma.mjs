@@ -81,7 +81,15 @@ async function main() {
   if (!url) return say("Sin direccion no se puede continuar.");
 
   say("Conectando con la base en la nube...");
-  const pool = new pg.Pool({ connectionString: url, ssl: sslFor(url), max: 1, connectionTimeoutMillis: 20000 });
+  // Con tiempos maximos: si la nube no contesta, se corta con un mensaje en vez de quedarse esperando.
+  const pool = new pg.Pool({
+    connectionString: url,
+    ssl: sslFor(url),
+    max: 1,
+    connectionTimeoutMillis: 20000,
+    query_timeout: 90000,
+    statement_timeout: 90000,
+  });
   let remote;
   try {
     remote = await pool.connect();
@@ -117,6 +125,9 @@ async function main() {
 
   const summary = [];
   const skipped = [];
+  const toCopy = remoteTables.filter((t) => !SKIP.has(t));
+  let done = 0;
+  say("\nCopiando (si una tabla tarda mas de 1 minuto, se corta y avisa):");
   try {
     db.exec("begin");
     for (const table of remoteTables) {
@@ -125,6 +136,8 @@ async function main() {
         skipped.push(table);
         continue;
       }
+      done += 1;
+      process.stdout.write(`  [${done}/${toCopy.length}] ${table.replace("gestion_", "")} ... `);
       const localCols = db.prepare(`pragma table_info(${table})`).all().map((c) => c.name);
       const { rows: remoteColsRows } = await remote.query(
         "select column_name from information_schema.columns where table_schema = 'public' and table_name = $1 order by ordinal_position",
@@ -141,6 +154,7 @@ async function main() {
         count += 1;
       }
       summary.push([table, count]);
+      say(`${count} filas`);
     }
     db.exec("commit");
   } catch (error) {
