@@ -20,3 +20,26 @@ describe("conexión a la base: cifrado según dónde esté", () => {
     expect(sslOptionFor("no es una url", undefined)).toEqual({ rejectUnauthorized: false });
   });
 });
+
+import { getDbMode } from "@/lib/admin/db";
+
+describe("qué base usa la PC", () => {
+  const withEnv = (env: Record<string, string | undefined>, fn: () => void) => {
+    const saved = { ...process.env };
+    for (const [k, v] of Object.entries(env)) (v === undefined ? delete process.env[k] : (process.env[k] = v));
+    try {
+      fn();
+    } finally {
+      process.env = saved;
+    }
+  };
+  it("con una dirección de base en la nube guardada usa esa", () => {
+    withEnv({ DATABASE_URL: "postgres://u:p@h/db", MADERO_FORCE_LOCAL: undefined, VERCEL: undefined }, () => expect(getDbMode()).toBe("postgres"));
+  });
+  it("el acceso SIN INTERNET (MADERO_FORCE_LOCAL=1) usa la base de la PC aunque la dirección esté guardada", () => {
+    withEnv({ DATABASE_URL: "postgres://u:p@h/db", MADERO_FORCE_LOCAL: "1", VERCEL: undefined }, () => expect(getDbMode()).toBe("sqlite"));
+  });
+  it("en Vercel nunca se fuerza la base local", () => {
+    withEnv({ DATABASE_URL: "postgres://u:p@h/db", MADERO_FORCE_LOCAL: "1", VERCEL: "1" }, () => expect(getDbMode()).toBe("postgres"));
+  });
+});
