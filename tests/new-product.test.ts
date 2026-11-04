@@ -27,8 +27,8 @@ const row = async (name: string) =>
 describe("productos nuevos", () => {
   it("vienen cargadas la pizza y la media de champiñón (activas en Fudo, faltaban)", async () => {
     const state = await getState();
-    expect(state.catalog["Pizzas"].find((p) => p.name === "Pizza Champiñon")).toMatchObject({ price: 15000, inStock: true });
-    expect(state.catalog["Media Pizza 1/2"].find((p) => p.name === "1/2 Champiñon")).toMatchObject({ price: 8000, inStock: true });
+    expect(state.catalog["Pizzas"].find((p) => p.name === "Pizza Champiñon")).toMatchObject({ price: 16500, inStock: true });
+    expect(state.catalog["Media Pizza 1/2"].find((p) => p.name === "1/2 Champiñon")).toMatchObject({ price: 9000, inStock: true });
   });
 
   it("si se pausa la de champiñón, no vuelve a aparecer sola", async () => {
