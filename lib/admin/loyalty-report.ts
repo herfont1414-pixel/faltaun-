@@ -24,10 +24,12 @@ const SQL_ACCOUNTS = `
   select phone, name, stamps, redeemed, order_count, total_spent, origin, updated_at
   from gestion_loyalty_accounts
   order by phone`;
+// 'import' = sellos que el cliente ya tenía, cargados a mano (cuentan para la consistencia,
+// no como sellos dados por un empleado).
 const SQL_TX_BY_PHONE = `
   select phone, count(*) as n, coalesce(sum(stamps), 0) as stamps_sum
   from gestion_loyalty_transactions
-  where type = 'stamp'
+  where type in ('stamp', 'import')
   group by phone`;
 const SQL_TX_TYPES = `
   select type, count(*) as n, max(created_at) as last_at
