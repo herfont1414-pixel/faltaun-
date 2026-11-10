@@ -62,10 +62,15 @@ export async function getPrintableOrder(orderId: string, options: { all?: boolea
      order by c.sort_order, oi.product_name`,
     [orderId]
   );
+  // Áreas que no salen en la comanda (ej. Barra): sus productos ni se imprimen ni cuentan como
+  // "nuevo". Un producto sin área cae en Cocina o en Barra (si es de Bebidas), y sigue la misma regla.
+  const { rows: skipRows } = await pool.query<{ nombre: string }>("select nombre from gestion_print_areas where en_comanda = false");
+  const skipAreas = new Set(skipRows.map((r) => r.nombre));
+  const kitchenRows = itemRows.filter((r) => !skipAreas.has(r.area_name ?? fallbackArea(r.category_name)));
 
   const pending = (r: { qty: number; comanda_printed_qty: number | null }) => Math.max(0, Number(r.qty) - Number(r.comanda_printed_qty ?? 0));
-  const wanted = options.all ? itemRows : itemRows.filter((r) => pending(r) > 0);
-  const addition = !options.all && itemRows.some((r) => Number(r.comanda_printed_qty ?? 0) > 0) && wanted.length > 0;
+  const wanted = options.all ? kitchenRows : kitchenRows.filter((r) => pending(r) > 0);
+  const addition = !options.all && kitchenRows.some((r) => Number(r.comanda_printed_qty ?? 0) > 0) && wanted.length > 0;
   const items: PrintableItem[] = wanted.map((r) => ({
     id: String(r.id),
     name: r.product_name,

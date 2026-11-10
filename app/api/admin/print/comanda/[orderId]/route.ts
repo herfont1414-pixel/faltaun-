@@ -16,7 +16,8 @@ export async function GET(request: NextRequest, { params }: { params: { orderId:
   const all = request.nextUrl.searchParams.get("all") === "1";
   const [order, config] = await Promise.all([getPrintableOrder(params.orderId, { all }), getPrintConfig()]);
   // Nada nuevo para imprimir: sin contenido (el panel avisa, no abre el diálogo de impresión).
-  if (order.items.length === 0 && !all) return new NextResponse(null, { status: 204 });
+  // (También si lo único enviado es de áreas que no salen en la comanda, como Barra.)
+  if (order.items.length === 0) return new NextResponse(null, { status: 204 });
   const html = renderComandaHtml(toComandaPrintData(order), config);
   // Desde el navegador no se puede saber si se llegó a imprimir: se da por impreso al generarla
   // (si falla, "Reimprimir comanda completa" la saca de nuevo).

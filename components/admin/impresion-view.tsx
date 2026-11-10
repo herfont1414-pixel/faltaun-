@@ -6,6 +6,7 @@ import type { PrintConfig } from "@/lib/admin/types";
 interface PrintArea {
   id: number;
   nombre: string;
+  enComanda: boolean;
 }
 
 const FONT_SIZE_OPTIONS: { value: PrintConfig["fontSizeHeader"]; label: string }[] = [
@@ -50,6 +51,18 @@ export function ImpresionView() {
     setNombre("");
     setSaving(false);
     load();
+  }
+
+  async function setEnComanda(id: number, enComanda: boolean) {
+    setAreas((prev) => prev?.map((x) => (x.id === id ? { ...x, enComanda } : x)) ?? prev);
+    const res = await fetch(`/api/admin/print-areas/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enComanda }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.areas) setAreas(data.areas);
+    else load();
   }
 
   async function removeArea(id: number) {
@@ -250,7 +263,8 @@ export function ImpresionView() {
           Las comandas que se mandan a cocina (botón "Enviar a cocina") se separan en estas áreas según el
           área asignada a cada producto en <strong>Productos</strong>. Un producto sin área asignada cae en
           Cocina (o Barra si es de la categoría Bebidas), para no perder nada mientras se termina de
-          clasificar la carta.
+          clasificar la carta. Las áreas con <strong>«Sale en la comanda»</strong> destildado (por ejemplo Barra)
+          no se imprimen en la comanda de cocina; igual quedan en la cuenta del cliente.
         </p>
 
         <div className="caja-card" style={{ marginBottom: 14 }}>
@@ -278,6 +292,12 @@ export function ImpresionView() {
               areas.map((a) => (
                 <tr key={a.id}>
                   <td>{a.nombre}</td>
+                  <td>
+                    <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                      <input type="checkbox" checked={a.enComanda} onChange={(e) => setEnComanda(a.id, e.target.checked)} />
+                      Sale en la comanda
+                    </label>
+                  </td>
                   <td style={{ textAlign: "right" }}>
                     <button type="button" className="btn" onClick={() => removeArea(a.id)}>
                       Quitar
