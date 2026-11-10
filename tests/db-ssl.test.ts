@@ -41,5 +41,26 @@ describe("qué base usa la PC", () => {
   });
   it("en Vercel nunca se fuerza la base local", () => {
     withEnv({ DATABASE_URL: "postgres://u:p@h/db", MADERO_FORCE_LOCAL: "1", VERCEL: "1" }, () => expect(getDbMode()).toBe("postgres"));
+    withEnv({ DATABASE_URL: "postgres://u:p@h/db", MADERO_BASE: "local", VERCEL: "1" }, () => expect(getDbMode()).toBe("postgres"));
+  });
+  it("MADERO_BASE=local en .env.local también usa la base de la PC", () => {
+    withEnv({ DATABASE_URL: "postgres://u:p@h/db", MADERO_FORCE_LOCAL: undefined, MADERO_BASE: "local", VERCEL: undefined }, () =>
+      expect(getDbMode()).toBe("sqlite")
+    );
+  });
+  it("el lanzador puede preguntarle al servidor si está con la base local", async () => {
+    const { GET } = await import("@/app/api/local-mode/route");
+    const ask = async (env: Record<string, string | undefined>) => {
+      const saved = { ...process.env };
+      Object.assign(process.env, env);
+      for (const [k, v] of Object.entries(env)) if (v === undefined) delete process.env[k];
+      try {
+        return (await GET().json()) as { local: boolean };
+      } finally {
+        process.env = saved;
+      }
+    };
+    expect(await ask({ DATABASE_URL: "postgres://u:p@h/db", MADERO_FORCE_LOCAL: "1", VERCEL: undefined })).toEqual({ local: true });
+    expect(await ask({ DATABASE_URL: "postgres://u:p@h/db", MADERO_FORCE_LOCAL: undefined, MADERO_BASE: undefined, VERCEL: undefined })).toEqual({ local: false });
   });
 });

@@ -67,24 +67,17 @@ if errorlevel 1 goto :fallo_sqlite
 :sqlite_ok
 echo [OK] Componentes de base de datos listos
 
-rem ---------- 3b. Que base usar: la misma que Vercel o la local de esta PC ----------
-rem Se pregunta una sola vez (scripts\configurar-base.mjs) y queda en .env.local.
-rem MADERO_FORCE_LOCAL=1 (acceso "SIN INTERNET") fuerza la base local de esta PC.
-set "MODO_BASE=local"
-if "%MADERO_FORCE_LOCAL%"=="1" goto :base_decidida
-if exist "scripts\configurar-base.mjs" node "scripts\configurar-base.mjs"
-findstr /b /c:"DATABASE_URL=postgres" ".env.local" >nul 2>&1
-if not errorlevel 1 set "MODO_BASE=compartida"
-:base_decidida
-if "%MODO_BASE%"=="compartida" goto :msg_compartida
+rem ---------- 3b. Base de datos: SIEMPRE la local de esta PC ----------
+rem La PC es el sistema del local y trabaja con su propia base (maderosys.db), arranque como arranque
+rem (acceso del Escritorio, SIN INTERNET o inicio automatico con Windows). La nube (Vercel) es solo el
+rem menu online y se conecta con la PC por la sincronizacion (scripts\conectar-nube.bat). Una
+rem DATABASE_URL vieja guardada en .env.local ya no se usa.
+set "MADERO_FORCE_LOCAL=1"
 echo [OK] Base de datos: LOCAL de esta PC ^(no es la de Vercel^)
-goto :base_msg_fin
-:msg_compartida
-echo [OK] Base de datos: la MISMA que Vercel
-:base_msg_fin
 
 rem ---------- 3c. Conexion con el menu online (nube): se pregunta una sola vez ----------
-if "%MADERO_FORCE_LOCAL%"=="1" goto :nube_fin
+rem En el inicio automatico no se pregunta nada (la ventana esta minimizada).
+if "%MADERO_AUTO%"=="1" goto :nube_fin
 if exist "scripts\configurar-nube.mjs" node "scripts\configurar-nube.mjs"
 :nube_fin
 
@@ -104,19 +97,24 @@ if errorlevel 1 goto :fallo_build
 echo [OK] Aplicacion lista
 
 rem ---------- 5. Servidor ----------
-powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing -Uri http://localhost:3000/admin/login -TimeoutSec 2 | Out-Null; exit 0 } catch { exit 1 }"
+rem Si ya hay un servidor andando: con la base local se usa ese; si es uno con otra base (por ejemplo,
+rem uno viejo que arranco con la de la nube), se cierra y se arranca de nuevo con la local.
+rem 0 = andando con la base local, 2 = andando con otra base o version vieja, 1 = no hay servidor.
+powershell -NoProfile -Command "try { $r = Invoke-RestMethod -UseBasicParsing -Uri http://localhost:3000/api/local-mode -TimeoutSec 5; if ($r.local -eq $true) { exit 0 } else { exit 2 } } catch { if ($_.Exception.Response) { exit 2 } else { exit 1 } }"
+if errorlevel 2 goto :reiniciar_servidor
 if not errorlevel 1 goto :abrir
+goto :arrancar_servidor
+:reiniciar_servidor
+echo.
+echo Habia un servidor de MaderoSys andando con otra base: se cierra y se arranca con la de esta PC...
+powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; Start-Sleep -Seconds 2"
+:arrancar_servidor
 echo.
 echo Arrancando el servidor...
 rem MADERO_AUTO=1 = arranque automatico al encender la PC: la ventana del servidor queda minimizada.
 set "VENTANA_MIN="
 if "%MADERO_AUTO%"=="1" set "VENTANA_MIN=/min "
-if "%MODO_BASE%"=="compartida" goto :iniciar_compartida
 start %VENTANA_MIN%"MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "set MADERO_FORCE_LOCAL=1&& npm start"
-goto :esperar_servidor
-:iniciar_compartida
-start %VENTANA_MIN%"MaderoSys - Servidor (NO CERRAR esta ventana)" cmd /k "npm start"
-:esperar_servidor
 powershell -NoProfile -Command "for ($i=0; $i -lt 90; $i++) { try { Invoke-WebRequest -UseBasicParsing -Uri http://localhost:3000/admin/login -TimeoutSec 2 | Out-Null; exit 0 } catch { Start-Sleep -Seconds 1 } }; exit 1"
 if errorlevel 1 goto :fallo_server
 
