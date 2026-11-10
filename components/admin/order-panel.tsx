@@ -56,6 +56,8 @@ interface OrderPanelProps {
   onCancelOrder?: () => void;
   // Reimprime la comanda con todo lo ya enviado (el envío normal imprime solo lo nuevo).
   onReprintComanda?: () => void;
+  // Solo pedidos de mostrador: pasarlo a delivery (pide los datos del envío).
+  onConvertToDelivery?: () => void;
 }
 
 // Preferencia de cada PC: mostrar u ocultar la carta por categorías (en PC arranca oculta,
@@ -80,6 +82,7 @@ export function OrderPanel({
   onChangeShipping,
   onCancelOrder,
   onReprintComanda,
+  onConvertToDelivery,
   onClose,
   onSendKitchen,
   onRequestBill,
@@ -434,6 +437,11 @@ export function OrderPanel({
               {onReprintComanda && order.items.some((it) => it.sentToKitchen) && (
                 <button type="button" className="op-reprint" onClick={onReprintComanda}>
                   Reimprimir comanda completa
+                </button>
+              )}
+              {onConvertToDelivery && !order.isDelivery && !order.tableNumber && order.channel !== "web" && (
+                <button type="button" className="op-reprint" onClick={onConvertToDelivery}>
+                  🛵 Pasar a delivery
                 </button>
               )}
               {onCancelOrder && (
