@@ -501,15 +501,7 @@ export async function createDeliveryOrder(customer: {
   const pool = getPool();
   const phone = customer.phone.trim();
   const address = customer.address.trim();
-  // La agenda de clientes de delivery se indexa por teléfono: sin teléfono no se guarda.
-  if (phone && customer.name.trim()) {
-    await pool.query(
-      `insert into gestion_delivery_customers (phone, name, address, updated_at, created_at)
-       values ($1, $2, $3, now(), now())
-       on conflict (phone) do update set name = excluded.name, address = excluded.address, updated_at = excluded.updated_at`,
-      [phone, customer.name.trim(), address || null]
-    );
-  }
+  await rememberDeliveryCustomer(phone, customer.name, address);
   const { rows } = await pool.query(
     `insert into gestion_orders
        (origin, is_delivery, customer_name, customer_phone, customer_address, delivery_zone, shipping_cost, delivery_status, channel)
@@ -525,6 +517,70 @@ export async function createDeliveryOrder(customer: {
     ]
   );
   return getOrderRow(rows[0].id);
+}
+
+// La agenda de clientes de delivery se indexa por teléfono: sin teléfono no se guarda.
+async function rememberDeliveryCustomer(phone: string, name: string, address: string) {
+  if (!phone || !name.trim()) return;
+  await getPool().query(
+    `insert into gestion_delivery_customers (phone, name, address, updated_at, created_at)
+     values ($1, $2, $3, now(), now())
+     on conflict (phone) do update set name = excluded.name, address = excluded.address, updated_at = excluded.updated_at`,
+    [phone, name.trim(), address || null]
+  );
+}
+
+// Pasar a delivery un pedido de MOSTRADOR que todavía está abierto (por ejemplo, el cliente pidió
+// para retirar y después quiso que se lo lleven). Conserva los productos, lo ya enviado a cocina y
+// lo ya impreso; suma el envío de la zona elegida y pasa a la pantalla Delivery como "Preparando".
+// No se puede con mesas, con pedidos ya cobrados ni con los que vinieron del menú online (esos
+// tienen su propio seguimiento para el cliente).
+export async function convertToDelivery(
+  orderId: string,
+  customer: { name: string; phone: string; address: string; zone: string | null },
+  userId: number | null = null
+) {
+  const pool = getPool();
+  const { rows } = await pool.query<{ status: string; table_id: number | null; is_delivery: boolean | number }>(
+    "select status, table_id, is_delivery from gestion_orders where id = $1",
+    [orderId]
+  );
+  const order = rows[0];
+  if (!order) throw new Error("Ese pedido no existe");
+  if (order.status !== "abierta") throw new Error("El pedido ya fue cobrado");
+  if (order.table_id != null) throw new Error("Es una mesa: para delivery abrí un pedido nuevo en Delivery");
+  if (order.is_delivery) throw new Error("Ese pedido ya es de delivery");
+  const { rows: web } = await pool.query("select 1 from gestion_web_orders where order_id = $1", [orderId]);
+  if (web[0]) throw new Error("Ese pedido vino del menú online: se maneja desde Pedidos web");
+
+  const name = customer.name.trim().slice(0, 60);
+  const phone = customer.phone.trim().slice(0, 40);
+  const address = customer.address.trim().slice(0, 200);
+  if (!name || !address) throw new Error("Completá nombre y dirección para el delivery");
+  let shippingCost = 0;
+  const zone = customer.zone?.trim() || null;
+  if (zone) {
+    const found = (await listDeliveryZones()).find((z) => z.name === zone);
+    if (!found) throw new Error("La zona de envío elegida no existe");
+    shippingCost = found.cost;
+  }
+
+  await rememberDeliveryCustomer(phone, name, address);
+  await pool.query(
+    `update gestion_orders
+       set is_delivery = true, customer_name = $2, customer_phone = $3, customer_address = $4,
+           delivery_zone = $5, shipping_cost = $6, delivery_status = 'preparando'
+     where id = $1`,
+    [orderId, name, phone || null, address, zone, shippingCost]
+  );
+  await recordAudit({
+    userId,
+    action: "order_to_delivery",
+    entity: "order",
+    entityId: orderId,
+    newValue: { cliente: name, telefono: phone || null, direccion: address, zona: zone, envio: shippingCost },
+  });
+  return getOrderRow(orderId);
 }
 
 export async function setDeliveryStatus(orderId: string, status: "preparando" | "en_camino" | "entregado") {

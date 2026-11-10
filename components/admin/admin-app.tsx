@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/admin/sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { OrderPanel } from "@/components/admin/order-panel";
+import { DeliveryConvertModal } from "@/components/admin/delivery-convert-modal";
 import { DashboardView } from "@/components/admin/dashboard-view";
 import { MostradorView } from "@/components/admin/mostrador-view";
 import { DeliveryView } from "@/components/admin/delivery-view";
@@ -100,6 +101,8 @@ export function AdminApp() {
   const [pendingTable, setPendingTable] = useState<TableRow | null>(null);
   const [openingTable, setOpeningTable] = useState(false);
   const [editingTable, setEditingTable] = useState(false);
+  const [convertingDelivery, setConvertingDelivery] = useState(false);
+  const [convertBusy, setConvertBusy] = useState(false);
   // Pedidos web pendientes (para el aviso y el contador del menú lateral, en cualquier pantalla).
   const [pendingWeb, setPendingWeb] = useState(0);
   const [webAlert, setWebAlert] = useState<string | null>(null);
@@ -377,6 +380,18 @@ export function AdminApp() {
     applyState(state);
     closePanel();
     showToast(order?.tableNumber ? `Mesa ${order.tableNumber} anulada y liberada` : "Pedido anulado");
+  }
+
+  // Pedido de mostrador que pasa a delivery: mismos productos, con datos y costo de envío.
+  async function convertToDelivery(details: { name: string; phone: string; address: string; zone: string | null }) {
+    if (!selectedOrderId) return;
+    setConvertBusy(true);
+    const state = await safeCall(() => postJson("/api/admin/order-to-delivery", { orderId: selectedOrderId, ...details }));
+    setConvertBusy(false);
+    if (!state) return;
+    applyState(state);
+    setConvertingDelivery(false);
+    showToast("Pedido pasado a delivery: también lo ves en la pantalla Delivery");
   }
 
   async function cancelStaleOrders() {
@@ -766,6 +781,7 @@ export function AdminApp() {
             onEditTable={() => setEditingTable(true)}
             onCancelOrder={canCancel ? cancelOrder : undefined}
             onReprintComanda={reprintComanda}
+            onConvertToDelivery={() => setConvertingDelivery(true)}
           />
         </div>
       ) : section === "productos" ? (
@@ -829,6 +845,15 @@ export function AdminApp() {
           initial={{ partySize: currentOrder.partySize, customerName: currentOrder.customerName, waiter: currentOrder.waiter }}
           onCancel={() => setEditingTable(false)}
           onConfirm={confirmEditTable}
+        />
+      )}
+
+      {convertingDelivery && currentOrder && (
+        <DeliveryConvertModal
+          busy={convertBusy}
+          initial={{ name: currentOrder.customerName, phone: currentOrder.customerPhone }}
+          onCancel={() => setConvertingDelivery(false)}
+          onConfirm={convertToDelivery}
         />
       )}
 
