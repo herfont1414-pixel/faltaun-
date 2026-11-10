@@ -49,7 +49,8 @@ export function getDbMode(): DbMode {
   // Acceso "SIN INTERNET" / base local de la PC (MADERO_FORCE_LOCAL=1): se usa la base de la PC aunque
   // .env.local tenga guardada la dirección de una base en la nube (Next la carga igual y no se puede
   // "borrar" desde la línea de comandos).
-  if (process.env.MADERO_FORCE_LOCAL === "1" && !isRunningOnVercel()) return "sqlite";
+  // MADERO_BASE=local en .env.local hace lo mismo para cualquier arranque de la PC.
+  if ((process.env.MADERO_FORCE_LOCAL === "1" || process.env.MADERO_BASE === "local") && !isRunningOnVercel()) return "sqlite";
   if (process.env.DATABASE_URL) return "postgres";
   if (isRunningOnVercel()) return "none";
   return "sqlite";
