@@ -229,7 +229,9 @@ create table if not exists gestion_payment_methods (
 
 create table if not exists gestion_print_areas (
   id integer primary key autoincrement,
-  nombre text unique not null
+  nombre text unique not null,
+  -- 0 = lo de esta área no sale en la comanda de cocina (ej. Barra).
+  en_comanda boolean not null default 1
 );
 
 create table if not exists gestion_afip_config (

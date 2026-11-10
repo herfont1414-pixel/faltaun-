@@ -14,3 +14,17 @@ body {
 ::selection {
   @apply bg-ember/30 text-ember-soft;
 }
+
+/* Tarjeta de fidelidad del menú: un brillo que la cruza cada tanto. */
+.loyalty-card-shine {
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: loyalty-shine 5s ease-in-out 1.2s infinite;
+}
+@keyframes loyalty-shine {
+  0% { transform: translateX(-120%); }
+  30%, 100% { transform: translateX(120%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loyalty-card-shine { animation: none; display: none; }
+}

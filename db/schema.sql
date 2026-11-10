@@ -315,6 +315,8 @@ create table if not exists gestion_print_areas (
 );
 
 alter table gestion_products add column if not exists print_area_id int references gestion_print_areas(id);
+-- Áreas que NO salen en la comanda de cocina (ej. Barra: las bebidas las sirve el mozo).
+alter table gestion_print_areas add column if not exists en_comanda boolean not null default true;
 
 insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')
 on conflict (nombre) do nothing;

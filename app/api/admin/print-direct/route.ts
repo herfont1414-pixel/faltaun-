@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
     if (type === "comanda") {
       const all = body?.all === true;
       const order = await getPrintableOrder(orderId, { all });
-      if (order.items.length === 0 && !all) {
-        // Nada nuevo desde la última comanda: no se gasta papel.
+      if (order.items.length === 0) {
+        // Nada nuevo desde la última comanda (o solo bebidas/barra, que no salen): no se gasta papel.
         return NextResponse.json({ ok: false, reason: "nothing_new" });
       }
       printedItems = all ? [] : order.items.map((it) => ({ id: it.id, qty: it.qty }));

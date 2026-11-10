@@ -319,6 +319,7 @@ export async function ensureSeeded() {
         );
         await ensureSqliteColumn(client, "gestion_loyalty_accounts", "origin", "text");
         await ensureSqliteColumn(client, "gestion_products", "print_area_id", "int");
+        await ensureSqliteColumn(client, "gestion_print_areas", "en_comanda", "boolean not null default 1");
         await ensureSqliteColumn(client, "gestion_orders", "notes", "text");
         await ensureSqliteColumn(client, "gestion_order_items", "note", "text");
         await ensureSqliteColumn(client, "gestion_order_items", "comanda_printed_qty", "int not null default 0");
@@ -365,6 +366,13 @@ export async function ensureSeeded() {
         `insert into gestion_print_areas (nombre) values ('Barra'), ('Cocina')
          on conflict (nombre) do nothing`
       );
+      // Una sola vez: Barra (bebidas) deja de salir en la comanda de cocina. Después se cambia
+      // desde Impresión y se respeta.
+      const { rows: barraMeta } = await client.query("select 1 from gestion_meta where key = 'barra_fuera_comanda'");
+      if (!barraMeta[0]) {
+        await client.query("update gestion_print_areas set en_comanda = false where nombre = 'Barra'");
+        await client.query("insert into gestion_meta (key, value) values ('barra_fuera_comanda', 'ok') on conflict (key) do nothing");
+      }
       await client.query(`insert into gestion_print_config (id) values (1) on conflict (id) do nothing`);
       await client.query(`insert into gestion_afip_config (id) values (1) on conflict (id) do nothing`);
       await client.query(`insert into gestion_business_config (id) values (1) on conflict (id) do nothing`);
