@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  Tv,
   Home,
   LayoutGrid,
   Store,
@@ -84,7 +85,7 @@ interface NavItem {
   label: string;
   Icon: typeof Home;
   section?: Section;
-  action?: "kds";
+  action?: "kds" | "tv";
 }
 
 const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
@@ -118,6 +119,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     title: "Más",
     items: [
       { label: "Cocina (KDS)", Icon: Monitor, action: "kds" },
+      { label: "Madero TV", Icon: Tv, action: "tv" },
       { label: "Impresión", Icon: Printer, section: "impresion" },
       { label: "Usuarios", Icon: UserCog, section: "usuarios" },
       { label: "Auditoría", Icon: History, section: "auditoria" },
@@ -144,6 +146,10 @@ export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile, 
     }
     if (item.action === "kds") {
       window.open("/admin/kds", "_blank");
+    }
+    // Pantalla para la tele del local (se transmite desde Chrome o se abre en la tele).
+    if (item.action === "tv") {
+      window.open("/tv", "_blank");
     }
   }
 
