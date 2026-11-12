@@ -218,7 +218,7 @@ export function OrderHistoryModal({ onClose }: { onClose: () => void }) {
                       </span>
                     </div>
                     {(o.progress === "entregado" || (o.fulfillment === "retiro" && o.progress === "listo")) && (
-                      <ShareOrderButton orderId={o.id} items={o.items.map((it) => ({ name: it.name, qty: it.qty }))} />
+                      <ShareOrderButton orderId={o.id} createdAt={o.createdAt} items={o.items.map((it) => ({ name: it.name, qty: it.qty }))} />
                     )}
                   </div>
                 ))}
