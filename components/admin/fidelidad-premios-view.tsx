@@ -202,7 +202,7 @@ function RewardsConfig({ rewards, products, onSaved }: { rewards: LoyaltyReward[
   );
 }
 
-export function FidelidadPremiosView() {
+export function FidelidadPremiosView({ initialPhone = null }: { initialPhone?: string | null } = {}) {
   const [pending, setPending] = useState<PendingGrant[] | null>(null);
   const [rewards, setRewards] = useState<LoyaltyReward[]>([]);
   const [burgerChoices, setBurgerChoices] = useState<BurgerChoice[]>([]);
@@ -211,7 +211,7 @@ export function FidelidadPremiosView() {
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<LoyaltySearchRow[] | null>(null);
-  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(initialPhone);
   const [detail, setDetail] = useState<{ account: LoyaltyAccount; grants: LoyaltyGrant[] } | null>(null);
   const [detailError, setDetailError] = useState("");
   const [redeeming, setRedeeming] = useState<{ grant: LoyaltyGrant; customer: string } | null>(null);

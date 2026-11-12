@@ -9,12 +9,14 @@ import {
   listRewards,
   searchLoyaltyAccounts,
 } from "@/lib/admin/loyalty";
+import { getLoyaltyRanking } from "@/lib/admin/loyalty-ranking";
 
 export const dynamic = "force-dynamic";
 
 // Lectura para la pantalla de premios y canjes (admin y encargado):
 //  ?q=...      → búsqueda de clientes por teléfono o nombre
 //  ?phone=...  → ficha de un cliente (sellos, premios y canjes)
+//  ?ranking=1  → tabla de posiciones: todos los clientes con sus sellos
 //  sin params  → premios pendientes de todos los clientes + premios configurados
 // Solo hace SELECT: canjear y editar premios se hace por sus propias rutas.
 export async function GET(request: NextRequest) {
@@ -27,6 +29,9 @@ export async function GET(request: NextRequest) {
   }
   const params = request.nextUrl.searchParams;
   try {
+    if (params.get("ranking") === "1") {
+      return NextResponse.json(await getLoyaltyRanking());
+    }
     const q = params.get("q");
     if (q !== null) {
       return NextResponse.json({ results: await searchLoyaltyAccounts(q) });
