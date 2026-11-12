@@ -1,4 +1,5 @@
 import type { WebOrder } from "@/lib/admin/types";
+import { INSTAGRAM_HANDLE } from "@/lib/brand";
 
 // Formato de plata del mensaje: $14.000,00 (separador de miles y dos decimales).
 function ars(amount: number) {
@@ -41,6 +42,10 @@ export function buildOrderConfirmationMessage(
     "",
     "Para seguir el avance de tu pedido entrá a nuestro menú online y tocá el ícono 🧾 *Mis pedidos*, arriba:",
     MENU_URL
+  );
+  lines.push(
+    "",
+    `📸 Cuando lo recibas, si te gustó compartilo en tus historias y etiquetanos *@${INSTAGRAM_HANDLE}* (en *Mis pedidos* te armamos la imagen).`
   );
   lines.push("", "¡Gracias por tu compra!", "Madero Restó");
   return lines.join("\n");

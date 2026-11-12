@@ -27,6 +27,8 @@ describe("mensaje de confirmación al cliente", () => {
         "Para seguir el avance de tu pedido entrá a nuestro menú online y tocá el ícono 🧾 *Mis pedidos*, arriba:",
         "https://madero14.vercel.app",
         "",
+        "📸 Cuando lo recibas, si te gustó compartilo en tus historias y etiquetanos *@madero_resto* (en *Mis pedidos* te armamos la imagen).",
+        "",
         "¡Gracias por tu compra!",
         "Madero Restó",
       ].join("\n")
