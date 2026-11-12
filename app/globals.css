@@ -28,3 +28,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .loyalty-card-shine { animation: none; display: none; }
 }
+
+/* Letras de los flyers (imagen para compartir el pedido). */
+@font-face {
+  font-family: "MaderoAnton";
+  src: url("/fonts/anton.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "MaderoElite";
+  src: url("/fonts/specialelite.woff2") format("woff2");
+  font-display: swap;
+}

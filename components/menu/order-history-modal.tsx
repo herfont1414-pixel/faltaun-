@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X, Clock3 } from "lucide-react";
+import { ShareOrderButton } from "@/components/menu/share-order-button";
 
 interface HistoryItem {
   name: string;
@@ -216,6 +217,9 @@ export function OrderHistoryModal({ onClose }: { onClose: () => void }) {
                         ${o.total.toLocaleString("es-AR")}
                       </span>
                     </div>
+                    {(o.progress === "entregado" || (o.fulfillment === "retiro" && o.progress === "listo")) && (
+                      <ShareOrderButton orderId={o.id} />
+                    )}
                   </div>
                 ))}
               </div>
