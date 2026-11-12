@@ -1,14 +1,8 @@
-// Imágenes tamaño historia (1080×1920) para que el cliente comparta su pedido en Instagram,
+// Imagen tamaño historia (1080×1920) para que el cliente comparta su pedido en Instagram,
 // WhatsApp o Facebook. Se dibujan en el celular del cliente (canvas): no usan la base ni el
-// servidor, y no llevan nombre ni teléfono. Dos estilos:
-//  - "foto": la foto que saca el cliente de su comida, con el marco de Madero.
-//  - "ticket": una comanda de papel con lo que pidió y la calificación.
+// servidor, y no llevan nombre ni teléfono: es la foto que saca el cliente de su comida, con el
+// marco de Madero.
 import { INSTAGRAM_HANDLE } from "@/lib/brand";
-
-export interface ShareCardItem {
-  name: string;
-  qty: number;
-}
 
 const W = 1080;
 const H = 1920;
@@ -16,15 +10,6 @@ const CREAM = "#efe3cc";
 const GOLD = "#d6b480";
 const EMBER = "#e58a3c";
 const BG = "#1a110b";
-const INK = "#2a1a10";
-
-// Líneas del pedido: hasta `max` productos y "y N más". Exportada para probarla sin canvas.
-export function itemLines(items: ShareCardItem[], max = 5): string[] {
-  const lines = items.slice(0, max).map((it) => `${it.qty}x ${it.name}`);
-  const rest = items.length - max;
-  if (rest > 0) lines.push(`y ${rest} ${rest === 1 ? "producto" : "productos"} más`);
-  return lines;
-}
 
 function seedOf(text: string) {
   let h = 0;
@@ -114,26 +99,9 @@ function grunge(text: string, px: number, color: string, width: number, height: 
   return layer;
 }
 
-// Logo de un color cualquiera (el archivo es crema sobre transparente).
-function tinted(logo: HTMLImageElement, color: string) {
-  const c = document.createElement("canvas");
-  c.width = logo.width;
-  c.height = logo.height;
-  const x = c.getContext("2d")!;
-  x.drawImage(logo, 0, 0);
-  x.globalCompositeOperation = "source-in";
-  x.fillStyle = color;
-  x.fillRect(0, 0, c.width, c.height);
-  return c;
-}
-
 function cleanUrl(url: string) {
   return url.replace(/^https?:\/\//, "").replace(/\/+$/, "").toUpperCase();
 }
-
-// ---------------------------------------------------------------------------------------------
-// Estilo 1: la foto del cliente con el marco de Madero
-// ---------------------------------------------------------------------------------------------
 
 export async function renderPhotoCard(opts: { photo: Blob; seed: string; menuUrl: string }): Promise<Blob> {
   const logo = await ready();
@@ -193,167 +161,6 @@ export async function renderPhotoCard(opts: { photo: Blob; seed: string; menuUrl
   ctx.font = "300 40px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
   ctx.fillStyle = GOLD;
   spaced(ctx, `@${INSTAGRAM_HANDLE.toUpperCase()}`, W / 2, H - 125, 8);
-  return toBlob(canvas);
-}
-
-// ---------------------------------------------------------------------------------------------
-// Estilo 3: comanda de papel con el pedido y la calificación
-// ---------------------------------------------------------------------------------------------
-
-function star(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
-  ctx.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const rad = i % 2 === 0 ? r : r * 0.45;
-    const a = -Math.PI / 2 + (i * Math.PI) / 5;
-    ctx.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad);
-  }
-  ctx.closePath();
-  ctx.fill();
-}
-
-function dashed(ctx: CanvasRenderingContext2D, x1: number, x2: number, y: number) {
-  ctx.save();
-  ctx.strokeStyle = "rgba(42,26,16,0.55)";
-  ctx.lineWidth = 3;
-  ctx.setLineDash([14, 10]);
-  ctx.beginPath();
-  ctx.moveTo(x1, y);
-  ctx.lineTo(x2, y);
-  ctx.stroke();
-  ctx.restore();
-}
-
-export async function renderTicketCard(opts: {
-  items: ShareCardItem[];
-  seed: string;
-  reference: string;
-  date: Date;
-  menuUrl: string;
-}): Promise<Blob> {
-  const logo = await ready();
-  const { canvas, ctx } = newCanvas();
-  const seed = seedOf(opts.seed);
-  const rand = rng(seed);
-
-  // Fondo de madera oscura (vetas suaves) con luz cálida.
-  ctx.fillStyle = BG;
-  ctx.fillRect(0, 0, W, H);
-  for (let y = 0; y < H; y += 6) {
-    ctx.fillStyle = `rgba(120,70,35,${0.04 + rand() * 0.07})`;
-    ctx.fillRect(0, y, W, 2 + rand() * 3);
-  }
-  const glow = ctx.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, 1000);
-  glow.addColorStop(0, "rgba(217,123,63,0.30)");
-  glow.addColorStop(1, "rgba(0,0,0,0.55)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.font = "300 42px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
-  ctx.fillStyle = GOLD;
-  spaced(ctx, "HOY PEDÍ EN MADERO", W / 2, 120, 10);
-
-  // El papel: alto según la cantidad de productos.
-  const lines = itemLines(opts.items, 4);
-  const logoW = 340;
-  const logoH = (logo.height / logo.width) * logoW;
-  const paperW = 860;
-  // Alto justo para el contenido (ver los saltos de "y" más abajo).
-  const paperH = 70 + logoH + 70 + 54 + 50 + 80 + lines.length * 70 + 4 + 90 + 80 + 100 + 110 + 140 + 60;
-  const px = (W - paperW) / 2;
-  const py = 180;
-  ctx.save();
-  ctx.translate(W / 2, py + paperH / 2);
-  ctx.rotate(-0.025);
-  ctx.translate(-W / 2, -(py + paperH / 2));
-  ctx.shadowColor = "rgba(0,0,0,0.6)";
-  ctx.shadowBlur = 50;
-  ctx.shadowOffsetY = 24;
-  // Bordes de papel cortado (zigzag arriba y abajo).
-  const tooth = 26;
-  ctx.beginPath();
-  ctx.moveTo(px, py + 14);
-  for (let x = px; x < px + paperW; x += tooth) {
-    ctx.lineTo(x + tooth / 2, py);
-    ctx.lineTo(x + tooth, py + 14);
-  }
-  ctx.lineTo(px + paperW, py + paperH - 14);
-  for (let x = px + paperW; x > px; x -= tooth) {
-    ctx.lineTo(x - tooth / 2, py + paperH);
-    ctx.lineTo(x - tooth, py + paperH - 14);
-  }
-  ctx.closePath();
-  ctx.fillStyle = "#f4ead6";
-  ctx.fill();
-  ctx.shadowColor = "transparent";
-  // Granito del papel.
-  ctx.clip();
-  for (let i = 0; i < 2200; i++) {
-    ctx.fillStyle = `rgba(90,60,30,${0.03 + rand() * 0.06})`;
-    ctx.fillRect(px + rand() * paperW, py + rand() * paperH, 2, 2);
-  }
-
-  const cx = W / 2;
-  let y = py + 70;
-  ctx.drawImage(tinted(logo, INK), cx - logoW / 2, y, logoW, logoH);
-  y += logoH + 70;
-
-  ctx.fillStyle = INK;
-  ctx.font = "44px MaderoElite, 'Courier New', monospace";
-  ctx.fillText(`COMANDA #${opts.reference}`, cx, y);
-  y += 54;
-  ctx.font = "36px MaderoElite, 'Courier New', monospace";
-  ctx.fillStyle = "rgba(42,26,16,0.75)";
-  ctx.fillText(
-    opts.date.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }),
-    cx,
-    y
-  );
-  y += 50;
-  dashed(ctx, px + 60, px + paperW - 60, y);
-  y += 80;
-
-  ctx.fillStyle = INK;
-  ctx.font = "46px MaderoElite, 'Courier New', monospace";
-  ctx.textAlign = "left";
-  for (const line of lines) {
-    ctx.fillText(fitText(ctx, line, paperW - 130), px + 65, y);
-    y += 70;
-  }
-  ctx.textAlign = "center";
-  y += 4;
-  dashed(ctx, px + 60, px + paperW - 60, y);
-  y += 90;
-
-  ctx.font = "40px MaderoElite, 'Courier New', monospace";
-  ctx.fillStyle = "rgba(42,26,16,0.8)";
-  ctx.fillText("CALIFICACIÓN", cx, y);
-  y += 80;
-  ctx.fillStyle = EMBER;
-  for (let i = 0; i < 5; i++) star(ctx, cx - 240 + i * 120, y - 20, 46);
-  y += 100;
-  ctx.drawImage(grunge("10/10 · VOLVERÍA", 96, INK, paperW - 80, 130, seed), px + 40, y - 70);
-  y += 110;
-
-  // "Código de barras" decorativo.
-  const barsW = 520;
-  let bx = cx - barsW / 2;
-  ctx.fillStyle = INK;
-  while (bx < cx + barsW / 2) {
-    const w = 2 + Math.floor(rand() * 7);
-    ctx.fillRect(bx, y, w, 90);
-    bx += w + 3 + Math.floor(rand() * 7);
-  }
-  y += 140;
-  ctx.font = "40px MaderoElite, 'Courier New', monospace";
-  ctx.fillText(`@${INSTAGRAM_HANDLE}`, cx, y);
-  ctx.restore();
-
-  ctx.font = "300 38px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
-  ctx.fillStyle = GOLD;
-  spaced(ctx, "PEDÍ EL TUYO EN", W / 2, H - 150, 10);
-  ctx.font = "66px MaderoAnton, Impact, sans-serif";
-  ctx.fillStyle = EMBER;
-  ctx.fillText(fitText(ctx, cleanUrl(opts.menuUrl), W - 160), W / 2, H - 72);
   return toBlob(canvas);
 }
 

@@ -45,7 +45,7 @@ export function buildOrderConfirmationMessage(
   );
   lines.push(
     "",
-    `📸 Cuando lo recibas, si te gustó compartilo en tus historias y etiquetanos *@${INSTAGRAM_HANDLE}* (en *Mis pedidos* te armamos la imagen).`
+    `📸 Cuando lo recibas, si te gustó compartilo en tus historias y etiquetanos *@${INSTAGRAM_HANDLE}* (en *Mis pedidos* le ponemos el marco de Madero a tu foto).`
   );
   lines.push("", "¡Gracias por tu compra!", "Madero Restó");
   return lines.join("\n");
