@@ -45,11 +45,21 @@ export async function POST(request: NextRequest) {
   response.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    // Solo se manda por HTTPS (la web y el panel van siempre con candado). COOKIE_SECURE=false
-    // permite probar un servidor nuevo por http:// antes de tener la dirección definitiva.
-    secure: process.env.NODE_ENV === "production" && !/^(false|0|no|off)$/i.test(process.env.COOKIE_SECURE ?? ""),
+    // Con candado (https) el cookie viaja solo por https. Por http no se le pone "secure": el
+    // navegador lo descartaría. Es el caso de la PC del local (localhost o, desde los celulares
+    // de los mozos, http://IP-DE-LA-PC:3000). COOKIE_SECURE=true lo fuerza siempre y
+    // COOKIE_SECURE=false nunca.
+    secure: cookieSecure(request),
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
   return response;
+}
+
+function cookieSecure(request: NextRequest): boolean {
+  const forced = (process.env.COOKIE_SECURE ?? "").trim().toLowerCase();
+  if (/^(true|1|yes|on)$/.test(forced)) return true;
+  if (/^(false|0|no|off)$/.test(forced)) return false;
+  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  return proto ? proto === "https" : request.nextUrl.protocol === "https:";
 }

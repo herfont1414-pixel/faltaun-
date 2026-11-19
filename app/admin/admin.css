@@ -1793,3 +1793,11 @@
 .op-reprint:hover {
   color: var(--text);
 }
+
+/* Pantallas táctiles (PC de caja con pantalla touch, celulares de los mozos): sin la espera de
+   "doble toque para zoom", los botones responden al instante. */
+.admin-root button,
+.admin-root a,
+.admin-root input {
+  touch-action: manipulation;
+}

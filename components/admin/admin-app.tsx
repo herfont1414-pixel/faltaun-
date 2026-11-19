@@ -318,12 +318,31 @@ export function AdminApp() {
     setSelectedTableNumber(null);
   }
 
+  // Cargar un producto: se ve en el pedido al instante (suma una unidad a su línea o agrega
+  // una línea provisoria) y el servidor confirma después; si lo rechaza (sin stock, sin
+  // conexión…) se vuelve a lo guardado.
   async function addProduct(productId: number) {
-    if (!selectedOrderId) return;
-    const state = await safeCall(() =>
-      postJson("/api/admin/add-item", { orderId: selectedOrderId, productId })
-    );
+    if (!selectedOrderId || !data) return;
+    const orderId = selectedOrderId;
+    const product = Object.values(data.catalog).flat().find((p) => p.id === productId);
+    if (product) {
+      patchOrderLocally(orderId, (o) => {
+        const line = o.items.find((it) => it.name === product.name);
+        const items = line
+          ? o.items.map((it) => (it === line ? { ...it, qty: it.qty + 1 } : it))
+          : [
+              ...o.items,
+              { id: `tmp-${productId}`, name: product.name, price: product.price, qty: 1, sentToKitchen: false, comandaPrintedQty: 0, note: null },
+            ];
+        return withTotal({ ...o, items });
+      });
+    }
+    qtyPending.current += 1;
+    const state = await safeCall(() => postJson("/api/admin/add-item", { orderId, productId }));
+    qtyPending.current -= 1;
+    if (qtyPending.current > 0) return;
     if (state) applyState(state);
+    else reloadState();
   }
 
   // Cambia el pedido en pantalla al instante (sin esperar al servidor, que con la base en
@@ -353,6 +372,8 @@ export function AdminApp() {
   const qtyPending = useRef(0);
   async function changeQty(itemId: string, delta: number) {
     if (!selectedOrderId || delta === 0) return;
+    // Línea recién agregada que el servidor todavía no confirmó: se espera un instante.
+    if (itemId.startsWith("tmp-")) return;
     const orderId = selectedOrderId;
     patchOrderLocally(orderId, (o) =>
       withTotal({
