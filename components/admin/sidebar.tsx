@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Tv,
+  Smartphone,
   Home,
   LayoutGrid,
   Store,
@@ -27,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { BrandLogo } from "@/components/admin/brand-logo";
+import { PhoneAccessModal } from "@/components/admin/phone-access-modal";
 import type { Section } from "@/lib/admin/client-types";
 
 interface ConnectionStatus {
@@ -85,7 +87,7 @@ interface NavItem {
   label: string;
   Icon: typeof Home;
   section?: Section;
-  action?: "kds" | "tv";
+  action?: "kds" | "tv" | "phone";
 }
 
 const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
@@ -120,6 +122,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { label: "Cocina (KDS)", Icon: Monitor, action: "kds" },
       { label: "Madero TV", Icon: Tv, action: "tv" },
+      { label: "Usar en el celular", Icon: Smartphone, action: "phone" },
       { label: "Impresión", Icon: Printer, section: "impresion" },
       { label: "Usuarios", Icon: UserCog, section: "usuarios" },
       { label: "Auditoría", Icon: History, section: "auditoria" },
@@ -138,6 +141,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile, badges }: SidebarProps) {
+  const [phoneOpen, setPhoneOpen] = useState(false);
   function handleClick(item: NavItem) {
     onCloseMobile();
     if (item.section) {
@@ -151,6 +155,7 @@ export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile, 
     if (item.action === "tv") {
       window.open("/tv", "_blank");
     }
+    if (item.action === "phone") setPhoneOpen(true);
   }
 
   return (
@@ -223,6 +228,7 @@ export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile, 
             : ""}
         </div>
       </aside>
+      {phoneOpen && <PhoneAccessModal onClose={() => setPhoneOpen(false)} />}
     </>
   );
 }
