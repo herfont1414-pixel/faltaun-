@@ -70,19 +70,25 @@ async function serverIsRunning() {
   }
 }
 
+// Cierra el servidor de MaderoSys (su ventana negra y lo que esté escuchando en el puerto 3000)
+// y espera a que el puerto quede libre.
+async function stopServer() {
+  const ps = (command) => spawnSync("powershell", ["-NoProfile", "-NonInteractive", "-Command", command], { encoding: "utf8" });
+  spawnSync("taskkill", ["/FI", "WINDOWTITLE eq MaderoSys - Servidor*", "/T", "/F"], { encoding: "utf8" });
+  ps("Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }");
+  for (let i = 0; i < 20; i++) {
+    if (!(await serverIsRunning())) return true;
+    await new Promise((resolve) => setTimeout(resolve, 750));
+  }
+  return false;
+}
+
 async function main() {
   const branchFromFile = existsSync(BRANCH_FILE) ? readFileSync(BRANCH_FILE, "utf8").trim() : "";
   const branch = process.env.MADERO_BRANCH || branchFromFile || "main";
   if (!/^[\w./-]+$/.test(branch)) {
     say("Nombre de rama no valido. Se usa la version instalada.");
     return 1;
-  }
-
-  // Con el servidor abierto no se toca nada: reemplazar archivos en uso rompe la
-  // app en pleno servicio. La actualización se aplica la próxima vez que se inicie.
-  if (await serverIsRunning()) {
-    say("El servidor ya esta abierto: se actualiza la proxima vez que lo inicies.");
-    return 10;
   }
 
   let remote;
@@ -103,6 +109,22 @@ async function main() {
   if (local === remote) {
     say("Ya tenes la ultima version (" + remote.slice(0, 7) + ").");
     return 10;
+  }
+
+  // Con el servidor abierto no se pueden reemplazar los archivos (están en uso). Como MaderoSys
+  // arranca solo con Windows y queda abierto, si se esperara a que esté cerrado la PC no se
+  // actualizaría nunca: al abrir el acceso a mano, se cierra un momento y el lanzador lo vuelve
+  // a abrir con la versión nueva.
+  if (await serverIsRunning()) {
+    if (process.platform !== "win32") {
+      say("El servidor ya esta abierto: se actualiza la proxima vez que lo inicies.");
+      return 10;
+    }
+    say("Hay una version nueva (" + remote.slice(0, 7) + "): se cierra MaderoSys un momento para actualizar (tarda 1 a 3 minutos)...");
+    if (!(await stopServer())) {
+      say("No se pudo cerrar el servidor. Cerra la ventana negra 'MaderoSys - Servidor' y volve a abrir MaderoSys.");
+      return 10;
+    }
   }
 
   say("Hay una version nueva (" + remote.slice(0, 7) + "). Descargando...");
