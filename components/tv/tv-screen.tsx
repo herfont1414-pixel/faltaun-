@@ -2,12 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { TvData, TvProduct } from "@/lib/tv";
-import { cartaPages } from "@/lib/tv-carta";
-import type { CartaPage } from "@/lib/tv-carta";
 
 const SLIDE_MS = 10_000;
-// La carta se lee más despacio.
-const CARTA_MS = 15_000;
 const REFRESH_MS = 60_000;
 const EMOJI: Record<string, string> = { papas: "🍟", burger: "🍔" };
 
@@ -16,28 +12,13 @@ type Slide =
   | { kind: "featured" }
   | { kind: "special" }
   | { kind: "loyalty" }
-  // Una página de la carta: cada vez que aparece muestra la siguiente (categoría por categoría).
-  | { kind: "carta" }
   | { kind: "flyer"; url: string; name: string };
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("es-AR")}`;
 const host = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/+$/, "");
 
-// Secuencia completa: lo de siempre y, cada dos pantallas, una página de la carta.
-function buildSlides(data: TvData): Slide[] {
-  const base = baseSlides(data);
-  if (!cartaPages(data).length) return base;
-  const out: Slide[] = [];
-  base.forEach((slide, i) => {
-    out.push(slide);
-    if (i % 2 === 1) out.push({ kind: "carta" });
-  });
-  if (base.length < 2) out.push({ kind: "carta" });
-  return out;
-}
-
 // Los flyers intercalados con las pantallas de información.
-function baseSlides(data: TvData): Slide[] {
+function buildSlides(data: TvData): Slide[] {
   const info: Slide[] = [{ kind: "featured" }];
   if (data.special) info.push({ kind: "special" });
   if (data.rewards.length) info.push({ kind: "loyalty" });
@@ -97,44 +78,6 @@ function ProductCard({ p }: { p: TvProduct }) {
   );
 }
 
-function CartaView({ page, data }: { page: CartaPage; data: TvData }) {
-  const half = Math.ceil(page.items.length / 2);
-  const columns = [page.items.slice(0, half), page.items.slice(half)];
-  return (
-    <div className="flex h-full w-full flex-col px-[5vw] py-[3.6vw]">
-      <div className="mb-[2vw] flex items-end justify-between">
-        <div>
-          <Spaced>Nuestra carta</Spaced>
-          <Title size="5.6vw">{page.category}</Title>
-          {page.pages > 1 && <Elite size="1.3vw" color="#d6b480">{page.page} de {page.pages}</Elite>}
-        </div>
-        <div className="flex items-center gap-[1.6vw]">
-          <div className="flex flex-col items-center gap-[0.4vw]">
-            <Qr svg={data.qrMenu} size="7vw" />
-            <div style={{ fontSize: "0.9vw", color: "#d6b480", letterSpacing: "0.3em" }}>PEDÍ ONLINE</div>
-          </div>
-          <Logo width="12vw" />
-        </div>
-      </div>
-      <div className="grid flex-1 grid-cols-2 gap-x-[5vw]">
-        {columns.map((col, ci) => (
-          <div key={ci} className="flex flex-col justify-start gap-[1.1vw]">
-            {col.map((it) => (
-              <div key={it.name} className="flex items-baseline gap-[1vw]">
-                <span style={{ fontFamily: "MaderoAnton, Impact, sans-serif", fontSize: "2.3vw", color: "#efe3cc", textTransform: "uppercase", letterSpacing: "0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "30vw" }}>
-                  {it.name}
-                </span>
-                <span className="flex-1" style={{ borderBottom: "0.2vw dotted rgba(214,180,128,.45)", transform: "translateY(-0.5vw)" }} />
-                <span style={{ fontFamily: "MaderoAnton, Impact, sans-serif", fontSize: "2.5vw", color: "#e58a3c", whiteSpace: "nowrap" }}>{money(it.price)}</span>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // Flyer: los horizontales (como una tele) ocupan toda la pantalla; los verticales van al centro
 // con el logo y el QR al costado.
 function FlyerView({ url, name, data }: { url: string; name: string; data: TvData }) {
@@ -168,8 +111,7 @@ function FlyerView({ url, name, data }: { url: string; name: string; data: TvDat
   );
 }
 
-function SlideView({ slide, data, cartaPage }: { slide: Slide; data: TvData; cartaPage: CartaPage | null }) {
-  if (slide.kind === "carta") return cartaPage ? <CartaView page={cartaPage} data={data} /> : null;
+function SlideView({ slide, data }: { slide: Slide; data: TvData }) {
   if (slide.kind === "flyer") {
     return <FlyerView url={slide.url} name={slide.name} data={data} />;
   }
@@ -305,23 +247,14 @@ export function TvScreen() {
   }, []);
 
   const slides = useMemo(() => (data ? buildSlides(data) : []), [data]);
-  const pages = useMemo(() => (data ? cartaPages(data) : []), [data]);
-  // Página de la carta que se muestra: avanza cada vez que aparece una pantalla de carta.
-  const [cartaIndex, setCartaIndex] = useState(0);
 
   const slide = slides.length ? slides[index % slides.length] : null;
 
   useEffect(() => {
     if (!slides.length) return;
-    const t = setTimeout(() => {
-      const next = (index + 1) % slides.length;
-      if (slides[next]?.kind === "carta" && slide?.kind !== "carta") setCartaIndex((c) => c + 1);
-      setIndex(next);
-    }, slide?.kind === "carta" ? CARTA_MS : SLIDE_MS);
+    const t = setTimeout(() => setIndex((i) => (i + 1) % slides.length), SLIDE_MS);
     return () => clearTimeout(t);
-  }, [index, slides, slide?.kind]);
-
-  const cartaPage = pages.length ? pages[(cartaIndex + pages.length - 1) % pages.length] : null;
+  }, [index, slides.length]);
 
   return (
     <main
@@ -335,8 +268,8 @@ export function TvScreen() {
         </div>
       ) : (
         slide && (
-          <div key={`${index}-${slide.kind}-${cartaIndex}`} className="tv-fade h-full w-full">
-            <SlideView slide={slide} data={data} cartaPage={cartaPage} />
+          <div key={`${index}-${slide.kind}`} className="tv-fade h-full w-full">
+            <SlideView slide={slide} data={data} />
           </div>
         )
       )}

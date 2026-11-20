@@ -15,8 +15,10 @@ import type { MenuItem } from "@/lib/types";
 // clientes.
 
 const IMAGE_EXT = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
-// Categorías que no se muestran como destacados (bebidas, salsas, vajilla…).
-const NOT_FEATURED = /bebida|salsa|vajilla|extra|aderezo/i;
+// Categorías que no se muestran como destacados (bebidas, salsas, vajilla, combos…).
+const NOT_FEATURED = /bebida|salsa|vajilla|extra|aderezo|combo|promo/i;
+// Productos que tampoco van como destacados aunque estén en Burger o Pizzas (los combos).
+const NOT_FEATURED_NAME = /combo|promo/i;
 
 // Carpeta de flyers de la tele: en la carpeta del usuario de Windows (como las copias de
 // seguridad), así las actualizaciones del sistema nunca la tocan.
@@ -131,15 +133,8 @@ export interface TvProduct {
   category: string;
 }
 
-export interface TvCartaCategory {
-  category: string;
-  items: { name: string; price: number }[];
-}
-
 export interface TvData {
   featured: TvProduct[];
-  /** La carta por categorías (solo lo disponible), para las pantallas de precios. */
-  carta: TvCartaCategory[];
   /** "popular": los más pedidos; "recomendados": rotación del día (sin ventas suficientes). */
   featuredKind: "popular" | "recomendados";
   special: (TvProduct & { text: string; imageUrl: string | null }) | null;
@@ -176,7 +171,8 @@ export function mixFeatured(candidates: MenuItem[], popular: MenuItem[], day: st
   const total = perGroup * MIX.length;
   if (out.length < total) {
     const used = new Set(out.map((i) => i.id));
-    const fill = [...popular, ...dailyPick(candidates, candidates.length, day)].filter((i) => !used.has(i.id) && !NOT_FEATURED.test(i.category));
+    const allowed = new Set(candidates.map((i) => i.id));
+    const fill = [...popular, ...dailyPick(candidates, candidates.length, day)].filter((i) => !used.has(i.id) && allowed.has(i.id));
     for (const it of fill) {
       if (out.length >= total) break;
       if (!used.has(it.id)) {
@@ -188,21 +184,6 @@ export function mixFeatured(candidates: MenuItem[], popular: MenuItem[], day: st
   return out;
 }
 
-// Categorías que no van a la carta de la tele.
-const NOT_IN_CARTA = /salsa|vajilla|extra|aderezo|delivery|^v$/i;
-
-export function buildCarta(items: MenuItem[]): TvCartaCategory[] {
-  const out: TvCartaCategory[] = [];
-  for (const it of items) {
-    if (NOT_IN_CARTA.test(it.category)) continue;
-    let cat = out.find((c) => c.category === it.category);
-    if (!cat) out.push((cat = { category: it.category, items: [] }));
-    cat.items.push({ name: it.name, price: it.price });
-  }
-  // Bebidas al final (son muchas): primero la comida.
-  return [...out.filter((c) => !/bebida/i.test(c.category)), ...out.filter((c) => /bebida/i.test(c.category))];
-}
-
 const qr = (text: string) =>
   QRCode.toString(text, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#1a110bff", light: "#efe3ccff" } });
 
@@ -210,7 +191,7 @@ export async function getTvData(now: Date = new Date()): Promise<TvData> {
   const items = await getMenuItems();
   const highlights = await getMenuHighlights(items);
   const byId = new Map(items.map((i) => [i.id, i]));
-  const candidates = items.filter((i) => !NOT_FEATURED.test(i.category));
+  const candidates = items.filter((i) => !NOT_FEATURED.test(i.category) && !NOT_FEATURED_NAME.test(i.name));
   const popular = (highlights?.popularIds ?? []).map((id) => byId.get(id)).filter((i): i is MenuItem => !!i);
   const featuredItems = mixFeatured(candidates, popular, now.toISOString().slice(0, 10));
 
@@ -225,7 +206,6 @@ export async function getTvData(now: Date = new Date()): Promise<TvData> {
   return {
     featured: featuredItems.map((i) => ({ name: i.name, price: i.price, category: i.category })),
     featuredKind: popular.length >= 3 ? "popular" : "recomendados",
-    carta: buildCarta(items),
     special: specialItem
       ? {
           name: specialItem.name,

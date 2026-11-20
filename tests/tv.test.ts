@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { seedFreshDb, tearDownTestDb } from "./helpers";
 import { getTvData, listTvFlyers, resolveTvFlyer } from "@/lib/tv";
-import { cartaPages } from "@/lib/tv-carta";
+import { getPool } from "@/lib/admin/db";
+import { resetReadCache } from "@/lib/admin/read-cache";
 import { GET as tvGet } from "@/app/api/tv/route";
 import { GET as flyerGet } from "@/app/api/tv/flyer/[name]/route";
 
@@ -67,19 +68,14 @@ describe("Madero TV", () => {
     expect((await res.json()).featured).toHaveLength(6);
   });
 
-  it("arma la carta por categorías, sin salsas ni vajilla, con las bebidas al final y en páginas de hasta 14", async () => {
-    const data = await getTvData();
-    const cats = data.carta.map((c) => c.category);
-    expect(cats[0]).toBe("Entradas");
-    expect(cats.at(-1)).toBe("Bebidas");
-    expect(cats.some((c) => /salsa|vajilla/i.test(c))).toBe(false);
-    for (const c of data.carta) for (const it of c.items) expect(it.price).toBeGreaterThan(0);
-    const pages = cartaPages(data);
-    for (const p of pages) expect(p.items.length).toBeLessThanOrEqual(14);
-    const bebidas = pages.filter((p) => p.category === "Bebidas");
-    expect(bebidas.length).toBeGreaterThan(1);
-    expect(bebidas.map((p) => p.page)).toEqual(bebidas.map((_, i) => i + 1));
-    expect(bebidas.reduce((n, p) => n + p.items.length, 0)).toBe(data.carta.find((c) => c.category === "Bebidas")!.items.length);
-    expect(cartaPages({ carta: [{ category: "X", items: Array.from({ length: 15 }, (_, i) => ({ name: `p${i}`, price: 1 })) }] }).map((p) => p.items.length)).toEqual([8, 7]);
+  it("los destacados no incluyen combos", async () => {
+    const catId = (await getPool().query("select id from gestion_categories where name = 'Burger'")).rows[0].id;
+    await getPool().query("insert into gestion_products (category_id, name, price, active, in_stock) values ($1, 'Combo Prueba Burger', 9999, true, true)", [catId]);
+    resetReadCache();
+    for (const day of ["2030-01-01", "2030-01-02", "2030-01-03", "2030-01-04", "2030-01-05", "2030-01-06"]) {
+      const data = await getTvData(new Date(`${day}T12:00:00Z`));
+      expect(data.featured.some((p) => /combo|promo/i.test(p.name) || /combo|promo/i.test(p.category))).toBe(false);
+      expect(data.featured).toHaveLength(6);
+    }
   });
 });
