@@ -78,4 +78,18 @@ describe("Madero TV", () => {
       expect(data.featured).toHaveLength(6);
     }
   });
+  it("los favoritos salen de las ventas reales (Fudo + sistema) y «¿Ya los probaste?» de lo que menos se pide", async () => {
+    const data = await getTvData(new Date("2026-11-20T15:00:00Z"));
+    expect(data.featuredKind).toBe("popular");
+    const fav = data.featured.map((p) => p.name);
+    expect(fav).toContain("Burger Clasica");
+    expect(fav).toContain("Emp Carne Pic Cuchillo");
+    expect(fav).not.toContain("Burger Blue Cheese");
+    expect(data.toTry).toHaveLength(6);
+    expect(data.toTry.map((p) => p.category)).toEqual(["Burger", "Pizzas", "Empanadas", "Burger", "Pizzas", "Empanadas"]);
+    for (const p of data.toTry) expect(fav).not.toContain(p.name);
+    expect(data.toTry.map((p) => p.name)).not.toContain("Emp Carne Pic Cuchillo");
+    // El mismo día, la misma selección; otro día puede cambiar.
+    expect((await getTvData(new Date("2026-11-20T22:00:00Z"))).toTry).toEqual(data.toTry);
+  });
 });

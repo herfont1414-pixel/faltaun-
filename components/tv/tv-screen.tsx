@@ -10,6 +10,7 @@ const EMOJI: Record<string, string> = { papas: "🍟", burger: "🍔" };
 type Slide =
   | { kind: "qr" }
   | { kind: "featured" }
+  | { kind: "toTry" }
   | { kind: "special" }
   | { kind: "loyalty" }
   | { kind: "flyer"; url: string; name: string };
@@ -21,6 +22,7 @@ const host = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/+$/, ""
 function buildSlides(data: TvData): Slide[] {
   const info: Slide[] = [{ kind: "featured" }];
   if (data.special) info.push({ kind: "special" });
+  if (data.toTry.length) info.push({ kind: "toTry" });
   if (data.rewards.length) info.push({ kind: "loyalty" });
   info.push({ kind: "qr" });
   const flyers: Slide[] = data.flyers.map((f) => ({ kind: "flyer", url: f.url, name: f.name }));
@@ -142,6 +144,24 @@ function SlideView({ slide, data }: { slide: Slide; data: TvData }) {
         </div>
         <div className="grid flex-1 grid-cols-3 gap-[1.6vw]">
           {data.featured.slice(0, 6).map((p) => (
+            <ProductCard key={p.name} p={p} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (slide.kind === "toTry") {
+    return (
+      <div className="flex h-full w-full flex-col px-[5vw] py-[4vw]">
+        <div className="mb-[2.4vw] flex items-end justify-between">
+          <div>
+            <Spaced color="#e58a3c">Animate a algo distinto</Spaced>
+            <Title size="5.4vw">¿Ya los probaste?</Title>
+          </div>
+          <Logo width="13vw" />
+        </div>
+        <div className="grid flex-1 grid-cols-3 gap-[1.6vw]">
+          {data.toTry.slice(0, 6).map((p) => (
             <ProductCard key={p.name} p={p} />
           ))}
         </div>

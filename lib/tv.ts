@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import QRCode from "qrcode";
 import { getMenuHighlights, getMenuItems } from "@/lib/menu";
+import { getPool } from "@/lib/admin/db";
+import { loadFudoHistory } from "@/lib/admin/product-sales";
 import { isDbConfigured } from "@/lib/admin/db";
 import { listRewards } from "@/lib/admin/loyalty";
 import { MENU_URL } from "@/lib/order-messages";
@@ -137,6 +139,8 @@ export interface TvData {
   featured: TvProduct[];
   /** "popular": los más pedidos; "recomendados": rotación del día (sin ventas suficientes). */
   featuredKind: "popular" | "recomendados";
+  /** "¿Ya los probaste?": de lo que se pide menos, para animar a probar (rota cada día). */
+  toTry: TvProduct[];
   special: (TvProduct & { text: string; imageUrl: string | null }) | null;
   rewards: { code: string; name: string; firstMilestone: number }[];
   menuUrl: string;
@@ -154,34 +158,105 @@ function dailyPick(items: MenuItem[], count: number, day: string): MenuItem[] {
   return scored.sort((a, b) => a.k - b.k).slice(0, count).map((x) => x.it);
 }
 
-// Destacados mezclados: 2 burgers, 2 pizzas y 2 empanadas (los más pedidos de cada una si hay
-// ventas; si no, una rotación del día), intercalados. Si falta alguna, se completa con otros.
+// Destacados mezclados: 2 burgers, 2 pizzas y 2 empanadas, intercalados.
 const MIX: RegExp[] = [/burg/i, /^pizza/i, /empanad/i];
+const SALES_WINDOW_DAYS = 120;
+// Un producto nuevo se mide desde que empezó a venderse (con un mínimo de días, para que un
+// par de ventas sueltas no lo pongan primero).
+const MIN_RATE_DAYS = 14;
 
-export function mixFeatured(candidates: MenuItem[], popular: MenuItem[], day: string, perGroup = 2): MenuItem[] {
-  const popularRank = new Map(popular.map((p, i) => [p.id, i]));
-  const groups = MIX.map((re) => {
-    const inGroup = candidates.filter((i) => re.test(i.category));
-    const sold = inGroup.filter((i) => popularRank.has(i.id)).sort((a, b) => popularRank.get(a.id)! - popularRank.get(b.id)!);
-    const rest = dailyPick(inGroup.filter((i) => !popularRank.has(i.id)), inGroup.length, day + re.source);
-    return [...sold, ...rest].slice(0, perGroup);
-  });
+const norm = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+const daysBetween = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86_400_000);
+
+// Ventas por día de cada producto en los últimos meses: el historial de Fudo (hasta su último
+// día) más lo cobrado en MaderoSys después, sin contar dos veces un mismo día. Así lo que se
+// vende de verdad manda, aunque MaderoSys todavía tenga pocas ventas. Clave: nombre normalizado.
+export async function salesRates(now: Date = new Date()): Promise<Map<string, number>> {
+  const today = dayKey(now);
+  const from = dayKey(new Date(now.getTime() - SALES_WINDOW_DAYS * 86_400_000));
+  const stats = new Map<string, { qty: number; first: string }>();
+  const add = (name: string, qty: number, day: string) => {
+    const key = norm(name);
+    const cur = stats.get(key) ?? { qty: 0, first: day };
+    cur.qty += qty;
+    if (day < cur.first) cur.first = day;
+    stats.set(key, cur);
+  };
+  const history = loadFudoHistory();
+  for (const [day, , , product, qty] of history.rows) {
+    if (day >= from && day <= today) add(product, Number(qty), day);
+  }
+  if (isDbConfigured()) {
+    // Lo del sistema, desde el día siguiente al último del historial (o desde el inicio de la ventana).
+    const since = history.to && history.to >= from ? new Date(`${history.to}T23:59:59.999-03:00`) : new Date(`${from}T00:00:00-03:00`);
+    try {
+      const { rows } = await getPool().query<{ product_name: string; qty: number; closed_at: string | Date }>(
+        `select oi.product_name, oi.qty, o.closed_at
+         from gestion_order_items oi join gestion_orders o on o.id = oi.order_id
+         where o.status = 'cerrada' and o.closed_at >= $1`,
+        [since.toISOString()]
+      );
+      for (const r of rows) add(r.product_name, Number(r.qty), dayKey(new Date(r.closed_at)));
+    } catch {
+      // sin ventas del sistema: alcanza con el historial
+    }
+  }
+  const rates = new Map<string, number>();
+  for (const [key, st] of stats) rates.set(key, st.qty / Math.max(MIN_RATE_DAYS, daysBetween(st.first, today) + 1));
+  return rates;
+}
+
+const rateOf = (rates: Map<string, number>, item: MenuItem) => rates.get(norm(item.name)) ?? 0;
+
+// Intercala los grupos (burger, pizza, empanada, burger…) y completa con otros si falta alguno.
+function interleave(groups: MenuItem[][], perGroup: number, fill: MenuItem[], exclude = new Set<string>()): MenuItem[] {
   const out: MenuItem[] = [];
-  for (let i = 0; i < perGroup; i++) for (const g of groups) if (g[i]) out.push(g[i]);
-  const total = perGroup * MIX.length;
-  if (out.length < total) {
-    const used = new Set(out.map((i) => i.id));
-    const allowed = new Set(candidates.map((i) => i.id));
-    const fill = [...popular, ...dailyPick(candidates, candidates.length, day)].filter((i) => !used.has(i.id) && allowed.has(i.id));
-    for (const it of fill) {
-      if (out.length >= total) break;
-      if (!used.has(it.id)) {
+  const used = new Set(exclude);
+  for (let i = 0; i < perGroup; i++) {
+    for (const g of groups) {
+      const it = g.filter((x) => !used.has(x.id))[0];
+      if (it) {
         used.add(it.id);
         out.push(it);
       }
     }
   }
+  for (const it of fill) {
+    if (out.length >= perGroup * groups.length) break;
+    if (!used.has(it.id)) {
+      used.add(it.id);
+      out.push(it);
+    }
+  }
   return out;
+}
+
+// "Los favoritos": lo que más se vende por día de cada grupo. Sin ventas, una rotación del día.
+export function mixFeatured(candidates: MenuItem[], rates: Map<string, number>, day: string, perGroup = 2): MenuItem[] {
+  const byRate = (list: MenuItem[], seed: string) =>
+    [...dailyPick(list, list.length, seed)].sort((a, b) => rateOf(rates, b) - rateOf(rates, a));
+  const groups = MIX.map((re) => byRate(candidates.filter((i) => re.test(i.category)), day + re.source));
+  return interleave(groups, perGroup, byRate(candidates, day));
+}
+
+// "¿Ya los probaste?": de la mitad que menos se vende de cada grupo, una selección que cambia
+// cada día (sin repetir los favoritos de la otra pantalla).
+export function mixToTry(candidates: MenuItem[], rates: Map<string, number>, day: string, exclude: MenuItem[], perGroup = 2): MenuItem[] {
+  const lessSold = (list: MenuItem[]) => {
+    const sorted = [...list].sort((a, b) => rateOf(rates, a) - rateOf(rates, b));
+    return sorted.slice(0, Math.max(perGroup, Math.ceil(sorted.length / 2)));
+  };
+  const groups = MIX.map((re) => dailyPick(lessSold(candidates.filter((i) => re.test(i.category))), 99, `${day}-probar-${re.source}`));
+  const fill = dailyPick(lessSold(candidates), 99, `${day}-probar`);
+  return interleave(groups, perGroup, fill, new Set(exclude.map((i) => i.id)));
 }
 
 const qr = (text: string) =>
@@ -192,8 +267,11 @@ export async function getTvData(now: Date = new Date()): Promise<TvData> {
   const highlights = await getMenuHighlights(items);
   const byId = new Map(items.map((i) => [i.id, i]));
   const candidates = items.filter((i) => !NOT_FEATURED.test(i.category) && !NOT_FEATURED_NAME.test(i.name));
-  const popular = (highlights?.popularIds ?? []).map((id) => byId.get(id)).filter((i): i is MenuItem => !!i);
-  const featuredItems = mixFeatured(candidates, popular, now.toISOString().slice(0, 10));
+  const day = dayKey(now);
+  const rates = await salesRates(now);
+  const withSales = candidates.filter((i) => rateOf(rates, i) > 0).length;
+  const featuredItems = mixFeatured(candidates, rates, day);
+  const toTryItems = mixToTry(candidates, rates, day, featuredItems);
 
   const specialItem = highlights?.special ? byId.get(highlights.special.id) : undefined;
   const rewards = isDbConfigured()
@@ -205,7 +283,8 @@ export async function getTvData(now: Date = new Date()): Promise<TvData> {
 
   return {
     featured: featuredItems.map((i) => ({ name: i.name, price: i.price, category: i.category })),
-    featuredKind: popular.length >= 3 ? "popular" : "recomendados",
+    featuredKind: withSales >= 6 ? "popular" : "recomendados",
+    toTry: toTryItems.map((i) => ({ name: i.name, price: i.price, category: i.category })),
     special: specialItem
       ? {
           name: specialItem.name,
