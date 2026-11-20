@@ -174,9 +174,23 @@ function SlideView({ slide, data }: { slide: Slide; data: TvData }) {
       <div className="flex h-full w-full items-center justify-center gap-[5vw] px-[6vw]">
         <div className="flex max-w-[52vw] flex-col gap-[1.4vw]">
           <Spaced size="1.6vw" color="#e58a3c">★ Especial del día ★</Spaced>
-          <Title size="8vw">{s.name}</Title>
-          {s.text && <Elite size="2.2vw">{s.text}</Elite>}
-          <Title size="6vw" color="#e58a3c">{money(s.price)}</Title>
+          {s.also ? (
+            <>
+              {s.text && <Elite size="2.2vw">{s.text}</Elite>}
+              {[s, s.also].map((p) => (
+                <div key={p.name} className="flex flex-col gap-[0.4vw]">
+                  <Title size="5.2vw">{p.name}</Title>
+                  <Title size="4vw" color="#e58a3c">{money(p.price)}</Title>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <Title size="8vw">{s.name}</Title>
+              {s.text && <Elite size="2.2vw">{s.text}</Elite>}
+              <Title size="6vw" color="#e58a3c">{money(s.price)}</Title>
+            </>
+          )}
           <Logo width="14vw" />
         </div>
         {s.imageUrl ? (

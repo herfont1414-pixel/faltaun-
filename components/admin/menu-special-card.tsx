@@ -7,6 +7,7 @@ import type { AdminProduct } from "@/lib/admin/types";
 interface Special {
   active: boolean;
   productId: number | null;
+  productId2: number | null;
   text: string;
 }
 
@@ -51,6 +52,7 @@ export function MenuSpecialCard() {
   const [saved, setSaved] = useState<Special | null>(null);
   const [active, setActive] = useState(false);
   const [productId, setProductId] = useState<number | null>(null);
+  const [productId2, setProductId2] = useState<number | null>(null);
   const [text, setText] = useState("");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -73,6 +75,7 @@ export function MenuSpecialCard() {
           setSaved(s.special);
           setActive(s.special.active);
           setProductId(s.special.productId);
+          setProductId2(s.special.productId2 ?? null);
           setText(s.special.text);
         }
       })
@@ -80,9 +83,27 @@ export function MenuSpecialCard() {
   }, []);
 
   const product = products.find((p) => p.id === productId) ?? null;
+  const product2 = products.find((p) => p.id === productId2) ?? null;
   const dirty =
-    !saved || saved.active !== active || saved.productId !== productId || saved.text !== text.trim();
+    !saved ||
+    saved.active !== active ||
+    saved.productId !== productId ||
+    (saved.productId2 ?? null) !== productId2 ||
+    saved.text !== text.trim();
   const categories = Array.from(new Set(products.map((p) => p.category)));
+
+  const productOptions = categories.map((cat) => (
+    <optgroup key={cat} label={cat}>
+      {products
+        .filter((p) => p.category === cat)
+        .map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name} · {money(p.price)}
+            {p.inStock ? "" : " (sin stock)"}
+          </option>
+        ))}
+    </optgroup>
+  ));
 
   async function uploadPhoto(file: File) {
     setImageMsg("");
@@ -132,7 +153,7 @@ export function MenuSpecialCard() {
     const res = await fetch("/api/admin/menu-special", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active, productId, text }),
+      body: JSON.stringify({ active, productId, productId2, text }),
     });
     const data = await res.json().catch(() => ({}));
     setSaving(false);
@@ -172,18 +193,7 @@ export function MenuSpecialCard() {
             style={{ marginTop: 6, width: "100%" }}
           >
             <option value="">Elegí un producto</option>
-            {categories.map((cat) => (
-              <optgroup key={cat} label={cat}>
-                {products
-                  .filter((p) => p.category === cat)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} · {money(p.price)}
-                      {p.inStock ? "" : " (sin stock)"}
-                    </option>
-                  ))}
-              </optgroup>
-            ))}
+            {productOptions}
           </select>
           {product && !product.inStock && (
             <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "#b45309" }}>
@@ -192,6 +202,27 @@ export function MenuSpecialCard() {
           )}
           <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "var(--text-faint)" }}>
             El precio es siempre el vigente del producto; para cambiarlo, editalo en Productos.
+          </span>
+        </label>
+
+        <label style={{ fontSize: 12.5, fontWeight: 600 }}>
+          Segundo producto (opcional)
+          <select
+            value={productId2 ?? ""}
+            onChange={(e) => setProductId2(e.target.value ? Number(e.target.value) : null)}
+            className="caja-input"
+            style={{ marginTop: 6, width: "100%" }}
+          >
+            <option value="">Ninguno</option>
+            {productOptions}
+          </select>
+          {product2 && !product2.inStock && (
+            <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "#b45309" }}>
+              Este producto está sin stock: mientras tanto no se muestra.
+            </span>
+          )}
+          <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "var(--text-faint)" }}>
+            Se muestra junto al primero, cada uno con su precio (en el menú online y en Madero TV). Ej: dos pizzas nuevas.
           </span>
         </label>
 
