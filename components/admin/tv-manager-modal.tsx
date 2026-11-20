@@ -73,7 +73,10 @@ export function TvManagerModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <div style={{ fontSize: 13, color: "var(--text-dim)", marginBottom: 14 }}>
-          Además de la carta, los destacados, la fidelidad y el QR, en la tele pasan estos flyers. Pasan en orden de nombre. Los horizontales se ven a pantalla completa.
+          Además de los destacados, la fidelidad y el QR, en la tele pasan estos flyers. Pasan en orden de nombre. Los horizontales se ven a pantalla completa.
+        </div>
+        <div style={{ fontSize: 12.5, color: "var(--text-dim)", background: "#f6f3ee", borderRadius: 10, padding: "8px 12px", marginBottom: 14 }}>
+          La pantalla <b>«Especial del día»</b> (sus productos, el texto y la foto de la derecha) se cambia en <b>Configuración → Especial del día</b>.
         </div>
 
         <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
