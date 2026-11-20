@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { seedFreshDb, tearDownTestDb } from "./helpers";
 import { getTvData, listTvFlyers, resolveTvFlyer } from "@/lib/tv";
+import { cartaPages } from "@/lib/tv-carta";
 import { GET as tvGet } from "@/app/api/tv/route";
 import { GET as flyerGet } from "@/app/api/tv/flyer/[name]/route";
 
@@ -47,6 +48,8 @@ describe("Madero TV", () => {
   it("arma los destacados con precio, la fidelidad y los QR al menú", async () => {
     const data = await getTvData(new Date("2030-01-01T12:00:00Z"));
     expect(data.featured).toHaveLength(6);
+    // Mezcla: burger, pizza, empanada, burger, pizza, empanada.
+    expect(data.featured.map((p) => p.category)).toEqual(["Burger", "Pizzas", "Empanadas", "Burger", "Pizzas", "Empanadas"]);
     for (const p of data.featured) {
       expect(p.price).toBeGreaterThan(0);
       expect(p.category).not.toMatch(/bebida|salsa|vajilla/i);
@@ -62,5 +65,21 @@ describe("Madero TV", () => {
     const res = await tvGet();
     expect(res.status).toBe(200);
     expect((await res.json()).featured).toHaveLength(6);
+  });
+
+  it("arma la carta por categorías, sin salsas ni vajilla, con las bebidas al final y en páginas de hasta 14", async () => {
+    const data = await getTvData();
+    const cats = data.carta.map((c) => c.category);
+    expect(cats[0]).toBe("Entradas");
+    expect(cats.at(-1)).toBe("Bebidas");
+    expect(cats.some((c) => /salsa|vajilla/i.test(c))).toBe(false);
+    for (const c of data.carta) for (const it of c.items) expect(it.price).toBeGreaterThan(0);
+    const pages = cartaPages(data);
+    for (const p of pages) expect(p.items.length).toBeLessThanOrEqual(14);
+    const bebidas = pages.filter((p) => p.category === "Bebidas");
+    expect(bebidas.length).toBeGreaterThan(1);
+    expect(bebidas.map((p) => p.page)).toEqual(bebidas.map((_, i) => i + 1));
+    expect(bebidas.reduce((n, p) => n + p.items.length, 0)).toBe(data.carta.find((c) => c.category === "Bebidas")!.items.length);
+    expect(cartaPages({ carta: [{ category: "X", items: Array.from({ length: 15 }, (_, i) => ({ name: `p${i}`, price: 1 })) }] }).map((p) => p.items.length)).toEqual([8, 7]);
   });
 });

@@ -79,8 +79,15 @@ export interface TvProduct {
   category: string;
 }
 
+export interface TvCartaCategory {
+  category: string;
+  items: { name: string; price: number }[];
+}
+
 export interface TvData {
   featured: TvProduct[];
+  /** La carta por categorías (solo lo disponible), para las pantallas de precios. */
+  carta: TvCartaCategory[];
   /** "popular": los más pedidos; "recomendados": rotación del día (sin ventas suficientes). */
   featuredKind: "popular" | "recomendados";
   special: (TvProduct & { text: string; imageUrl: string | null }) | null;
@@ -100,6 +107,50 @@ function dailyPick(items: MenuItem[], count: number, day: string): MenuItem[] {
   return scored.sort((a, b) => a.k - b.k).slice(0, count).map((x) => x.it);
 }
 
+// Destacados mezclados: 2 burgers, 2 pizzas y 2 empanadas (los más pedidos de cada una si hay
+// ventas; si no, una rotación del día), intercalados. Si falta alguna, se completa con otros.
+const MIX: RegExp[] = [/burg/i, /^pizza/i, /empanad/i];
+
+export function mixFeatured(candidates: MenuItem[], popular: MenuItem[], day: string, perGroup = 2): MenuItem[] {
+  const popularRank = new Map(popular.map((p, i) => [p.id, i]));
+  const groups = MIX.map((re) => {
+    const inGroup = candidates.filter((i) => re.test(i.category));
+    const sold = inGroup.filter((i) => popularRank.has(i.id)).sort((a, b) => popularRank.get(a.id)! - popularRank.get(b.id)!);
+    const rest = dailyPick(inGroup.filter((i) => !popularRank.has(i.id)), inGroup.length, day + re.source);
+    return [...sold, ...rest].slice(0, perGroup);
+  });
+  const out: MenuItem[] = [];
+  for (let i = 0; i < perGroup; i++) for (const g of groups) if (g[i]) out.push(g[i]);
+  const total = perGroup * MIX.length;
+  if (out.length < total) {
+    const used = new Set(out.map((i) => i.id));
+    const fill = [...popular, ...dailyPick(candidates, candidates.length, day)].filter((i) => !used.has(i.id) && !NOT_FEATURED.test(i.category));
+    for (const it of fill) {
+      if (out.length >= total) break;
+      if (!used.has(it.id)) {
+        used.add(it.id);
+        out.push(it);
+      }
+    }
+  }
+  return out;
+}
+
+// Categorías que no van a la carta de la tele.
+const NOT_IN_CARTA = /salsa|vajilla|extra|aderezo|delivery|^v$/i;
+
+export function buildCarta(items: MenuItem[]): TvCartaCategory[] {
+  const out: TvCartaCategory[] = [];
+  for (const it of items) {
+    if (NOT_IN_CARTA.test(it.category)) continue;
+    let cat = out.find((c) => c.category === it.category);
+    if (!cat) out.push((cat = { category: it.category, items: [] }));
+    cat.items.push({ name: it.name, price: it.price });
+  }
+  // Bebidas al final (son muchas): primero la comida.
+  return [...out.filter((c) => !/bebida/i.test(c.category)), ...out.filter((c) => /bebida/i.test(c.category))];
+}
+
 const qr = (text: string) =>
   QRCode.toString(text, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#1a110bff", light: "#efe3ccff" } });
 
@@ -109,7 +160,7 @@ export async function getTvData(now: Date = new Date()): Promise<TvData> {
   const byId = new Map(items.map((i) => [i.id, i]));
   const candidates = items.filter((i) => !NOT_FEATURED.test(i.category));
   const popular = (highlights?.popularIds ?? []).map((id) => byId.get(id)).filter((i): i is MenuItem => !!i);
-  const featuredItems = popular.length >= 3 ? popular.slice(0, 6) : dailyPick(candidates, 6, now.toISOString().slice(0, 10));
+  const featuredItems = mixFeatured(candidates, popular, now.toISOString().slice(0, 10));
 
   const specialItem = highlights?.special ? byId.get(highlights.special.id) : undefined;
   const rewards = isDbConfigured()
@@ -122,6 +173,7 @@ export async function getTvData(now: Date = new Date()): Promise<TvData> {
   return {
     featured: featuredItems.map((i) => ({ name: i.name, price: i.price, category: i.category })),
     featuredKind: popular.length >= 3 ? "popular" : "recomendados",
+    carta: buildCarta(items),
     special: specialItem
       ? {
           name: specialItem.name,
