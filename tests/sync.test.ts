@@ -21,6 +21,8 @@ import { getMenuHighlights, getMenuItems } from "@/lib/menu";
 import { POST as syncPost } from "@/app/api/sync/route";
 import { GET as businessGet } from "@/app/api/business-config/route";
 import { middleware } from "@/middleware";
+import { GET as cajaGet } from "@/app/caja/route";
+import { isLanAdminUrl } from "@/lib/admin/caja-link";
 
 const g = globalThis as unknown as { __adminDb?: Db };
 const files: string[] = [];
@@ -297,6 +299,62 @@ describe("la nube no tiene panel", () => {
     expect(middleware(new NextRequest("http://localhost/api/admin/state")).status).toBe(401);
   });
 });
+
+describe("link fijo /caja (abrir la caja desde el celular aunque cambie su dirección)", () => {
+  const open = () => onCloud(() => cajaGet(new NextRequest("https://madero14.vercel.app/caja")));
+
+  it("lleva a la dirección que mandó la PC en la última sincronización", async () => {
+    resetHeartbeatThrottle();
+    await syncOnce(pc, send, { popularNames: [], cajaLanUrl: "http://192.168.1.50:3000/admin" });
+    let res = await open();
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("http://192.168.1.50:3000/admin");
+
+    // Se reinició la PC y el router le dio otra dirección: el mismo link sigue andando.
+    resetHeartbeatThrottle();
+    await syncOnce(pc, send, { popularNames: [], cajaLanUrl: "http://192.168.1.63:3000/admin" });
+    res = await open();
+    expect(res.headers.get("location")).toBe("http://192.168.1.63:3000/admin");
+  });
+
+  it("con la caja apagada (no habló hace rato) avisa en vez de mandar a una dirección muerta", async () => {
+    await cloud.query("update gestion_meta set value = $1 where key = 'pc_last_seen'", [new Date(Date.now() - 10 * 60_000).toISOString()]);
+    const res = await open();
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("No encuentro la caja");
+    resetHeartbeatThrottle();
+    await noteHeartbeat(cloud, Date.now(), true);
+  });
+
+  it("nunca lleva a un sitio de internet, solo a direcciones del local", async () => {
+    expect(isLanAdminUrl("http://192.168.0.10:3000/admin")).toBe(true);
+    expect(isLanAdminUrl("http://10.0.0.5:3000/admin")).toBe(true);
+    expect(isLanAdminUrl("https://otro-sitio.com/admin")).toBe(false);
+    expect(isLanAdminUrl("http://8.8.8.8:3000/admin")).toBe(false);
+    expect(isLanAdminUrl("http://192.168.1.5:3000/admin@evil.com")).toBe(false);
+    await cloud.query("update gestion_meta set value = 'https://otro-sitio.com/admin' where key = 'caja_lan_url'");
+    const res = await open();
+    expect(res.status).toBe(200);
+  });
+
+  it("/caja?guardar muestra cómo dejar el acceso fijo en el celular (con su botón a la caja)", async () => {
+    resetHeartbeatThrottle();
+    await syncOnce(pc, send, { popularNames: [], cajaLanUrl: "http://192.168.1.77:3000/admin" });
+    const res = await onCloud(() => cajaGet(new NextRequest("https://madero14.vercel.app/caja?guardar")));
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('href="http://192.168.1.77:3000/admin"');
+    expect(html).toContain("Agregar a la pantalla principal");
+    expect(html).toContain('rel="manifest" href="/caja/manifest"');
+  });
+
+  it("en la propia PC, /caja abre el panel", async () => {
+    const res = await onPc(() => cajaGet(new NextRequest("http://localhost:3000/caja")));
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("http://localhost:3000/admin");
+  });
+});
+
 
 describe("la nube sin menú todavía", () => {
   it("no muestra el menú de ejemplo: queda vacío hasta que la PC lo mande", async () => {

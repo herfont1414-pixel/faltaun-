@@ -20,10 +20,21 @@ export function lanAddresses(port = Number(process.env.PORT) || 3000): string[] 
   return out.sort((x, y) => x.rank - y.rank).map((x) => x.url);
 }
 
+// Link fijo a la caja en la nube (https://…/caja): sigue andando aunque el router le cambie la
+// dirección a la PC (ver lib/admin/caja-link.ts). Solo si la PC está conectada con la nube.
+export function fixedCajaUrl(): string | null {
+  const base = process.env.CLOUD_SYNC_URL?.trim().replace(/\/+$/, "");
+  if (!base || !process.env.SYNC_TOKEN?.trim() || !/^https:\/\//i.test(base)) return null;
+  return `${base}/caja?guardar`;
+}
+
 export async function lanInfo() {
   const addresses = process.env.VERCEL ? [] : lanAddresses();
-  const qr = addresses[0]
-    ? await QRCode.toString(addresses[0], { type: "svg", margin: 1, color: { dark: "#111111ff", light: "#ffffffff" } })
+  const fixedUrl = addresses.length ? fixedCajaUrl() : null;
+  // El QR lleva al link fijo cuando existe: se escanea una sola vez y queda guardado para siempre.
+  const target = fixedUrl ?? addresses[0];
+  const qr = target
+    ? await QRCode.toString(target, { type: "svg", margin: 1, color: { dark: "#111111ff", light: "#ffffffff" } })
     : null;
-  return { addresses, qr };
+  return { addresses, fixedUrl, qr };
 }

@@ -80,8 +80,13 @@ export const META_KEYS = [
   "menu_special_image_v",
   "menu_special_image",
   "menu_popular_names",
+  // Dirección de la caja en la red del local (http://192.168.x.x:3000/admin): la nube la usa para
+  // el link fijo /caja, que lleva siempre a la caja aunque el router le cambie la dirección.
+  "caja_lan_url",
 ];
 const META = "meta";
+// Claves que la PC no guarda en su base: se calculan en cada vuelta.
+const COMPUTED_META = new Set(["menu_popular_names", "caja_lan_url"]);
 
 // Se publican siempre juntas: reemplazar categorías borraría los productos en cascada.
 const LINKED: Record<string, string> = { gestion_categories: "gestion_products", gestion_products: "gestion_categories" };
@@ -116,7 +121,11 @@ function plain(row: Row): Row {
 // PC: leer lo que hay que publicar
 // ---------------------------------------------------------------------------------------------
 
-export async function readPublishable(db: DbClient, popularNames: string[] = []): Promise<Record<string, Row[]>> {
+export async function readPublishable(
+  db: DbClient,
+  popularNames: string[] = [],
+  cajaLanUrl: string | null = null
+): Promise<Record<string, Row[]>> {
   const out: Record<string, Row[]> = {};
   for (const spec of PUBLISHED_TABLES) {
     const { rows } = await db.query<Row>(`select ${spec.cols.join(", ")} from ${spec.name} order by ${spec.orderBy}`);
@@ -126,8 +135,9 @@ export async function readPublishable(db: DbClient, popularNames: string[] = [])
     `select key, value from gestion_meta where key in (${META_KEYS.map((_, i) => `$${i + 1}`).join(", ")}) order by key`,
     META_KEYS
   );
-  const metaRows: Row[] = meta.filter((m) => m.key !== "menu_popular_names").map((m) => ({ key: m.key, value: m.value }));
+  const metaRows: Row[] = meta.filter((m) => !COMPUTED_META.has(m.key)).map((m) => ({ key: m.key, value: m.value }));
   metaRows.push({ key: "menu_popular_names", value: JSON.stringify(popularNames) });
+  if (cajaLanUrl) metaRows.push({ key: "caja_lan_url", value: cajaLanUrl });
   out[META] = metaRows.sort((a, b) => String(a.key).localeCompare(String(b.key)));
   return out;
 }

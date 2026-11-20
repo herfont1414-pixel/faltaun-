@@ -51,3 +51,22 @@ describe("usar el panel desde el celular (Wi-Fi del local)", () => {
     for (const a of lanAddresses(3000)) expect(a).not.toMatch(/127\.0\.0\.1|169\.254\./);
   });
 });
+
+describe("link fijo a la caja (cuando la PC está conectada con la nube)", () => {
+  it("se arma con la dirección del menú online; sin nube (o sin https) no hay", async () => {
+    const { fixedCajaUrl } = await import("@/lib/admin/lan");
+    const saved = { url: process.env.CLOUD_SYNC_URL, token: process.env.SYNC_TOKEN };
+    try {
+      process.env.CLOUD_SYNC_URL = "https://madero14.vercel.app/";
+      process.env.SYNC_TOKEN = "clave";
+      expect(fixedCajaUrl()).toBe("https://madero14.vercel.app/caja?guardar");
+      process.env.CLOUD_SYNC_URL = "http://algo.local";
+      expect(fixedCajaUrl()).toBeNull();
+      delete process.env.CLOUD_SYNC_URL;
+      expect(fixedCajaUrl()).toBeNull();
+    } finally {
+      if (saved.url === undefined) delete process.env.CLOUD_SYNC_URL; else process.env.CLOUD_SYNC_URL = saved.url;
+      if (saved.token === undefined) delete process.env.SYNC_TOKEN; else process.env.SYNC_TOKEN = saved.token;
+    }
+  });
+});

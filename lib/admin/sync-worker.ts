@@ -14,6 +14,7 @@ import {
   type SyncResponse,
 } from "@/lib/admin/sync";
 import { popularProductNames } from "@/lib/menu";
+import { lanAddresses } from "@/lib/admin/lan";
 
 const HASH_PREFIX = "sync_hash:";
 const ACK_KEY = "sync_pending_ack";
@@ -44,11 +45,12 @@ export interface SyncOutcome {
 export async function syncOnce(
   db: Db,
   send: (request: SyncRequest) => Promise<SyncResponse>,
-  options: { now?: Date; popularNames?: string[] } = {}
+  options: { now?: Date; popularNames?: string[]; cajaLanUrl?: string | null } = {}
 ): Promise<SyncOutcome> {
   const now = options.now ?? new Date();
   const popular = options.popularNames ?? (await popularProductNames(db));
-  const current = await readPublishable(db, popular);
+  const cajaLanUrl = options.cajaLanUrl !== undefined ? options.cajaLanUrl : (lanAddresses()[0] ?? null);
+  const current = await readPublishable(db, popular, cajaLanUrl);
 
   const { rows: hashRows } = await db.query<{ key: string; value: string | null }>(
     "select key, value from gestion_meta where key like $1",
