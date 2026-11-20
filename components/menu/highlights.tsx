@@ -4,7 +4,7 @@ import type { MenuItem } from "@/lib/types";
 
 interface HighlightsProps {
   popular: MenuItem[];
-  special: { item: MenuItem; text: string; imageUrl: string | null } | null;
+  special: { item: MenuItem; also?: MenuItem | null; text: string; imageUrl: string | null } | null;
   onSelect: (item: MenuItem) => void;
 }
 
@@ -61,11 +61,7 @@ export function Highlights({ popular, special, onSelect }: HighlightsProps) {
 
       {special && SpecialIcon && (
         <div className="px-5">
-          <button
-            type="button"
-            onClick={() => onSelect(special.item)}
-            className="w-full rounded-2xl border border-ember/50 bg-gradient-to-br from-ember/20 via-base-card to-base-card p-4 text-left shadow-[0_0_24px_rgba(217,123,63,0.12)] transition active:scale-[0.99]"
-          >
+          <div className="w-full rounded-2xl border border-ember/50 bg-gradient-to-br from-ember/20 via-base-card to-base-card p-4 text-left shadow-[0_0_24px_rgba(217,123,63,0.12)]">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 font-display text-lg text-stone-50">
                 <Sparkles className="h-5 w-5 text-ember" strokeWidth={1.8} />
@@ -74,26 +70,43 @@ export function Highlights({ popular, special, onSelect }: HighlightsProps) {
               <span className="rounded-md bg-ember px-2 py-0.5 text-[10px] font-bold tracking-wider text-base">HOY</span>
             </div>
             {special.imageUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={special.imageUrl}
-                alt={special.item.name}
-                loading="lazy"
-                className="mt-3 max-h-[420px] w-full rounded-xl bg-black/40 object-contain"
-              />
+              <button type="button" onClick={() => onSelect(special.item)} className="block w-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={special.imageUrl}
+                  alt={special.item.name}
+                  loading="lazy"
+                  className="mt-3 max-h-[420px] w-full rounded-xl bg-black/40 object-contain"
+                />
+              </button>
             )}
-            <div className="mt-3 flex items-center gap-3">
-              <SpecialIcon className="h-11 w-11 shrink-0 text-ember" strokeWidth={1.3} />
-              <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-semibold leading-tight text-stone-50">{special.item.name}</p>
-                {special.text && <p className="mt-0.5 line-clamp-2 text-xs text-stone-400">{special.text}</p>}
-                <p className="mt-1 font-display text-base text-ember-soft">{price(special.item.price)}</p>
-              </div>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ember text-base">
-                <Plus className="h-4 w-4" strokeWidth={2.5} />
-              </span>
-            </div>
-          </button>
+            {special.also && special.text && <p className="mt-3 line-clamp-2 text-xs text-stone-400">{special.text}</p>}
+            {[special.item, ...(special.also ? [special.also] : [])].map((item, index) => {
+              const Icon = iconFor(item.category);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelect(item)}
+                  className={`flex w-full items-center gap-3 text-left transition active:scale-[0.99] ${
+                    index > 0 ? "mt-3 border-t border-white/10 pt-3" : "mt-3"
+                  }`}
+                >
+                  <Icon className="h-11 w-11 shrink-0 text-ember" strokeWidth={1.3} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold leading-tight text-stone-50">{item.name}</span>
+                    {!special.also && special.text && (
+                      <span className="mt-0.5 line-clamp-2 block text-xs text-stone-400">{special.text}</span>
+                    )}
+                    <span className="mt-1 block font-display text-base text-ember-soft">{price(item.price)}</span>
+                  </span>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ember text-base">
+                    <Plus className="h-4 w-4" strokeWidth={2.5} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

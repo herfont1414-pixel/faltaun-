@@ -74,6 +74,7 @@ export const PUBLISHED_TABLES: TableSpec[] = [
 export const META_KEYS = [
   "menu_special_active",
   "menu_special_id",
+  "menu_special_id2",
   "menu_special_text",
   "menu_special_image_product",
   "menu_special_image_v",

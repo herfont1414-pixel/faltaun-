@@ -21,12 +21,13 @@ export async function PUT(request: NextRequest) {
   const actor = await requireUser(request, ["admin", "encargado"]);
   if (!actor) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const body = (await request.json().catch(() => ({}))) as { active?: boolean; productId?: number | null; text?: string };
+  const body = (await request.json().catch(() => ({}))) as { active?: boolean; productId?: number | null; productId2?: number | null; text?: string };
   try {
     const before = await getMenuSpecial();
     const special = await setMenuSpecial({
       active: body.active === true,
       productId: typeof body.productId === "number" ? body.productId : null,
+      productId2: typeof body.productId2 === "number" ? body.productId2 : null,
       text: typeof body.text === "string" ? body.text : "",
     });
     await recordAudit({

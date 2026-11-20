@@ -141,7 +141,8 @@ export interface TvData {
   featuredKind: "popular" | "recomendados";
   /** "¿Ya los probaste?": de lo que se pide menos, para animar a probar (rota cada día). */
   toTry: TvProduct[];
-  special: (TvProduct & { text: string; imageUrl: string | null }) | null;
+  /** also: segundo producto del especial (opcional), con su precio. */
+  special: (TvProduct & { text: string; imageUrl: string | null; also: TvProduct | null }) | null;
   rewards: { code: string; name: string; firstMilestone: number }[];
   menuUrl: string;
   instagram: string;
@@ -274,6 +275,7 @@ export async function getTvData(now: Date = new Date()): Promise<TvData> {
   const toTryItems = mixToTry(candidates, rates, day, featuredItems);
 
   const specialItem = highlights?.special ? byId.get(highlights.special.id) : undefined;
+  const alsoItem = highlights?.special?.id2 ? byId.get(highlights.special.id2) : undefined;
   const rewards = isDbConfigured()
     ? (await listRewards().catch(() => []))
         .filter((r) => r.active)
@@ -292,6 +294,7 @@ export async function getTvData(now: Date = new Date()): Promise<TvData> {
           category: specialItem.category,
           text: highlights?.special?.text ?? "",
           imageUrl: highlights?.special?.imageUrl ?? null,
+          also: alsoItem ? { name: alsoItem.name, price: alsoItem.price, category: alsoItem.category } : null,
         }
       : null,
     rewards,

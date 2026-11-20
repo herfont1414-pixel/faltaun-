@@ -46,7 +46,7 @@ describe("foto del especial del día", () => {
     const s = await special();
     expect(s!.imageUrl).toBe(`/api/menu-special/image?v=${info.version}`);
     // El especial (producto, texto) no cambia por subir la foto.
-    expect(await getMenuSpecial()).toEqual({ active: true, productId, text: "Solo hoy" });
+    expect(await getMenuSpecial()).toEqual({ active: true, productId, productId2: null, text: "Solo hoy" });
 
     const data = await getMenuSpecialImageData();
     expect(data!.mime).toBe("image/jpeg");
