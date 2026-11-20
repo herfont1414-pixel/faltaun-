@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { BrandLogo } from "@/components/admin/brand-logo";
 import { PhoneAccessModal } from "@/components/admin/phone-access-modal";
+import { TvManagerModal } from "@/components/admin/tv-manager-modal";
 import type { Section } from "@/lib/admin/client-types";
 
 interface ConnectionStatus {
@@ -142,6 +143,7 @@ interface SidebarProps {
 
 export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile, badges }: SidebarProps) {
   const [phoneOpen, setPhoneOpen] = useState(false);
+  const [tvOpen, setTvOpen] = useState(false);
   function handleClick(item: NavItem) {
     onCloseMobile();
     if (item.section) {
@@ -151,10 +153,8 @@ export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile, 
     if (item.action === "kds") {
       window.open("/admin/kds", "_blank");
     }
-    // Pantalla para la tele del local (se transmite desde Chrome o se abre en la tele).
-    if (item.action === "tv") {
-      window.open("/tv", "_blank");
-    }
+    // Madero TV: manejar los flyers y abrir la pantalla de la tele.
+    if (item.action === "tv") setTvOpen(true);
     if (item.action === "phone") setPhoneOpen(true);
   }
 
@@ -229,6 +229,7 @@ export function Sidebar({ activeSection, onNavigate, mobileOpen, onCloseMobile, 
         </div>
       </aside>
       {phoneOpen && <PhoneAccessModal onClose={() => setPhoneOpen(false)} />}
+      {tvOpen && <TvManagerModal onClose={() => setTvOpen(false)} />}
     </>
   );
 }

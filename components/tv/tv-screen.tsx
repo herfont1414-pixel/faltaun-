@@ -135,16 +135,27 @@ function CartaView({ page, data }: { page: CartaPage; data: TvData }) {
   );
 }
 
-function SlideView({ slide, data, cartaPage }: { slide: Slide; data: TvData; cartaPage: CartaPage | null }) {
-  if (slide.kind === "carta") return cartaPage ? <CartaView page={cartaPage} data={data} /> : null;
-  if (slide.kind === "flyer") {
-    return (
-      <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={slide.url} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-3xl" />
-        <div className="relative flex h-full w-full items-center justify-center gap-[4vw] px-[4vw]">
+// Flyer: los horizontales (como una tele) ocupan toda la pantalla; los verticales van al centro
+// con el logo y el QR al costado.
+function FlyerView({ url, name, data }: { url: string; name: string; data: TvData }) {
+  const [landscape, setLandscape] = useState<boolean | null>(null);
+  return (
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-3xl" />
+      {landscape ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={name} className="relative h-full w-full object-contain" />
+      ) : (
+        <div className="relative flex h-full w-full items-center justify-center gap-[4vw] px-[4vw]" style={{ visibility: landscape === null ? "hidden" : "visible" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={slide.url} alt={slide.name} className="max-h-[92vh] max-w-[62vw] rounded-[1vw] object-contain shadow-2xl" />
+          <img
+            src={url}
+            alt={name}
+            onLoad={(e) => setLandscape(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight >= 1.25)}
+            onError={() => setLandscape(false)}
+            className="max-h-[92vh] max-w-[62vw] rounded-[1vw] object-contain shadow-2xl"
+          />
           <div className="flex flex-col items-center gap-[1.2vw] text-center">
             <Logo width="14vw" />
             <Spaced size="1.1vw">Pedí online</Spaced>
@@ -152,8 +163,15 @@ function SlideView({ slide, data, cartaPage }: { slide: Slide; data: TvData; car
             <Elite size="1.2vw" color="#d6b480">@{data.instagram}</Elite>
           </div>
         </div>
-      </div>
-    );
+      )}
+    </div>
+  );
+}
+
+function SlideView({ slide, data, cartaPage }: { slide: Slide; data: TvData; cartaPage: CartaPage | null }) {
+  if (slide.kind === "carta") return cartaPage ? <CartaView page={cartaPage} data={data} /> : null;
+  if (slide.kind === "flyer") {
+    return <FlyerView url={slide.url} name={slide.name} data={data} />;
   }
   if (slide.kind === "qr") {
     return (

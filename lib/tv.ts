@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import QRCode from "qrcode";
@@ -71,6 +71,58 @@ export function resolveTvFlyer(name: string): string | null {
   const dir = tvDir();
   const full = path.join(dir, base);
   return existsSync(full) ? full : null;
+}
+
+// ---------- Subir y borrar flyers desde el panel ----------
+
+export const MAX_FLYER_BYTES = 15 * 1024 * 1024;
+
+// Tipo de imagen según los primeros bytes (no se confía en el nombre del archivo).
+function imageExt(bytes: Uint8Array): string | null {
+  const b = bytes;
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return ".jpg";
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return ".png";
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return ".gif";
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return ".webp";
+  return null;
+}
+
+// Nombre prolijo y seguro: sin rutas ni caracteres raros, con la extensión del tipo real.
+export function safeFlyerName(original: string, ext: string): string {
+  const base = path
+    .basename(original || "flyer")
+    .replace(/\.[^.]*$/, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9 _-]+/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+  return `${base || "flyer"}${ext}`;
+}
+
+export function saveTvFlyer(originalName: string, bytes: Uint8Array): TvFlyer {
+  const dir = ensureTvDir();
+  if (!dir) throw new Error("Los flyers de la tele se cargan desde la PC del local.");
+  if (bytes.length === 0) throw new Error("El archivo está vacío.");
+  if (bytes.length > MAX_FLYER_BYTES) throw new Error("La imagen es muy pesada (máximo 15 MB).");
+  const ext = imageExt(bytes);
+  if (!ext) throw new Error("Solo se pueden subir imágenes JPG, PNG, WEBP o GIF.");
+  // Si ya hay uno con ese nombre: "nombre-2", "nombre-3"… (nunca se pisa otro flyer).
+  const first = safeFlyerName(originalName, ext);
+  const stem = first.slice(0, -ext.length);
+  let name = first;
+  for (let i = 2; existsSync(path.join(dir, name)) && i < 1000; i++) name = `${stem}-${i}${ext}`;
+  if (existsSync(path.join(dir, name))) throw new Error("Hay demasiados flyers con ese nombre.");
+  writeFileSync(path.join(dir, name), bytes);
+  return listTvFlyers().find((f) => f.name === name) ?? { name, url: `/api/tv/flyer/${encodeURIComponent(name)}` };
+}
+
+export function deleteTvFlyer(name: string): boolean {
+  const file = resolveTvFlyer(name);
+  if (!file) return false;
+  unlinkSync(file);
+  return true;
 }
 
 export interface TvProduct {
